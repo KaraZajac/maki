@@ -62,21 +62,39 @@ maki adds differs by flow, and it's worth being exact.
 
 Decided 2026-09-26 with Kara.
 
-### Three buttons
+### Three buttons: the model every screen follows
 
-Everything works with the three buttons on the face: **left**, **right** and the **centre**
-press. The up/down switch on the side isn't needed for anything; it's awkward with the badge
-lying on a desk, which is how it gets used. One pattern everywhere: left and right move, the
-centre confirms.
+Like a Ledger, which manages with two buttons; maki has three: **left**, **right**, and the
+**centre**. The jog dial on the side isn't used: the badge usually lies on a desk, and a normal
+day is plug in, enter the PIN, and confirm prompts with the centre as they come.
 
-- **Home** is an icon carousel: one app at a time, a big icon and its name, left and right to
-  cycle, the centre to open. The status bar stays (name, link dot, clock).
-- **Approvals**: the centre allows, left refuses. Where there's a choice (two logins for one
-  site), left and right cycle through them, with Cancel as the last stop, and the centre picks.
-- **Transactions** review like a Ledger: right steps through the screens (each output, the
-  fee), the last one is Sign (centre), and left refuses from any of them.
-- The stock vault's screens still use the switch; they get reworked to this model over time.
-  New screens (home, PIN, approvals, wallet) use the three buttons from the start.
+- **Centre: confirm** whatever the screen is offering: open, allow, deny, sign, exit, the digit
+  under the cursor.
+- **Left and right together: the menu.** On the home screen, maki's own (lock, change PIN,
+  backup, about); in an app, that app's menu, which always ends with Exit. (Ledger's gesture.
+  A long press of the centre was the first idea, but the keypad reports presses more reliably
+  than how long a key was held.)
+- **Left and right: move** to the next app, the next item, the next page of a transaction, or the
+  next of the choices a screen offers (from allow to deny).
+- **There is no back button.** Going back, cancelling, refusing and leaving are always
+  something the screen offers and the centre confirms.
+
+What it looks like:
+
+- **Every screen's bottom line** names what the centre will do, boxed, with arrows at the sides
+  when left and right have somewhere to go.
+- **Home**: one app at a time, a big icon and its name; the centre opens it.
+- **Menus** (maki's and apps'): one item at a time; left and right go through them, the centre
+  picks. An app says what's in its menu; the launcher draws it and adds Exit, so every app is
+  left the same way, even one that misbehaves.
+- **Asks** (a site wants a login): the request, offering "allow"; right offers "deny"; the
+  centre does what's offered. With a choice (two logins for a site), left and right go through
+  them and then Cancel.
+- **Transactions**: left and right page through the details (each output, the fee), ending on
+  Sign and Reject; the centre does what's shown.
+- **Keys underneath:** the keyboard service holds a left or right press for 150 ms to see
+  whether the other side joins it. If it does, it sends the menu key (`MENU`) and neither
+  arrow, so a menu never also moves; if not, the arrow. Left and right don't auto-repeat.
 
 ### Boot PIN
 
