@@ -87,7 +87,8 @@ First boot of a fresh image, as observed: the PDDB finds blank flash, formats an
 **with no prompt**, swap encryption comes on, and the BAOKEY home screen is up by ~3G.
 Every emulator run starts from blank flash, so every run is a first boot.
 
-Launcher regression check (home → Vault → Vault Menu → Home screen → home → Vault):
+Launcher regression check (home → Authenticator → Vault Menu → Home screen → home →
+Authenticator). The home screen lists the vault twice, as Authenticator and Passwords:
 
 ```sh
 scripts/emu.sh 3G,3.6G,4.1G,5G,5.6G,6.4G --press 1@3.1G --press 1@3.7G \
@@ -96,8 +97,9 @@ scripts/emu.sh 3G,3.6G,4.1G,5G,5.6G,6.4G --press 1@3.1G --press 1@3.7G \
 scripts/montage.py flow.png 3 .emu/shots/*.pgm   # the six frames as one image
 ```
 
-The launcher logs `bringing 'Vault' to the front` and `'Vault' returned to the home
-screen` on each change. Reading screenshots: the vault's TOTP view with no codes stored
+The launcher logs `bringing 'Authenticator' to the front` and `'Authenticator' returned to
+the home screen` on each change. In the emulator, buttons 3 and 4 arrive swapped (3 is `←`,
+4 is `→`); up and down are as labelled. Reading screenshots: the vault's TOTP view with no codes stored
 shows `✕✕✕✕✕✕` in the code box, with the white bar under it as the 30-second countdown.
 
 The first cold build signs with the post-quantum developer key (SLH-DSA), which is

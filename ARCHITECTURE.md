@@ -65,8 +65,8 @@ maki adds differs by flow, and it's worth being exact.
    `GET_LOGIN`, `GET_TOTP`, `SAVE_LOGIN` go through the vault.
 3. ~~Native messaging host and a Chrome/Firefox extension~~ — done: fills logins and codes,
    offers typed logins to maki.
-4. **Home screen entries for the vault**: Authenticator and Passwords, then a new Passkeys screen
-   (passkeys have no screen of their own today).
+4. **Home screen entries for the vault**: ~~Authenticator and Passwords~~ (done), then a new
+   Passkeys screen (passkeys have no screen of their own today).
 5. **Wallets**: Bitcoin first (PSBT, decoded on-device), Ethereum later (EIP-1193 provider).
 6. **App store** over serial, building on Xous's Precursor app loader.
 
