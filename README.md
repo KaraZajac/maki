@@ -4,7 +4,9 @@ Community firmware for the DEF CON 34 badge's core module: a security key with a
 and an app platform for the hacker community to build on. Flipper-style custom firmware,
 for your keys.
 
-> **Status: design.** No firmware yet. Start with [RESEARCH.md](./RESEARCH.md).
+> **Status: early development.** Our fork builds and boots in an emulator; nothing runs on
+> a badge yet. Start with [RESEARCH.md](./RESEARCH.md); [DEVELOPMENT.md](./DEVELOPMENT.md)
+> has the build-and-emulate loop.
 
 ## The idea
 

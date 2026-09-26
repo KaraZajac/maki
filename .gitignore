@@ -5,3 +5,8 @@ target/
 .venv/
 __pycache__/
 /scratch/
+
+# nested upstream clones (not part of this repo)
+/xous-core/
+/tools/baomulator/
+/.emu/

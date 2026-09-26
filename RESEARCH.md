@@ -181,8 +181,13 @@ and the app loader should be `#![forbid(unsafe_code)]` and fuzzed.
 
 For people who want some theft resistance: mix a passphrase, entered on the badge, into the
 key that encrypts the PDDB. A thief who reflashes then faces an offline brute force, which
-only helps with a real passphrase, not a 6-digit PIN (the lesson of the early Trezors). The
-stock baosec vault doesn't have this; it would be new work.
+only helps with a real passphrase, not a 6-digit PIN (the lesson of the early Trezors).
+
+*Correction, from the first emulator run:* the stock baosec PDDB already asks you to create a
+PIN when it formats, and has a change-PIN menu that re-wraps the system keys
+(`services/pddb/src/backend/hw.rs`, `pddb_change_pin`). Not yet traced: whether that PIN is
+mixed into the key hierarchy on baosec or only gates the UI, and whether it could take a real
+passphrase. That decides how much of this section is new work.
 
 ---
 

@@ -1,0 +1,96 @@
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index 6c3ca6f..8bb931e 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -29,6 +29,9 @@
+ //!   --console-final N last N console bytes at the end (default 800)
+ //!   --gddram          also dump the raw GDDRAM page/column occupancy map
+ //!   --fw DIR          firmware directory (default web/fw)
++//!   --owc SLOT=VAL    preset a one-way counter before boot (repeatable)
++//!   --dev-mode        shorthand for --owc 85=1: model a badge already in
++//!                     developer mode, so devkey-signed builds boot
+ //!   --quiet           only print the summary table
+ //!
+ //! Examples:
+@@ -63,6 +66,7 @@ struct Args {
+     console_final: usize,
+     gddram: bool,
+     fw_dir: String,
++    owc: Vec<(u32, u32)>,
+     quiet: bool,
+ }
+ 
+@@ -118,6 +122,7 @@ fn parse_args() -> Args {
+         console_final: 800,
+         gddram: false,
+         fw_dir: "web/fw".into(),
++        owc: Vec::new(),
+         quiet: false,
+     };
+     let argv: Vec<String> = std::env::args().skip(1).collect();
+@@ -139,6 +144,14 @@ fn parse_args() -> Args {
+             "--out" => a.out_dir = next(&mut i),
+             "--prefix" => a.prefix = next(&mut i),
+             "--fw" => a.fw_dir = next(&mut i),
++            "--owc" => {
++                let v = next(&mut i);
++                match v.split_once('=').and_then(|(s, n)| Some((s.parse().ok()?, n.parse().ok()?))) {
++                    Some(pair) => a.owc.push(pair),
++                    None => eprintln!("shot: bad --owc spec {v:?} (want SLOT=VAL)"),
++                }
++            }
++            "--dev-mode" => a.owc.push((85, 1)),
+             "--no-ascii" => a.ascii = false,
+             "--no-pgm" => a.pgm = false,
+             "--gddram" => a.gddram = true,
+@@ -177,7 +190,7 @@ fn print_help() {
+     println!(
+         "shot [CHECKPOINTS] [--press N@T[+D]] [--out DIR] [--prefix NAME]\n\
+          \x20    [--no-ascii] [--no-pgm] [--gddram] [--console N] [--console-final N]\n\
+-         \x20    [--fw DIR] [--quiet]\n\
++         \x20    [--fw DIR] [--owc SLOT=VAL] [--dev-mode] [--quiet]\n\
+          \n\
+          CHECKPOINTS: comma-separated instruction counts, k/M/G suffixes ok.\n\
+          \x20            default 500M,1G,2G,3G\n\
+@@ -318,6 +331,9 @@ fn main() {
+         eprintln!("shot: run ./build.sh first, or pass --fw DIR");
+         std::process::exit(1);
+     }
++    for &(slot, value) in &a.owc {
++        baomulator::emu_set_owc(e, slot, value);
++    }
+     if a.pgm {
+         if let Err(err) = std::fs::create_dir_all(&a.out_dir) {
+             eprintln!("shot: cannot create {}: {err} (disabling --pgm)", a.out_dir);
+diff --git a/src/lib.rs b/src/lib.rs
+index ad2855c..e6d02d6 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -217,6 +217,27 @@ pub extern "C" fn emu_set_pin(e: *mut Emulator, port: u32, bit: u32, level: bool
+     e.mach.irq_invalidate();
+ }
+ 
++/// Preset a one-way counter before the first instruction, the same way
++/// `emu_set_pin` straps the badge type. Real firmware can only increment
++/// these; this reaches around that so a host can model a badge that has
++/// already crossed a one-way door (e.g. slot 85 `DEVELOPER_MODE`, which
++/// `boot1` sets on real hardware but which this emulator never runs).
++/// Out-of-range slots are ignored.
++#[no_mangle]
++pub extern "C" fn emu_set_owc(e: *mut Emulator, slot: u32, value: u32) {
++    let e = unsafe { &mut *e };
++    if let Some(c) = e.mach.soc.owc.get_mut(slot as usize) {
++        *c = value;
++    }
++}
++
++/// Current value of a one-way counter, or 0 for out-of-range slots.
++#[no_mangle]
++pub extern "C" fn emu_get_owc(e: *mut Emulator, slot: u32) -> u32 {
++    let e = unsafe { &*e };
++    e.mach.soc.owc.get(slot as usize).copied().unwrap_or(0)
++}
++
+ /// Read back the resolved level of an IOX pin (output drive, external input
+ /// and the port F button matrix all applied) — the same value the firmware
+ /// would see reading GPIOIN. Returns false for out-of-range ports.
