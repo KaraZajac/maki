@@ -85,6 +85,9 @@ compiled in unless set, so rebuild without them before flashing:
 - `MAKI_DEMO_ASKS=1`: maki-link queues four requests at boot as if the desktop had sent them
   (keep two logins for github.com, fill one for gist.github.com, keep one for a long hostname).
   They wait until maki is unlocked.
+- `MAKI_DEMO_BACKUP=1`: once maki has its PIN and phrase, maki-link takes a backup through
+  maki-keys and restores it, logging `demo backup: N bytes sealed` and `demo restore: ...`.
+  The only way to exercise the backup's encryption on firmware without USB.
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `0` Down,
 `1` Select, `2` Up, `3` Right, `4` Left, `5` Center. The emulator runs at roughly
