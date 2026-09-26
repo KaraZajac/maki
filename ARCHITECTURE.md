@@ -109,6 +109,9 @@ covers everything: passwords, codes, passkeys, the wallet.
   setup, restorable from the recovery phrase and the backup (below). The count survives
   unplugging: it's raised before each try and cleared on success.
 - **Until it's unlocked**, maki answers the desktop's requests with a new approval, "locked".
+- **Changing it**, from maki's menu: the new PIN twice, then the current one, which counts toward
+  the wipe like any other try. The new record is written beside the old before replacing it, so
+  pulling the plug mid-change leaves whichever PIN is entered next working.
 - **How:** the secrets live in a PDDB secret basis, whose 32-byte key (the gen2 API takes one
   directly) comes from the PIN through a deliberately slow key derivation. The counter lives
   outside that basis.
@@ -149,12 +152,17 @@ it's never typed into the computer, which is what a hardware key defends against
 5. ~~Three-button UI~~ — done: the icon carousel home, menus on left+right, asks that offer
    one action at a time, and the vault's screens one entry at a time.
 6. ~~Boot PIN and first-boot setup~~ — done: welcome, choose and confirm a PIN, the secret basis
-   (maki-keys), Lock in maki's menu, the five-try wipe, "locked" answers to the desktop.
+   (maki-keys), Lock and Change PIN in maki's menu, the five-try wipe, "locked" answers to the
+   desktop. Asks wait until setup is over.
 7. ~~Recovery phrase and backups~~ — done: made, shown and checked at setup, or typed in to
    restore; maki desktop keeps the encrypted backup (hourly, and after a login is saved) and
    sends it back on request, with the owner's yes on maki.
-8. **Bitcoin wallet**: keys from the phrase; receive addresses shown on maki to check against
-   the computer; PSBTs reviewed screen by screen and signed through maki desktop.
+8. ~~Bitcoin wallet~~ — done: the BIP84 account from the phrase (`libs/maki-btc`), handed to
+   wallet software as a descriptor with the owner's yes; addresses shown on maki to compare, and
+   as QR codes in the Bitcoin app; PSBTs checked (every input maki's, with the transaction it
+   spends), gone through page by page (each payment, change, fee) and signed, through maki
+   desktop. Signatures match rust-bitcoin's and pass Bitcoin Core's consensus code. Not yet:
+   taproot, multisig, and a run against Sparrow with real coins on a badge.
 9. **Passkeys from the phrase**, and a Passkeys screen. Passkeys live in OpenSK's store, owned
    by the vault's FIDO thread, which blocks on USB; listing them needs a way into that thread.
 10. **Ethereum** (an EIP-1193 provider in the extension), then the **app store** over serial,

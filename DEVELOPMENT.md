@@ -55,7 +55,7 @@ git switch baokey && git merge dev
 ## The loop
 
 ```sh
-cd xous-core && cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link && cd ..   # ~6 min cold, ~3 warm
+cd xous-core && cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-bitcoin && cd ..   # ~6 min cold, ~2 warm
 scripts/emu.sh 3G,4G                                                             # ~2 min for 4G instructions
 ```
 
@@ -63,16 +63,19 @@ What's where in the fork:
 
 | Path | What |
 |---|---|
-| `apps-baosec/maki-launcher` | boot image, the home carousel, input focus, menus, the PIN and setup screens, and asks (`Launcher::ask`) shown over whatever is in front |
+| `apps-baosec/maki-launcher` | boot image, the home carousel, input focus, menus, the PIN and setup screens, and asks (`Launcher::ask`, `Launcher::review` with pages) shown over whatever is in front |
+| `apps-baosec/maki-bitcoin` | the Bitcoin app: receiving addresses and the account key as QR codes and text |
+| `libs/maki-ui` | the keys and drawing every maki screen shares: status bar, action bar, arrows, icons, QR codes |
+| `libs/maki-btc` | the Bitcoin wallet, host-testable: BIP32/BIP84 keys, addresses, descriptors, PSBT parsing, the checks before signing, signing; tested against rust-bitcoin and Bitcoin Core's consensus code |
 | `apps-baosec/vault2` | the upstream vault, registered with the launcher; `src/link.rs` answers the browser's requests for logins and codes |
 | `services/maki-link` | the serial end of the desktop link: time sync, link state, and handing requests to the vault |
 | `libs/maki-proto` | the protocol (framing, messages, device logic) and `PROTOCOL.md`; `examples/fake_maki.rs` |
 | `libs/maki-vault-api` | how maki-link asks the vault (one connection only, made at boot) |
-| `services/maki-keys` | the boot PIN: the secret basis's key, wrapped under the PIN's, the wrong-try count and the wipe |
+| `services/maki-keys` | the boot PIN: the secret basis's key, wrapped under the PIN's, the wrong-try count and the wipe; the recovery phrase, backups, and the Bitcoin account (`src/bitcoin.rs`) |
 | `libs/maki-icons` | the home screen's icons, drawn by `icons.py` |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
-Host-side tests need no badge: `cargo test -p roughtime -p maki-proto`. The desktop app's tests
+Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc`. The desktop app's tests
 drive the real protocol logic through `fake_maki`; see its README.
 
 The emulator has no USB, so maki-link sits idle there; the link is exercised end to end against
@@ -88,6 +91,11 @@ compiled in unless set, so rebuild without them before flashing:
 - `MAKI_DEMO_BACKUP=1`: once maki has its PIN and phrase, maki-link takes a backup through
   maki-keys and restores it, logging `demo backup: N bytes sealed` and `demo restore: ...`.
   The only way to exercise the backup's encryption on firmware without USB.
+- `MAKI_DEMO_BTC=1`: once maki has its PIN and phrase, maki-link does what the desktop's
+  Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
+  sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
+  `demo btc signed: N bytes, as expected: true` if the signature is the one maki-btc makes on a
+  computer. The PSBT belongs to the BIP39 test phrase, so restore that at setup (below).
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `0` Down,
 `1` Select, `2` Up, `3` Right, `4` Left, `5` Center. The emulator runs at roughly
@@ -119,6 +127,29 @@ scripts/emu.sh 4.9G,5.1G,5.3G,6.15G,6.3G,6.8G,7.55G,8.2G ${=P}
 Presses: 3 is left (`←`), 4 is right (`→`): the emulator's labels have them the other way
 round. Hold a tap for 2M instructions (`+2M`): the emulator's default of 20M is long enough
 to count as a hold.
+
+When the first screen appears depends on how many processes boot: with maki-bitcoin in the
+image it's about 2.8G rather than 2.3G. Take a few screenshots early to find it, and shift the
+presses to match.
+
+`scripts/presses-test-phrase.sh` prints the presses that restore the BIP39 test phrase
+("abandon" eleven times, then "about") with PIN 000000 in a `MAKI_DEMO` build: restore from
+phrase, the PIN twice, 12 words, each word typed a letter at a time until it can be picked.
+`OFFSET` shifts them all (in G). It ends at 10.0G + `OFFSET` on "Phrase restored". Asks wait
+until setup is over, so the centre first continues to the home screen. With `MAKI_DEMO_BTC`, the
+Bitcoin asks follow: the centre answers the account and the address, then goes through the
+transaction (Send, Change, Fee) and signs:
+
+```sh
+MAKI_DEMO=1 MAKI_DEMO_BTC=1 cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-bitcoin
+bash -c 'mapfile -t P < <(OFFSET=0.6 scripts/presses-test-phrase.sh)
+  for t in 10.9 11.8 12.2 12.6 12.8 13.0 13.2; do P+=(--press 5@${t}G+2M); done
+  scripts/emu.sh 11.7G,12.1G,12.5G,13.5G "${P[@]}"' | grep "demo btc"
+```
+
+With `MAKI_DEMO_ASKS` instead, the vault's four requests come after "continue"; space the
+answers 0.7G apart (the vault saves each login before it sends the next request), then left and
+right go round the home screen.
 
 
 

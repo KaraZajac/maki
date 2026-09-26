@@ -5,15 +5,17 @@ and an app platform for the hacker community to build on. Flipper-style custom f
 for your keys.
 
 > **Status: early development.** The custom firmware is named **maki**. It builds and boots in an
-> emulator with a home screen, the vault, and a serial link; a desktop app in the tray
-> ([maki-desktop](https://github.com/KaraZajac/maki-desktop)) keeps it linked and its clock verified
-> with Roughtime, and a browser extension asks maki for logins and TOTP codes, which you approve
-> on maki's screen. The browser side is tested in real Chromium and Firefox against a stand-in
-> for maki; the screens below are maki's firmware in the emulator. Nothing runs on a badge yet.
+> emulator: a boot PIN, a recovery phrase, a home screen, the vault, a Bitcoin wallet and a serial
+> link. A desktop app in the tray ([maki-desktop](https://github.com/KaraZajac/maki-desktop)) keeps
+> it linked, its clock verified with Roughtime and its backups encrypted on the computer; a browser
+> extension asks maki for logins and TOTP codes, which you approve on maki's screen; and Bitcoin
+> wallet software (Sparrow, Bitcoin Core) sends transactions through it for maki to show you and
+> sign. The desktop side is tested against a stand-in for maki that runs maki's own code; the
+> screens below are maki's firmware in the emulator. Nothing runs on a badge yet.
 > [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan, [RESEARCH.md](./RESEARCH.md) the background,
 > [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
 
-![maki asking to keep two logins for github.com, to pick which one to fill on gist.github.com, and to keep a login for a long hostname cut at the start so its end still shows](docs/approvals.png)
+![maki's screens in the emulator: the home screen on Bitcoin; asks to keep a login for github.com, to pick which login to fill on gist.github.com, and to keep one for a long hostname cut at the start so its end still shows; a Bitcoin transaction's payment, fee and sign pages; and a receiving address as a QR code](docs/screens.png)
 
 ## The idea
 
@@ -27,8 +29,9 @@ Planned apps:
 - **Passkeys, passwords and TOTP**, building on the stock vault, with the browser extension
   filling logins and codes once you approve them on maki
 - **SSH and git signing**: see the user and the commit before you approve
-- **A small Bitcoin wallet**: keys on maki behind the boot PIN, from a recovery phrase you
-  write down, each transaction reviewed on maki's screen before it's signed
+- **A small Bitcoin wallet** (working in the emulator): keys on maki behind the boot PIN, from a
+  recovery phrase you write down; every payment, the change and the fee shown on maki's screen
+  before a transaction is signed; receiving addresses as QR codes that never touch the computer
 - **Community apps**, installed from the browser over USB, each isolated from your keys
 
 ## Who it's for
