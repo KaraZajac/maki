@@ -259,11 +259,19 @@ The post-con Bird Challenge deadline (~2026-09-20) has passed, so that's no long
 reason to wait. But **`THE_FLAG_1` has been extracted by others and its value was
 deliberately withheld — it is still findable, and flashing forfeits it.** If that matters,
 extract it first via the sealed-mode route documented in
-`~/Projects/BAOSEC/research/dc34badge`. This is a decision, not a technicality, and it
-should be made explicitly before any firmware touches the hardware.
+`~/Projects/BAOSEC/research/dc34badge`.
 
-Until then: `cargo xtask baosec-emu` runs the UX hosted on x86, and the whole protocol
-stack can be developed and tested there against real Yubico client tooling.
+**We have two core modules, which largely defuses this.** One becomes the dev unit and
+gets flashed; the other stays sealed as a reference — for diffing behaviour, for
+verifying that a stock badge still interoperates with whatever we build, and as the
+fallback if the dev unit gets bricked. Restocking is not an option on any useful
+timescale: the `dabao` breakout is pre-order only, shipping 2026-12-15 at $12 plus
+$10–18 postage, and Baochip-1x chips themselves aren't generally available until Q4
+2026. **Treat both modules as irreplaceable for the duration of this project.**
+
+Either way, phases 0–3 don't need hardware at all: `cargo xtask baosec-emu` runs the UX
+hosted on x86, and the whole protocol stack can be developed and tested there against
+real Yubico client tooling. Don't spend the door earlier than necessary.
 
 ### 4.2 The USB endpoint budget is nearly exhausted
 
@@ -419,10 +427,13 @@ The last two rows are the honest ones.
 
 ## 8. Open questions
 
-1. **Has the badge been flashed yet?** Everything in §4.1 depends on this. If it's still
-   sealed, do we want `THE_FLAG_1` first?
-2. **One module or two?** A second baosec-lite (or a `dabao` at ~$10) would let us keep
-   one sealed and develop on the other. Strongly recommended, and cheap.
+1. **Which of the two modules becomes the dev unit?** Resolved that we have two (§4.1),
+   so one gets flashed and one stays sealed. Worth labelling them physically before the
+   first flash, because once dev mode is set there is no way to tell them apart from the
+   host except by what they no longer know.
+2. **Do we want `THE_FLAG_1` off the sacrificial module first?** Extracting it via the
+   sealed-mode route in `~/Projects/BAOSEC/research/dc34badge` costs nothing but time,
+   and it's the last chance for that specific unit.
 3. **Primary target: HSM protocol, or PIV?** §6. This determines phase ordering.
 4. **How compatible is "compatible"?** Pass Yubico's own test suites and the
    `virtual-yubihsm` qualification harness, or just "works with `yubihsm-shell` and
