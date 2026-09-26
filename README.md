@@ -27,7 +27,8 @@ Planned apps:
 - **Passkeys, passwords and TOTP**, building on the stock vault, with the browser extension
   filling logins and codes once you approve them on maki
 - **SSH and git signing**: see the user and the commit before you approve
-- **A small Bitcoin wallet**: your seed stays on a QR code you scan, never stored on the badge
+- **A small Bitcoin wallet**: keys on maki behind the boot PIN, from a recovery phrase you
+  write down, each transaction reviewed on maki's screen before it's signed
 - **Community apps**, installed from the browser over USB, each isolated from your keys
 
 ## Who it's for

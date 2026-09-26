@@ -188,7 +188,8 @@ code (`pw_check`, `pddb_change_pin` in `services/pddb/src/backend/hw.rs`) is com
 `gen1`, the Precursor generation. On baosec (`gen2`) a change-PIN request hits
 `unimplemented!("Not available in gen2 targets")`, and in the emulator first boot formats and
 mounts with no prompt. The format prompt's text mentions creating a PIN, but that string is
-shared with Precursor. So this section is entirely new work.
+shared with Precursor. So this section is entirely new work. (maki adds a boot PIN of its own,
+over a PDDB secret basis: ARCHITECTURE.md, "On maki".)
 
 ---
 
@@ -230,6 +231,9 @@ The natural end state of a key that shows what it signs, and the highest stakes.
 - **Don't store the seed.** Keep it as a SeedQR (a QR code of the 12 or 24 words) and scan it
   with the camera for each signing session; the badge forgets it on unplug. This is
   SeedSigner's model, and it makes §3.3 irrelevant for the wallet's most important secret.
+  *Superseded 2026-09-26:* Kara chose to keep the seed on maki behind a boot PIN, Ledger-style,
+  with a recovery phrase and encrypted backups; see ARCHITECTURE.md, "On maki". The trade-off
+  above still holds, and is why the wallet stays pocket money.
 - **Bitcoin only, at first.** Its transaction format (PSBT, BIP174) can be decoded and shown
   honestly. Ethereum contract calls are opaque blobs, the "blind signing" problem Ledger
   still fights.

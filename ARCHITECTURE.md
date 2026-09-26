@@ -33,7 +33,7 @@ extensions for the web, and maki's screen and button as the approval for everyth
 | **Passkeys** | browser ⇄ maki over FIDO2 directly; maki shows the site, you press | works in the stock vault |
 | **Passwords** | page → extension → desktop → maki: "*site* — Fill login?" → press → credential back to the page; a login typed and submitted → "Keep new login?" | **built**, tested against the fake maki in real Chromium and Firefox; on maki, built and emulated |
 | **TOTP** | extension spots the code field → "*site* — Send code?" → press → filled; the first time, the owner picks which entry is the site's | **built**, as above; needs a Roughtime-verified clock |
-| **Wallets** | dApp → extension (a wallet provider) or wallet software → maki switches to that wallet, shows the decoded transaction → press → signature back | later |
+| **Wallets** | dApp → extension (a wallet provider) or wallet software → maki switches to that wallet, shows the decoded transaction → press → signature back | planned: Bitcoin first, keys from the recovery phrase (below) |
 | **App store** | desktop lists apps, installs them over serial | later (see RESEARCH.md §5) |
 
 ## What each flow can and can't protect
@@ -58,6 +58,68 @@ maki adds differs by flow, and it's worth being exact.
 - **Codes need verified time.** A host that could set maki's clock could collect codes for later,
   so GET_TOTP waits for Roughtime; the host's own clock is only good for display.
 
+## On maki: three buttons, a boot PIN, one recovery phrase
+
+Decided 2026-09-26 with Kara.
+
+### Three buttons
+
+Everything works with the three buttons on the face: **left**, **right** and the **centre**
+press. The up/down switch on the side isn't needed for anything; it's awkward with the badge
+lying on a desk, which is how it gets used. One pattern everywhere: left and right move, the
+centre confirms.
+
+- **Home** is an icon carousel: one app at a time, a big icon and its name, left and right to
+  cycle, the centre to open. The status bar stays (name, link dot, clock).
+- **Approvals**: the centre allows, left refuses. Where there's a choice (two logins for one
+  site), left and right cycle through them, with Cancel as the last stop, and the centre picks.
+- **Transactions** review like a Ledger: right steps through the screens (each output, the
+  fee), the last one is Sign (centre), and left refuses from any of them.
+- The stock vault's screens still use the switch; they get reworked to this model over time.
+  New screens (home, PIN, approvals, wallet) use the three buttons from the start.
+
+### Boot PIN
+
+Set at first boot, asked at every boot, and maki stays unlocked until it's unplugged. One PIN
+covers everything: passwords, codes, passkeys, the wallet.
+
+- **Entry, one digit at a time.** Each position starts on a random digit, underlined, so the
+  number of presses gives nothing away. Left and right step down and up through 0–9, then ⌫
+  (back one digit) and ✓ (done); the centre confirms and moves to the next position. Entered
+  digits show as dots. The PIN 000000 is six confirms of 0, then ✓. At least six digits.
+- **Five wrong PINs in a row wipe** everything the PIN protects, and maki goes back to first-boot
+  setup, restorable from the recovery phrase and the backup (below). The count survives
+  unplugging: it's raised before each try and cleared on success.
+- **Until it's unlocked**, maki answers the desktop's requests with a new approval, "locked".
+- **How:** the secrets live in a PDDB secret basis, whose 32-byte key (the gen2 API takes one
+  directly) comes from the PIN through a deliberately slow key derivation. The counter lives
+  outside that basis.
+- **What it protects against.** Someone who picks the badge up can't use it. Someone who takes
+  it home and reflashes it can: in developer mode any firmware can read the storage and try all
+  million six-digit PINs offline, skipping the counter, and the slow derivation only makes that
+  take hours instead of seconds (RESEARCH.md §3.4). So the wallet stays pocket money, and
+  nothing that leaves maki is protected by the PIN alone.
+
+### One recovery phrase
+
+Made at setup: 24 BIP39 words from the TRNG, shown one word per screen to write down, then
+checked by asking for a few of them back. It's the root of everything that can't be made again:
+
+- **the Bitcoin wallet's keys**, derived the standard way (BIP32, BIP84), so the phrase also
+  works in other wallets;
+- **the key that encrypts maki's backup**;
+- later, **passkeys**: FIDO credential keys derived from the phrase, as Trezor does, so they
+  survive a restore.
+
+**Backups.** maki desktop keeps an encrypted copy of the passwords, codes and passkey store,
+refreshed when they change. The key comes from the recovery phrase, never the PIN: a backup
+file is exactly what an attacker gets to try PINs against offline.
+
+**Restore.** A new or wiped maki: set a PIN, enter the recovery phrase on maki, and maki desktop
+sends the backup back. The phrase goes in on maki itself, word by word with the buttons (each
+word picked letter by letter, finished from the BIP39 list) or as a SeedQR through the camera;
+it's never typed into the computer, which is what a hardware key defends against.
+
 ## Order of work
 
 1. ~~Link and verified time~~ — done: protocol, maki-link, desktop app in the tray.
@@ -65,10 +127,19 @@ maki adds differs by flow, and it's worth being exact.
    `GET_LOGIN`, `GET_TOTP`, `SAVE_LOGIN` go through the vault.
 3. ~~Native messaging host and a Chrome/Firefox extension~~ — done: fills logins and codes,
    offers typed logins to maki.
-4. **Home screen entries for the vault**: ~~Authenticator and Passwords~~ (done), then a new
-   Passkeys screen (passkeys have no screen of their own today).
-5. **Wallets**: Bitcoin first (PSBT, decoded on-device), Ethereum later (EIP-1193 provider).
-6. **App store** over serial, building on Xous's Precursor app loader.
+4. ~~Home screen entries for the vault~~ — done: Authenticator and Passwords.
+5. **Three-button UI**: the icon carousel home, approvals on left/right/centre, and the PIN
+   pad, word picker and review screens as shared pieces.
+6. **Boot PIN and first-boot setup**: the PIN, the secret basis, moving the vault's records into
+   it, the five-try wipe, "locked" answers.
+7. **Recovery phrase and backups**: make, show and check the phrase; the encrypted backup kept
+   by maki desktop; restore on maki.
+8. **Bitcoin wallet**: keys from the phrase; receive addresses shown on maki to check against
+   the computer; PSBTs reviewed screen by screen and signed through maki desktop.
+9. **Passkeys from the phrase**, and a Passkeys screen. Passkeys live in OpenSK's store, owned
+   by the vault's FIDO thread, which blocks on USB; listing them needs a way into that thread.
+10. **Ethereum** (an EIP-1193 provider in the extension), then the **app store** over serial,
+    building on Xous's Precursor app loader.
 
 ## Constraints to design around
 
