@@ -183,11 +183,12 @@ For people who want some theft resistance: mix a passphrase, entered on the badg
 key that encrypts the PDDB. A thief who reflashes then faces an offline brute force, which
 only helps with a real passphrase, not a 6-digit PIN (the lesson of the early Trezors).
 
-*Correction, from the first emulator run:* the stock baosec PDDB already asks you to create a
-PIN when it formats, and has a change-PIN menu that re-wraps the system keys
-(`services/pddb/src/backend/hw.rs`, `pddb_change_pin`). Not yet traced: whether that PIN is
-mixed into the key hierarchy on baosec or only gates the UI, and whether it could take a real
-passphrase. That decides how much of this section is new work.
+The stock baosec vault has no user PIN or passphrase at all (*verified*). The PDDB's password
+code (`pw_check`, `pddb_change_pin` in `services/pddb/src/backend/hw.rs`) is compiled only for
+`gen1`, the Precursor generation. On baosec (`gen2`) a change-PIN request hits
+`unimplemented!("Not available in gen2 targets")`, and in the emulator first boot formats and
+mounts with no prompt. The format prompt's text mentions creating a PIN, but that string is
+shared with Precursor. So this section is entirely new work.
 
 ---
 
@@ -255,7 +256,12 @@ three buttons. §5.2 keeps them away from the keys.
 
 ### 5.1 What exists
 
-Nobody has built an app store or loader for Baochip. Apps are compiled into one signed
+**The BAOKEY launcher exists** (`apps-baosec/baokey-launcher` in the fork, 2026-09-26): a
+home screen listing registered apps, and the owner of input focus. Keys are routed only to the
+app in front, which is enforced; apps only drawing while in front is cooperative for now. Apps
+are still compiled into the image.
+
+Nobody else has built an app store or loader for Baochip. Apps are compiled into one signed
 image, and the whole thing is reflashed. But the kernel primitive exists:
 `xous::create_process()` starts a process from a blob of bytes (*verified*; the only user
 is a test, `services/test-spawn`).
@@ -347,9 +353,8 @@ Badge B stays sealed throughout, as a reference.
    to be cleared or worked around first.
 3. **Upstream first?** The PKE driver and the `rp.name` fix belong in `xous-core`. The kernel
    changes for §5.2 might too, so it's worth asking bunnie early whether he'd take them.
-4. **Out-of-tree or fork?** Building out-of-tree against a pinned `xous-core` (the
-   `bunnie/dabao-console` pattern) keeps this repo small, but the kernel changes for §5.2 may
-   force a fork.
+4. ~~**Out-of-tree or fork?**~~ Settled: a fork, kept private for now at
+   `KaraZajac/baokey-firmware` (see `DEVELOPMENT.md`).
 
 ---
 

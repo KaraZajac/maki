@@ -54,21 +54,30 @@ git switch baokey && git merge dev
 ## The loop
 
 ```sh
-cd xous-core && cargo xtask baosec-lite vault2 && cd ..   # ~6 min cold, faster warm
-scripts/emu.sh 3G,4G,5G,10G --press 1@4.1G                 # ~5 min for 10G instructions
+cd xous-core && cargo xtask baosec-lite baokey-launcher vault2 && cd ..   # ~6 min cold, ~3 warm
+scripts/emu.sh 3G,4G                                                     # ~2 min for 4G instructions
 ```
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `0` Down,
 `1` Select, `2` Up, `3` Right, `4` Left, `5` Center. The emulator runs at roughly
 30 million instructions per second, so `1G` ≈ 30 s of wall clock.
 
-First boot of a fresh image, as observed:
+First boot of a fresh image, as observed: the PDDB finds blank flash, formats and mounts
+**with no prompt**, swap encryption comes on, and the BAOKEY home screen is up by ~3G.
+Every emulator run starts from blank flash, so every run is a first boot.
 
-| Instructions | What happens |
-|---|---|
-| ~3G | PDDB finds blank flash and prompts (screen shows a masked field, see below) |
-| press Select | Cryptographic format runs, 0→100% |
-| ~5G | PDDB mounts, swap encryption on, `vault2` menu on screen |
+Launcher regression check (home → Vault → Vault Menu → Home screen → home → Vault):
+
+```sh
+scripts/emu.sh 3G,3.6G,4.1G,5G,5.6G,6.4G --press 1@3.1G --press 1@3.7G \
+  --press 0@4.2G --press 0@4.35G --press 0@4.5G --press 0@4.65G --press 0@4.8G \
+  --press 1@5.1G --press 1@5.8G
+scripts/montage.py flow.png 3 .emu/shots/*.pgm   # the six frames as one image
+```
+
+The launcher logs `bringing 'Vault' to the front` and `'Vault' returned to the home
+screen` on each change. Reading screenshots: the vault's TOTP view with no codes stored
+shows `✕✕✕✕✕✕` in the code box, with the white bar under it as the 30-second countdown.
 
 The first cold build signs with the post-quantum developer key (SLH-DSA), which is
 slow; later builds reuse `devkey/dev-pq.cache`.
@@ -95,10 +104,6 @@ slow; later builds reuse `devkey/dev-pq.cache`.
   Baochip firmwares!"* On hardware, `boot0` erases the collateral bank on every boot
   under a Baochip-signed `boot1`; the emulator never runs `boot0`. Harmless for now;
   modelling it means pre-filling slots 261–264 with the erase value.
-- **The masked-field screen** at ~3G on first boot is not identified yet. The PDDB's
-  format prompt says a PIN will be created, so it is probably PIN entry, which would
-  mean one Select press accepted a default. Needs checking before anything real is
-  stored.
 - **Licensing.** Baomulator has no license file, so all rights are reserved: use it
   locally, don't vendor or redistribute it. Our patch is ours and could be offered
   upstream.
