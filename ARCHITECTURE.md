@@ -150,8 +150,9 @@ it's never typed into the computer, which is what a hardware key defends against
    one action at a time, and the vault's screens one entry at a time.
 6. ~~Boot PIN and first-boot setup~~ — done: welcome, choose and confirm a PIN, the secret basis
    (maki-keys), Lock in maki's menu, the five-try wipe, "locked" answers to the desktop.
-7. **Recovery phrase and backups**: make, show and check the phrase; the encrypted backup kept
-   by maki desktop; restore on maki.
+7. ~~Recovery phrase and backups~~ — done: made, shown and checked at setup, or typed in to
+   restore; maki desktop keeps the encrypted backup (hourly, and after a login is saved) and
+   sends it back on request, with the owner's yes on maki.
 8. **Bitcoin wallet**: keys from the phrase; receive addresses shown on maki to check against
    the computer; PSBTs reviewed screen by screen and signed through maki desktop.
 9. **Passkeys from the phrase**, and a Passkeys screen. Passkeys live in OpenSK's store, owned
