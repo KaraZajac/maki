@@ -91,6 +91,22 @@ slow; later builds reuse `devkey/dev-pq.cache`.
   with the OLED in a desktop window. Much faster to iterate on UI, but it isn't the
   real binary.
 
+## Known issues (firmware)
+
+- **Swapper handler stack.** With the launcher's boot image and clock in the image, the
+  swapper overflowed its 8 KiB private handler stack during boot, faulting inside the panic
+  printer (which alone needs ~20 KiB, so at 8 KiB no swapper panic can ever be reported). The
+  fork raises it to 32 KiB in `loader/src/phase2.rs`. Deterministic in the emulator: 2 pages
+  always faults, 8 never does. Why the handler needed more than 8 KiB is not yet understood.
+  Worth an upstream issue once we know more.
+
+## Boot sequence
+
+Baochip's loader logo ("bao", with a progress bar) → the BAOKEY boot image (at least 1.5 s)
+→ on first boot only, the PDDB's "Cryptographic wipe" progress → the home screen. The boot
+image is drawn by `apps-baosec/baokey-launcher/assets/splash.py`; rerun it after editing.
+The loader is part of our build, so its logo could be replaced too.
+
 ## Emulator fidelity notes
 
 - **Developer mode.** Baomulator starts at the loader and never runs `boot1`, so it

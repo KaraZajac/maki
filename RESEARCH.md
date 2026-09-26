@@ -256,15 +256,19 @@ three buttons. §5.2 keeps them away from the keys.
 
 ### 5.1 What exists
 
-**The BAOKEY launcher exists** (`apps-baosec/baokey-launcher` in the fork, 2026-09-26): a
-home screen listing registered apps, and the owner of input focus. Keys are routed only to the
-app in front, which is enforced; apps only drawing while in front is cooperative for now. Apps
-are still compiled into the image.
+**The BAOKEY launcher exists** (`apps-baosec/baokey-launcher` in the fork, 2026-09-26): boot
+image, home screen with a status bar (name, clock), and the owner of input focus. Keys are
+routed only to the app in front, which is enforced; apps only drawing while in front is
+cooperative for now. Apps are still compiled into the image.
 
-Nobody else has built an app store or loader for Baochip. Apps are compiled into one signed
-image, and the whole thing is reflashed. But the kernel primitive exists:
-`xous::create_process()` starts a process from a blob of bytes (*verified*; the only user
-is a test, `services/test-spawn`).
+**Upstream Xous already has a runtime app loader, for Precursor** (`apps/app-loader`; an
+earlier version of this brief wrongly said nobody had built one). It starts a small spawn stub
+with `xous::create_process()` and streams it an ordinary Xous ELF, built separately with
+`cargo xtask compile-apps` and fetched over WiFi from a host-side `tools/app_server.py`. Its
+limits are the ones we'd have to fix: it's behind an `unsafe-app-loading` feature (no
+signatures), loaded apps don't survive a reboot, and Xous couldn't destroy processes when it was
+written. Nobody has done this for Baochip. The plan is the same two-stage mechanism with the USB
+cable in place of WiFi, plus signatures and persistence.
 
 Prior art to copy:
 
