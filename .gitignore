@@ -1,0 +1,7 @@
+target/
+*.uf2
+*.bin
+*.log
+.venv/
+__pycache__/
+/scratch/
