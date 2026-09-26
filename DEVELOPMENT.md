@@ -8,6 +8,7 @@ on 2026-09-25 on Fedora 44 with Rust 1.96.0.
 ```
 BAOKEY/
 ├── xous-core/          our fork: KaraZajac/baokey-firmware (private), branch `baokey`     (gitignored clone)
+├── desktop/            the desktop app: KaraZajac/maki-desktop (private)                 (gitignored clone)
 ├── tools/baomulator/   zst123/dc34_baomulator, full-system badge emulator            (gitignored clone)
 ├── patches/baomulator/ our changes to the emulator, applied on top of the clone
 ├── scripts/emu.sh      build → emulate → PNG screenshots, in one command
@@ -54,9 +55,25 @@ git switch baokey && git merge dev
 ## The loop
 
 ```sh
-cd xous-core && cargo xtask baosec-lite baokey-launcher vault2 && cd ..   # ~6 min cold, ~3 warm
-scripts/emu.sh 3G,4G                                                     # ~2 min for 4G instructions
+cd xous-core && cargo xtask baosec-lite maki-launcher vault2 maki-link && cd ..   # ~6 min cold, ~3 warm
+scripts/emu.sh 3G,4G                                                             # ~2 min for 4G instructions
 ```
+
+What's where in the fork:
+
+| Path | What |
+|---|---|
+| `apps-baosec/maki-launcher` | boot image, home screen (name, link dot, clock), input focus |
+| `apps-baosec/vault2` | the upstream vault, registered with the launcher |
+| `services/maki-link` | the serial end of the desktop link: time sync, link state |
+| `libs/maki-proto` | the protocol (framing, messages, device logic) and `PROTOCOL.md`; `examples/fake_maki.rs` |
+| `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
+
+Host-side tests need no badge: `cargo test -p roughtime -p maki-proto`. The desktop app's tests
+drive the real protocol logic through `fake_maki`; see its README.
+
+The emulator has no USB, so maki-link sits idle there; the link is exercised end to end against
+`fake_maki` instead.
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `0` Down,
 `1` Select, `2` Up, `3` Right, `4` Left, `5` Center. The emulator runs at roughly
@@ -90,6 +107,12 @@ slow; later builds reuse `devkey/dev-pq.cache`.
 - **Hosted mode** (`cargo xtask baosec-emu`) runs each service as a native x86 process
   with the OLED in a desktop window. Much faster to iterate on UI, but it isn't the
   real binary.
+
+## The badge on this machine
+
+A DC34 badge is usually plugged in here (serial `K402TS`, stock firmware, `/dev/ttyACM0`). It shares
+maki's USB IDs. The desktop app sends it at most one inert HELLO per session (no line ending, so the
+stock console never runs anything) and then leaves it alone. Don't flash it: that's the one-way door.
 
 ## Known issues (firmware)
 

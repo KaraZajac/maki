@@ -4,9 +4,11 @@ Community firmware for the DEF CON 34 badge's core module: a security key with a
 and an app platform for the hacker community to build on. Flipper-style custom firmware,
 for your keys.
 
-> **Status: early development.** Our fork builds and boots in an emulator, with a BAOKEY home
-> screen and the vault as its first app; nothing runs on a badge yet. Start with [RESEARCH.md](./RESEARCH.md); [DEVELOPMENT.md](./DEVELOPMENT.md)
-> has the build-and-emulate loop.
+> **Status: early development.** The custom firmware is named **maki**. It builds and boots in an
+> emulator with a home screen, the vault, and a serial link; a desktop app in the tray
+> ([maki-desktop](https://github.com/KaraZajac/maki-desktop)) keeps it linked and its clock verified
+> with Roughtime. Nothing runs on a badge yet. [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan,
+> [RESEARCH.md](./RESEARCH.md) the background, [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
 
 ## The idea
 
