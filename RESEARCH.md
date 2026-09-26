@@ -288,11 +288,26 @@ comment in `services/usb-bao1x/src/hw.rs` making the squeeze explicit:
 > there are not enough endpoints availbale to concurrently add that in - you have to
 > kick out one of the interfaces above to add mass storage!
 
-A YubiHSM bulk pair needs two more. **We can have the HSM interface, but not while also
-keeping everything the vault ships with.** That's an argument for BAOKEY being its own
-firmware image rather than an app added to the DC34 vault — and it means "HSM + FIDO2 +
-PIV/CCID all at once" is probably not on the table. Pick two, or make the interface set
-configurable at build time.
+A native YubiHSM-shaped bulk pair needs two more, and there aren't two spare.
+
+**But the connector shim (§5) means we don't need a YubiHSM-shaped USB interface at
+all.** Nothing on the host talks to the device directly — everything goes through
+`baokey-connector`, which we write. The device-side transport is therefore entirely our
+choice, and the protocol framing is transport-agnostic: `T L V` frames of a few hundred
+bytes will run over the **existing CDC-ACM serial interface** with zero new endpoints.
+
+That reorders the constraint. Options, cheapest first:
+
+| Transport | New endpoints | Notes |
+|---|---|---|
+| Frame over existing CDC-ACM | **0** | Works today. Serial console and HSM traffic must share or the console moves. |
+| Vendor command on the FIDO HID pair | 0 | 64-byte reports; more framing work, no `dialout` group needed. |
+| Dedicated bulk pair | 2 | Needs the NKRO keyboard dropped. Cleanest, most YubiHSM-like. |
+
+So "HSM + FIDO2 together" is comfortably achievable — drop the keyboard, which BAOKEY
+has no use for anyway. Adding PIV/CCID *on top of both* is where it genuinely runs out
+of room. This is still an argument for BAOKEY being its own firmware image rather than
+an app bolted onto the DC34 vault, but it is not the hard "pick two" I first read it as.
 
 ### 4.3 High speed vs. full speed
 
@@ -311,7 +326,63 @@ infringement, will confuse host software about what it's talking to, and would m
 project un-publishable. See §5 for the way around it, which turns out to be better
 anyway.
 
-### 4.5 This is a security device built by us
+### 4.5 Secure boot requires Baochip's signature — and that's the real ceiling
+
+This is the most consequential thing in the brief and I missed it on the first pass.
+Baochip documents a **supported third-party firmware path** (`README-baochip.md`,
+"Third Party Firmware"), built on a policy of *mutual distrust*:
+
+- `boot0` is indelible and holds Baochip's `reference keys` plus a well-known
+  `developer key` in slot 3.
+- A stage's `key manifest` is four Ed25519 public keys declaring what it will accept
+  for the *next* stage.
+- **A bank of 4 × 256-bit `collateral` keys** (slots 261–264) is preserved *only* when
+  manifest slots 0, 1 and 2 all differ from Baochip's reference keys. Third-party
+  firmware is **required** to mix at least one of slots 261–263 into its master key
+  derivation, and to expose slot 264 for inspection.
+
+The effect is elegant: if anyone swaps a Baochip-signed image back in, the collateral is
+erased and our data becomes permanently undecryptable. **That is hardware-enforced
+anti-downgrade key destruction, and we get it for free.**
+
+The catch is which route we take to a boot1 that runs our keys:
+
+**Path A — developer mode, devkey-signed boot1.** Available today, no one's permission
+needed. `boot1` is writeable and "the chip has to be set into developer mode in which
+case any pre-existing secrets are erased and anyone can install their own `boot1` code."
+Our manifest can carry our own keys, so collateral is preserved for us.
+**But the developer key can never be revoked**, because `boot1` only boots by virtue of
+being devkey-signed. `boot1`'s REPL enforces exactly this:
+
+```rust
+"lockdown" => match validate_image(BOOT0_TO_BOOT1, ...) {
+    ...
+    "Boot1 is signed with the developer key. Refusing to lockdown, as that would brick the chip."
+```
+
+So anyone with five minutes of physical access can install *their* boot1 — also
+devkey-signed, also with non-Baochip manifest keys, so **also inheriting live collateral
+keys** — and unwrap our object store. Path A gives us a fully functional HSM with **no
+secure boot and no physical-access resistance.**
+
+**Path B — Baochip-signed boot1 carrying our key manifest.** `boot0` accepts it on
+Baochip's signature; we then sign every downstream app image ourselves, and `lockdown`
+becomes legal, revoking the developer key so nothing else can ever boot. This is real
+secure boot. Baochip's four stated conditions are mechanical, not subjective: manifest
+entirely distinct from the reference keys, collateral demonstrably populated, demonstrated
+permanent data loss on a Baochip-signed swap-and-revert, and a changed inspection value
+afterwards. It costs a relationship and a review cycle with bunnie, not money.
+
+(The third option — our own `reference keys` burned into `boot0` — needs ~50,000 chips
+plus a retooling fee. Not for us.)
+
+**Path A is the right place to develop. Path B is the only place a device holding real
+keys can end up.** They are not mutually exclusive and the firmware is identical; only
+who signs `boot1` differs. Design for B from the start — specifically, derive the master
+key from the collateral slots *now*, because retrofitting that later means re-keying
+every stored object.
+
+### 4.6 This is a security device built by us
 
 Worth saying plainly. A clone of an HSM protocol with a home-grown SCP03 implementation,
 software RSA, and a hand-written crypto driver is a research artifact. It should carry
@@ -369,12 +440,15 @@ Suggested phasing, each phase independently useful:
 |---|---|---|
 | 0 | Protocol crate: TLV framing, SCP03, command/response types, capability model. Tested against `virtual-yubihsm` and real Yubico clients. | host only |
 | 1 | `baokey-connector` + a software device backend. Proves the ecosystem accepts us. | host only |
-| 2 | Firmware: bulk transport, session layer, object store on PDDB, software crypto. | `baosec-emu` |
+| 2 | Firmware: transport, session layer, object store on PDDB, software crypto. Master key derived from the `collateral` slots from day one (§4.5). | `baosec-emu` |
 | 3 | Screen/button policy engine. The actual point of the project. | `baosec-emu` |
-| 4 | Flash real hardware. ← the one-way door | badge |
-| 5 | PKE hardware driver. Upstreamable to xous-core on its own merits. | badge |
+| 4 | Flash the dev module, devkey-signed. ← the one-way door | badge A |
+| 5 | PKE hardware driver. Upstreamable to xous-core on its own merits. | badge A |
+| 6 | Own `boot1` + key manifest; satisfy Baochip's four conditions; get it signed; `lockdown`. Turns a working HSM into a *trustworthy* one. | badge A |
 
-Phases 0–3 need no badge and cost no secrets. That's most of the project.
+Phases 0–3 need no badge and cost no secrets. That's most of the project. Phase 6 is
+the difference between a demo and a device (§4.5) and depends on someone else's
+timeline, so start the conversation with Baochip early rather than at the end.
 
 ---
 
@@ -418,10 +492,14 @@ Not a rhetorical question — worth being able to answer it.
 | Usage limits | none | hardware one-way counters |
 | Firmware | closed | open, reproducible (`baobit`) |
 | Silicon | opaque | IRIS-inspectable against public RTL |
+| Anti-downgrade | firmware policy | hardware key destruction via `collateral` |
+| Secure boot | yes | only via Baochip-signed `boot1` (§4.5) |
+| Physical attack resistance | sealed, certified | bare PCB in clear plastic |
+| Device attestation | chains to Yubico | ours only — Baochip secrets are erased |
 | Audited | yes, FIPS options | **no** |
 | Costs you | ~$650 | a badge you already own, and its secrets |
 
-The last two rows are the honest ones.
+The bottom half of that table is the honest half.
 
 ---
 
@@ -434,11 +512,15 @@ The last two rows are the honest ones.
 2. **Do we want `THE_FLAG_1` off the sacrificial module first?** Extracting it via the
    sealed-mode route in `~/Projects/BAOSEC/research/dc34badge` costs nothing but time,
    and it's the last chance for that specific unit.
-3. **Primary target: HSM protocol, or PIV?** §6. This determines phase ordering.
-4. **How compatible is "compatible"?** Pass Yubico's own test suites and the
+3. **Do we commit to Path B (§4.5)?** If yes, the master-key derivation must mix the
+   `collateral` slots from the first line of storage code, and we should open a
+   conversation with Baochip early. If no, BAOKEY is explicitly a device that cannot
+   hold keys worth stealing, and the README should say so.
+4. **Primary target: HSM protocol, or PIV?** §6. This determines phase ordering.
+5. **How compatible is "compatible"?** Pass Yubico's own test suites and the
    `virtual-yubihsm` qualification harness, or just "works with `yubihsm-shell` and
    PKCS#11"? The first is a much bigger commitment.
-5. **Public or private long-term?** A clean-room YubiHSM-protocol implementation is
+6. **Public or private long-term?** A clean-room YubiHSM-protocol implementation is
    publishable and interesting. It also invites scrutiny we'd need to be ready for.
 
 ---
