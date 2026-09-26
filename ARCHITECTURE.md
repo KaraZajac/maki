@@ -146,10 +146,10 @@ it's never typed into the computer, which is what a hardware key defends against
 3. ~~Native messaging host and a Chrome/Firefox extension~~ — done: fills logins and codes,
    offers typed logins to maki.
 4. ~~Home screen entries for the vault~~ — done: Authenticator and Passwords.
-5. **Three-button UI**: the icon carousel home, approvals on left/right/centre, and the PIN
-   pad, word picker and review screens as shared pieces.
-6. **Boot PIN and first-boot setup**: the PIN, the secret basis, moving the vault's records into
-   it, the five-try wipe, "locked" answers.
+5. ~~Three-button UI~~ — done: the icon carousel home, menus on left+right, asks that offer
+   one action at a time, and the vault's screens one entry at a time.
+6. ~~Boot PIN and first-boot setup~~ — done: welcome, choose and confirm a PIN, the secret basis
+   (maki-keys), Lock in maki's menu, the five-try wipe, "locked" answers to the desktop.
 7. **Recovery phrase and backups**: make, show and check the phrase; the encrypted backup kept
    by maki desktop; restore on maki.
 8. **Bitcoin wallet**: keys from the phrase; receive addresses shown on maki to check against

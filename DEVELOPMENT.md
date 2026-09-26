@@ -55,7 +55,7 @@ git switch baokey && git merge dev
 ## The loop
 
 ```sh
-cd xous-core && cargo xtask baosec-lite maki-launcher vault2 maki-link && cd ..   # ~6 min cold, ~3 warm
+cd xous-core && cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link && cd ..   # ~6 min cold, ~3 warm
 scripts/emu.sh 3G,4G                                                             # ~2 min for 4G instructions
 ```
 
@@ -63,21 +63,28 @@ What's where in the fork:
 
 | Path | What |
 |---|---|
-| `apps-baosec/maki-launcher` | boot image, home screen (name, link dot, clock), input focus, and the approval screen (`Launcher::ask`) shown over whatever is in front |
+| `apps-baosec/maki-launcher` | boot image, the home carousel, input focus, menus, the PIN and setup screens, and asks (`Launcher::ask`) shown over whatever is in front |
 | `apps-baosec/vault2` | the upstream vault, registered with the launcher; `src/link.rs` answers the browser's requests for logins and codes |
 | `services/maki-link` | the serial end of the desktop link: time sync, link state, and handing requests to the vault |
 | `libs/maki-proto` | the protocol (framing, messages, device logic) and `PROTOCOL.md`; `examples/fake_maki.rs` |
 | `libs/maki-vault-api` | how maki-link asks the vault (one connection only, made at boot) |
+| `services/maki-keys` | the boot PIN: the secret basis's key, wrapped under the PIN's, the wrong-try count and the wipe |
+| `libs/maki-icons` | the home screen's icons, drawn by `icons.py` |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
 Host-side tests need no badge: `cargo test -p roughtime -p maki-proto`. The desktop app's tests
 drive the real protocol logic through `fake_maki`; see its README.
 
 The emulator has no USB, so maki-link sits idle there; the link is exercised end to end against
-`fake_maki` instead. To see the approval screens in the emulator, build with `MAKI_DEMO_ASKS=1`
-in the environment: maki-link then queues three requests at boot as if the desktop had sent
-them (keep a login for github.com, fill it for gist.github.com, keep one for a long hostname).
-Rebuild without it before flashing; the demo code isn't compiled in otherwise.
+`fake_maki` instead. Two build-time switches make the emulator easier to drive; neither is
+compiled in unless set, so rebuild without them before flashing:
+
+- `MAKI_DEMO=1`: every PIN position starts at 0 instead of a random digit (so a script can type
+  a PIN blind), and asks wait 600 s instead of 30 (the emulator skips through idle time, so 30
+  device seconds pass in a moment).
+- `MAKI_DEMO_ASKS=1`: maki-link queues four requests at boot as if the desktop had sent them
+  (keep two logins for github.com, fill one for gist.github.com, keep one for a long hostname).
+  They wait until maki is unlocked.
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `0` Down,
 `1` Select, `2` Up, `3` Right, `4` Left, `5` Center. The emulator runs at roughly
@@ -87,19 +94,33 @@ First boot of a fresh image, as observed: the PDDB finds blank flash, formats an
 **with no prompt**, swap encryption comes on, and the BAOKEY home screen is up by ~3G.
 Every emulator run starts from blank flash, so every run is a first boot.
 
-Launcher regression check (home → Authenticator → Vault Menu → Home screen → home →
-Authenticator). The home screen lists the vault twice, as Authenticator and Passwords:
+Every emulator run is a first boot, so it starts with PIN setup. With `MAKI_DEMO=1`, typing
+000000 is six presses of the centre, left (to ✓), the centre; then the same again. Space the
+presses 0.1G apart, and in zsh expand a variable holding several `--press` options as `${=P}`,
+or they arrive as one argument and are ignored. This walks through setup, locks from maki's
+menu, enters a wrong PIN, then the right one:
 
 ```sh
-scripts/emu.sh 3G,3.6G,4.1G,5G,5.6G,6.4G --press 1@3.1G --press 1@3.7G \
-  --press 0@4.2G --press 0@4.35G --press 0@4.5G --press 0@4.65G --press 0@4.8G \
-  --press 1@5.1G --press 1@5.8G
-scripts/montage.py flow.png 3 .emu/shots/*.pgm   # the six frames as one image
+P="--press 5@2.3G+2M"; for t in 2.4 2.5 2.6 2.7 2.8 2.9; do P="$P --press 5@${t}G+2M"; done
+P="$P --press 3@3.0G+2M --press 5@3.1G+2M"
+for t in 3.2 3.3 3.4 3.5 3.6 3.7; do P="$P --press 5@${t}G+2M"; done
+P="$P --press 3@3.8G+2M --press 5@3.9G+2M --press 5@4.7G+2M"                  # set, continue
+P="$P --press 3@5.0G+2M --press 4@5.0G+2M --press 5@5.2G+2M"                  # menu, Lock
+for t in 5.4 5.5 5.6 5.7 5.8; do P="$P --press 5@${t}G+2M"; done
+P="$P --press 4@5.9G+2M --press 5@6.0G+2M --press 3@6.1G+2M --press 5@6.2G+2M" # 000001
+for t in 6.9 7.0 7.1 7.2 7.3 7.4; do P="$P --press 5@${t}G+2M"; done
+P="$P --press 3@7.5G+2M --press 5@7.6G+2M"                                     # 000000
+scripts/emu.sh 4.9G,5.1G,5.3G,6.15G,6.3G,6.8G,7.55G,8.2G ${=P}
 ```
 
-The launcher logs `bringing 'Authenticator' to the front` and `'Authenticator' returned to
-the home screen` on each change. In the emulator, buttons 3 and 4 arrive swapped (3 is `←`,
-4 is `→`); up and down are as labelled. Reading screenshots: the vault's TOTP view with no codes stored
+Presses: 3 is left (`←`), 4 is right (`→`): the emulator's labels have them the other way
+round. Hold a tap for 2M instructions (`+2M`): the emulator's default of 20M is long enough
+to count as a hold.
+
+
+
+The launcher logs `bringing 'Authenticator' to the front` and `'Authenticator' exited from
+its menu` as apps come and go, and maki-keys logs `PIN set`, `locked` and `unlocked`. Reading screenshots: the vault's TOTP view with no codes stored
 shows `✕✕✕✕✕✕` in the code box, with the white bar under it as the 30-second countdown.
 
 The first cold build signs with the post-quantum developer key (SLH-DSA), which is
