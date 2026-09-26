@@ -376,13 +376,69 @@ afterwards. It costs a relationship and a review cycle with bunnie, not money.
 (The third option — our own `reference keys` burned into `boot0` — needs ~50,000 chips
 plus a retooling fee. Not for us.)
 
+One thing Path A is sometimes confused with: the published DC34 break (an unsigned jump
+in the loader's first 132 bytes) yields machine-mode execution while the badge stays
+*Sealed*, so in principle BAOKEY could run without ever entering developer mode and keep
+`THE_FLAG_1` intact. Don't. It is a live vulnerability rather than a boot path, it grants
+no secure boot, it wouldn't survive a firmware update, and upstream closed it in
+`4c054806e` ("make sure that the entrypoint is in signed code", 2026-08-22) — which we'd
+want in our own build anyway. Building a security device on a bug we're trying to fix is
+backwards.
+
 **Path A is the right place to develop. Path B is the only place a device holding real
 keys can end up.** They are not mutually exclusive and the firmware is identical; only
 who signs `boot1` differs. Design for B from the start — specifically, derive the master
 key from the collateral slots *now*, because retrofitting that later means re-keying
 every stored object.
 
-### 4.6 This is a security device built by us
+### 4.6 The keystore has no access control against code running on the device
+
+`~/Projects/BAOSEC/research/dc34badge/docs/05-fetch-acl-bypass.md` documents a **silicon**
+bug, distinct from the firmware break everything else in that repo rests on. Every
+access-control term in the RRAM controller is ANDed with `data_op`, and `data_op` is
+always zero during an instruction fetch:
+
+```
+rrc.sv:679              assign data_op = !axprot_reg[2];
+VexRiscv_CramSoC.sv:7508 assign iBusAxi_ar_payload_prot = 3'b110;   // AxPROT[2]=1 on every fetch
+rrc.sv:717              key_access_error_pre  = (...) & data_op & keysel   → 0
+rrc.sv:726              data_access_error_pre = (...) & data_op & datasel  → 0
+```
+
+Nothing is forged; `satp` is never touched and no privilege mode helps. The check is
+structurally absent. Measured scope explicitly includes "the key/data apertures", and it
+was confirmed on hardware in both M-mode and U-mode.
+
+**This lands directly on us.** The keystore is at `0x603F_0000`, the data slots at
+`0x603E_0000` — and the `collateral` keys that §4.5 makes our master-key derivation
+depend on are **data slots 261–264**. So the hardware guarantee we'd most want from an
+HSM — *even code running on this device cannot read the root keys* — does not exist on
+this die revision, and per the writeup it "cannot be fixed in firmware on fielded
+badges."
+
+Path B (§4.5) still does its job: with the developer key revoked, only our signed code
+runs, so nobody gets to execute anything in the first place. What we lose is
+defence-in-depth. **Any code-execution bug in BAOKEY's own firmware becomes an immediate
+and total key compromise, with no hardware backstop behind it.** For a device whose
+entire premise is "the keys don't leave even when everything else is owned", that's a
+real demotion, and it belongs in the README rather than in a footnote.
+
+Practical consequences:
+
+- Attack surface discipline matters more than it would on a chip with a working
+  keystore ACL. The USB parser and the SCP03 implementation are the exposed surface;
+  keep them small, keep them `#![forbid(unsafe_code)]`, fuzz them.
+- It strengthens the argument for the *screen*: a device that shows every operation
+  is one where silent misuse is detectable even when extraction isn't preventable.
+- A future die revision fixes this, and the suggested fix in the writeup is two lines.
+  Worth tracking; it's the one limitation here that has an expiry date.
+
+> **Embargo.** That document is marked unpatched and disclosed privately to the chip
+> author, under the same embargo as the rest of that repo. The firmware break was later
+> published with permission; this one may not have been. **Do not reference it in
+> anything public** without checking first. See §8.6.
+
+### 4.7 This is a security device built by us
 
 Worth saying plainly. A clone of an HSM protocol with a home-grown SCP03 implementation,
 software RSA, and a hand-written crypto driver is a research artifact. It should carry
@@ -495,6 +551,7 @@ Not a rhetorical question — worth being able to answer it.
 | Anti-downgrade | firmware policy | hardware key destruction via `collateral` |
 | Secure boot | yes | only via Baochip-signed `boot1` (§4.5) |
 | Physical attack resistance | sealed, certified | bare PCB in clear plastic |
+| Keystore ACL vs. on-device code | enforced | **absent on this die** (§4.6) |
 | Device attestation | chains to Yubico | ours only — Baochip secrets are erased |
 | Audited | yes, FIPS options | **no** |
 | Costs you | ~$650 | a badge you already own, and its secrets |
@@ -521,7 +578,9 @@ The bottom half of that table is the honest half.
    `virtual-yubihsm` qualification harness, or just "works with `yubihsm-shell` and
    PKCS#11"? The first is a much bigger commitment.
 6. **Public or private long-term?** A clean-room YubiHSM-protocol implementation is
-   publishable and interesting. It also invites scrutiny we'd need to be ready for.
+   publishable and interesting. It also invites scrutiny we'd need to be ready for —
+   and §4.6 is under embargo, so any public writeup that explains *why* our threat model
+   is shaped the way it is needs clearance first. Staying private costs nothing for now.
 
 ---
 
