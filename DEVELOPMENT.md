@@ -7,7 +7,7 @@ on 2026-09-25 on Fedora 44 with Rust 1.96.0.
 
 ```
 BAOKEY/
-├── xous-core/          our fork: upstream betrusted-io/xous-core `dev`, branch `baokey`   (gitignored clone)
+├── xous-core/          our fork: KaraZajac/baokey-firmware (private), branch `baokey`     (gitignored clone)
 ├── tools/baomulator/   zst123/dc34_baomulator, full-system badge emulator            (gitignored clone)
 ├── patches/baomulator/ our changes to the emulator, applied on top of the clone
 ├── scripts/emu.sh      build → emulate → PNG screenshots, in one command
@@ -17,10 +17,12 @@ BAOKEY/
 ## One-time setup
 
 ```sh
-# firmware source (reuses BAOSEC's objects, so it's quick)
-git clone --reference ~/Projects/BAOSEC/xous-core --dissociate --branch dev \
-    https://github.com/betrusted-io/xous-core.git xous-core
-git -C xous-core switch -c baokey
+# firmware source: our private fork. --reference reuses BAOSEC's objects so it's quick;
+# drop those two flags on a machine without ~/Projects/BAOSEC.
+git clone --reference ~/Projects/BAOSEC/xous-core --dissociate --branch baokey \
+    https://github.com/KaraZajac/baokey-firmware.git xous-core
+git -C xous-core remote add upstream https://github.com/betrusted-io/xous-core.git
+git -C xous-core fetch upstream --tags
 
 # emulator
 git clone https://github.com/zst123/dc34_baomulator.git tools/baomulator
@@ -28,8 +30,26 @@ git -C tools/baomulator apply "$PWD"/patches/baomulator/*.patch
 ```
 
 The Xous toolchain (`riscv32imac-unknown-xous-elf`) must match your `rustc` exactly;
-see `~/Projects/BAOSEC/SETUP.md`. Tags are required for image creation, and a normal
-clone has them.
+see `~/Projects/BAOSEC/SETUP.md`. The build stamps its version from upstream's git tags
+and fails without them, which is why the fork is its own repo rather than a folder in
+this one.
+
+## The fork
+
+`KaraZajac/baokey-firmware` is private, holds upstream's full history, and has two
+branches: `dev`, an untouched mirror of upstream `dev`, and `baokey`, where our work
+goes. **GitHub Actions is switched off on it**: upstream's workflows would otherwise run
+on every push (two of them trigger on any branch) and spend private-repo minutes. Turn
+it back on deliberately if we want our own CI.
+
+Syncing with upstream:
+
+```sh
+cd xous-core
+git fetch upstream --tags
+git switch dev && git merge --ff-only upstream/dev && git push origin dev --tags
+git switch baokey && git merge dev
+```
 
 ## The loop
 
