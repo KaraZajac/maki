@@ -1,50 +1,48 @@
 # BAOKEY
 
-Turning the DEF CON 34 `baosec-lite` core module into an open hardware security module
-that speaks the YubiHSM 2 protocol — and then does the things a YubiHSM 2 can't, because
-it has a screen and three buttons.
+Community firmware for the DEF CON 34 badge's core module: a security key with a screen,
+and an app platform for the hacker community to build on. Flipper-style custom firmware,
+for your keys.
 
-> **Status: research.** No firmware yet. Nothing here has run against hardware.
-> Start with [RESEARCH.md](./RESEARCH.md) — the feasibility brief, the protocol notes,
-> and the open questions.
+> **Status: design.** No firmware yet. Start with [RESEARCH.md](./RESEARCH.md).
 
 ## The idea
 
-A YubiHSM 2 holds keys and signs things without releasing the key material. It also has
-no display, no buttons, and no way to tell you what it's about to sign. Its password
-lives in a config file on the host, so a compromised host signs whatever it likes,
-silently, forever.
+A YubiKey's touch proves you're there. It doesn't prove what you approved: you tap, and
+whatever your computer asked for gets signed. The DC34 core module has a 128×128 OLED and
+three buttons, so BAOKEY shows you what you're signing (the site you're logging into, the
+SSH user, the commit, the transaction) and waits for you to press a button.
 
-The Baochip-1x module from the DC34 badge has a 128×128 OLED, three buttons, RSA/ECC/
-Ed25519 hardware, a TRNG, a hardware keystore, monotonic counters, and 4 MiB of RRAM.
-It can do everything a YubiHSM 2 does with more storage, and it can also show you the
-digest and make you press a button.
+Planned apps:
 
-The goal is **protocol compatibility first** — so that `yubihsm-shell`, the PKCS#11
-module, and the Python/Go/Rust clients work unmodified — with the screen-and-button
-policy layer added as extensions that degrade cleanly for clients that don't know
-about them.
+- **Passkeys and TOTP**, building on the stock vault
+- **SSH and git signing**: see the user and the commit before you approve
+- **A small Bitcoin wallet**: your seed stays on a QR code you scan, never stored on the badge
+- **Community apps**, installed from the browser over USB, each isolated from your keys
 
-## Approach
+## Who it's for
 
-Rather than claiming Yubico's USB IDs, BAOKEY reimplements `yubihsm-connector`: a small
-host daemon exposing the same `POST /connector/api` HTTP interface, talking to our own
-USB device. Every piece of Yubico host tooling can be pointed at a connector URL, so the
-whole ecosystem comes along for free. See [§5 of the brief](./RESEARCH.md#5-proposed-architecture).
+DEF CON 34 badge owners. BAOKEY runs in the badge's developer mode, which retail baosec
+units ship with permanently disabled.
 
-## Hardware background
+## Read this before you flash
 
-Prior research on this module — the silicon, the boot chain, the published attacks, and
-a verified build environment — lives in `~/Projects/BAOSEC`.
+**Flashing is a one-way door.** Developer mode permanently erases the badge's factory
+secrets: the light-exchange key, `THE_FLAG_1`, and everything the stock vault was storing,
+including TOTP codes, passwords and passkeys. Move those somewhere else first.
 
-## Warning
+**It's not a vault.** BAOKEY protects your keys from malware on your computer: nothing is
+signed without a button press, with the details on screen. It does **not** protect them from
+someone who has your badge. In developer mode anyone can flash their own firmware and read
+what's on it. Treat it like a Flipper, and don't keep anything on it you can't afford to lose.
 
-This is a research project. Any firmware that comes out of it will be an unaudited
-home-grown implementation of a security protocol. Don't put real key material on it.
+This is unaudited firmware from a hobby project.
 
-Flashing custom firmware onto a DC34 badge is **irreversible** and destroys the module's
-provisioned secrets. Read [§4.1](./RESEARCH.md#41-flashing-is-a-one-way-door) first.
+## Background
+
+Research on the silicon, the boot chain and the published attacks lives in
+`~/Projects/BAOSEC`, and the brief links the public sources.
 
 ## License
 
-BSD 3-Clause. See [LICENSE](./LICENSE).
+BSD 3-Clause for now; under review, see [RESEARCH.md §8](./RESEARCH.md#8-open-questions).

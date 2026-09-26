@@ -1,609 +1,403 @@
-# BAOKEY — feasibility brief
+# BAOKEY — design brief
 
-> Can the DEF CON 34 baosec-lite core module be turned into something that behaves
-> like a YubiHSM 2, but with a screen and buttons?
+> Community firmware for the DEF CON 34 badge's core module: a security key with a
+> screen, and an app platform for the hacker community to build on. Flipper-style custom
+> firmware, for your keys.
 
-Compiled 2026-09-25. Hardware facts come from the local `xous-core` @ `da252db56` and
-the `baochip-1x` RTL checkout in `~/Projects/BAOSEC`; protocol facts come from Yubico's
-docs and from third-party implementations of the wire protocol. Nothing here has been
-run against a badge yet — see §8 for what's still unknown.
+Rewritten 2026-09-25, replacing the earlier YubiHSM feasibility brief (its research is
+kept in Appendix A). Hardware facts come from `xous-core` @ `da252db56` and the
+`baochip-1x` RTL in `~/Projects/BAOSEC`. Anything marked *verified* was read in source,
+not recalled. Nothing has run on a badge yet.
 
-Prior hardware/security work on this same module lives in
-[`~/Projects/BAOSEC/RESEARCH.md`](../BAOSEC/RESEARCH.md); this brief assumes it and
-doesn't repeat it.
+## At a glance
 
-**Short answer: yes, and the protocol is the easy half.** The wire protocol is a
-three-byte header plus SCP03, the host ecosystem can be reached without touching
-Yubico's USB IDs, and the chip has more storage and better crypto hardware than a real
-YubiHSM 2. The two things that will actually cost time are that *nobody has written a
-driver for the public-key accelerator yet*, and that the USB controller has barely
-enough endpoints left. Both are tractable. Neither is a weekend.
+- **What:** custom firmware for the DC34 core module. Passkeys, TOTP, SSH and git
+  signing, a small Bitcoin wallet, and a catalog of community apps installed from the
+  browser over USB.
+- **The one idea:** *a key that shows you what you're signing.* A YubiKey's touch proves
+  you're present, not what you approved. A screen fixes that.
+- **How it runs:** in developer mode, on Baochip's stock `boot1`. Anyone can build it,
+  fork it and flash it, which is the point.
+- **What it isn't:** a vault. Malware on your computer can't use your keys without you
+  seeing it; someone holding your badge can read everything on it. Treat it like a Flipper.
+- **Who can run it:** DC34 badge owners. Retail baosec units ship with the developer key
+  revoked, which permanently rules out developer mode, so the audience is the badges
+  already out there.
 
 ---
 
-## 1. What a YubiHSM 2 actually is
+## 1. Decisions, and why
 
-Worth being precise, because "HSM" covers a lot of ground and a YubiHSM 2 is a much
-smaller thing than the name suggests.
+### Personal key, not an HSM
 
-It is a USB device that holds keys and performs operations on them without ever
-releasing the private material. It has **no screen, no buttons, and no user presence
-check of any kind** — authorization is entirely "do you know the password for an
-authentication key". It is designed to live permanently in a server's USB port.
+The first version of this brief targeted YubiHSM 2 compatibility. Set aside: a screen and
+buttons are a human-in-the-loop feature, and an HSM exists to serve software with no human
+around, like a CA server or a build box. The differentiator would be switched off in the
+HSM's main job. A personal key is where the gap is: you tap a YubiKey without knowing what
+you approved, so malware that sends its own request at the moment you expect one gets it
+signed.
 
-- **Storage**: 128 KB, ~256 objects.
-- **Auth model**: objects are owned by *domains* (16 of them) and gated by *capabilities*
-  (a 64-bit bitmask: `sign-ecdsa`, `delete-asymmetric-key`, `export-wrapped`, …).
-  An authentication key has a capability set and a set of delegated capabilities it can
-  grant to objects it creates.
-- **Session**: SCP03 — the GlobalPlatform smartcard secure-channel protocol. A static
-  K-ENC/K-MAC pair derived from the auth key password (PBKDF2), a challenge exchange,
-  then three session keys (S-ENC, S-MAC, S-RMAC) protecting every subsequent message.
-  Newer firmware adds a P-256 ECDH asymmetric auth option.
-- **Audit log**: a hash-chained log of every operation, readable and (optionally)
-  blocking when full.
+### Developer mode, not a Baochip-signed `boot1`
 
-The product's real value is not the silicon; it's that **the host ecosystem is good**.
-PKCS#11 module, `yubihsm-shell`, a Go library, a Python library, a pure-Rust client,
-KSP/CNG on Windows, and integrations in Vault, PKI stacks and code-signing tooling.
-That ecosystem is what we want to inherit, and §5 is about inheriting it cheaply.
+Baochip offers a path where they sign a third party's `boot1`, after which only that
+party's images run (Appendix B). That's real secure boot, and it's exactly wrong here: it
+turns the device into a walled garden where only we can sign code. Community firmware needs
+everyone to be able to build, fork and flash.
 
-### 1.1 The wire protocol
+What developer mode costs, precisely:
 
-Dead simple at the outer layer. Every message is:
+| Threat | Protected? |
+|---|---|
+| Malware on your computer using your keys silently | **Yes.** Every use needs a button press with the details on screen, and keys never leave the badge |
+| A catalog app reading another app's keys | **Yes, once §5.2 is built** |
+| Someone who takes your badge | **No.** Anyone can flash a developer-signed image and read the keys |
+| A code-execution bug in BAOKEY itself | **No.** See §3.3 |
 
-```
-  Tc (1 byte)  command code
-  Lc (2 bytes) big-endian payload length
-  Vc (Lc bytes) payload
-```
+The screen's protection never depended on secure boot, so it survives developer mode
+intact. What's lost is resistance to physical access, which is exactly the Flipper
+situation. An optional passphrase (§3.4) buys some of it back.
 
-The response echoes the command code with the top bit set (`0x03` → `0x83`), or returns
-`0x7f` for an error. A handful of commands are unauthenticated; everything else is
-wrapped inside `SESSION_MESSAGE` and encrypted/MAC'd under SCP03.
+It's also how this badge was meant to be hacked. bunnie's framing for DC34: cheaters get to
+run arbitrary code, but they forfeit the in-game secrets.
 
-Command codes we'd care about, from Yubico's reference:
+### Leave `boot1` alone
 
-| Cmd | Code | Cmd | Code |
-|---|---|---|---|
-| Echo | `0x01` | Generate Asymmetric Key | `0x46` |
-| Create Session | `0x03` | Sign ECDSA | `0x56` |
-| Authenticate Session | `0x04` | Derive ECDH | `0x57` |
-| Session Message | `0x05` | Delete Object | `0x58` |
-| Device Info | `0x06` | Decrypt OAEP | `0x59` |
-| Put Asymmetric Key | `0x45` | Encrypt AES ECB | `0x70` |
-| Decrypt PKCS1 | `0x49` | Encrypt AES CBC | `0x72` |
-| Export Wrapped | `0x4a` | Blink Device | `0x6b` |
+Developer mode only needs us to replace the loader, kernel and apps (`loader.uf2`,
+`xous.uf2`, `swap.uf2`). Replacing `boot1` is the one operation that can genuinely brick
+the module, it needs the two-step `alt-boot1` procedure, and without Baochip's signature it
+buys nothing. Keeping the stock `boot1` also means users keep getting Baochip's `boot1`
+hardening.
 
-Session setup is two round trips:
+One consequence, which corrects earlier advice: the `collateral` key bank (Appendix B) is
+erased by `boot0` on every boot whenever `boot1` carries Baochip's keys, and the stock
+`boot1` does (*verified*, `bao1x-boot/boot0/src/main.rs`). Collateral is unusable in this
+configuration, so the key hierarchy shouldn't be designed around it.
 
-```
-  CREATE SESSION        →  auth key id (2)  +  host challenge (8)
-                        ←  session id (1)   +  card challenge (8)  +  card cryptogram (8)
-  AUTHENTICATE SESSION  →  session id (1)   +  host cryptogram (8)
-                        ←  (empty)
-```
+### Apps are isolated even though the device isn't locked
 
-Sixteen concurrent sessions, 30-second inactivity timeout, refreshed by any valid
-command. All of this is ordinary GlobalPlatform SCP03 and there are clean Rust crates
-for the AES-CMAC and key-derivation pieces.
+Developer mode means anyone *holding* the badge can replace the firmware. It says nothing
+about what an app you *installed* can do. Those are different threats, and for a community
+catalog the second is the likely one. On a Flipper, apps run with access to the whole
+device. BAOKEY apps each get their own address space from the MMU, and that's worth
+protecting (§5.2).
 
-### 1.2 The USB layer
+---
+
+## 2. The hardware
+
+The DC34 badge is two boards. BAOKEY targets the removable **core module** (T6 Torx, two
+screws), which works standalone over USB-C. Background on the silicon, the boot chain and
+the published attacks is in `~/Projects/BAOSEC/RESEARCH.md`.
 
 | | |
 |---|---|
-| VID:PID | `1050:0030` |
-| Interface | `0` |
-| Bulk OUT | `0x01` |
-| Bulk IN | `0x81` |
-| Speed | full-speed, 64-byte packets |
+| CPU | Baochip-1x: VexRiscv RV32-IMAC @ 350 MHz, **with an MMU** |
+| Coprocessors | 4× PicoRV32 "BIO" cores for I/O |
+| Display | 128×128 mono OLED |
+| Input | 3 buttons, plus reset |
+| Camera | GC2145 sensor; the video service works on 256×240 frames. The stock vault already reads QR codes with it |
+| Clock | RTC runs while powered. No battery on the module, so it forgets the time when unplugged |
+| USB | 2.0 high-speed device: EP0 plus **4 endpoints** (§2.3) |
 
-No HID, no CCID, no class driver — raw bulk, WinUSB-bound on Windows via an `MSFT100`
-descriptor. That's it. Which is why third-party implementations exist and work:
-`qpernil/virtual-yubihsm` implements the whole device protocol in Rust over FunctionFS
-and passes real Yubico host tooling, including SCP03, P-256 ECDH auth, the capability
-model, and the hash-chained audit log. **It is the single most useful reference we have
-and we should read it before writing a line of firmware.**
+### 2.1 Storage (*verified*, `libs/bao1x-api/src/offsets/`)
 
-### 1.3 YubiKey is a different animal — and mostly not what we want
-
-The user's question mentioned the YubiKey SDK, so, to close it out: a YubiKey is a
-*smartcard*. It exposes CCID interfaces running applets (PIV, OpenPGP, OATH) addressed
-by ISO 7816 APDUs, plus a FIDO2 HID interface. The tooling (`ykman`, `libykpiv`,
-`yubikey-piv-tool`) talks APDUs through PC/SC.
-
-That matters for us in two ways:
-
-- **It's a separate, additive target.** PIV over CCID would make the module work as a
-  smartcard for SSH, TLS client auth and code signing, on every OS, with no custom
-  connector. That's arguably a *better* first deliverable than the HSM protocol.
-- **The badge already does the FIDO half.** `apps-baosec/dc34-vault` is an OpenSK-derived
-  CTAP2 implementation with `ctap-crypto`, `cbor` and `persistent_store`, running over
-  a `RawFido` HID interface. We would not be starting from zero on FIDO2.
-
-The two do not conflict at the protocol level, but they do conflict at the *endpoint
-budget* level — see §4.2.
-
----
-
-## 2. Does the chip have the crypto?
-
-This is where I stopped trusting marketing copy and read the RTL and the drivers.
-
-### 2.1 What the silicon has — confirmed in RTL
-
-`hw/baochip-1x/rtl/modules/crypto_top/rtl/` contains `pke.sv`, `aes.sv`, `combohasha.sv`,
-`hashcore*.sv`, `trng.sv`, all hanging off an `sce` (Secure Crypto Engine) DMA fabric.
-
-**Public key engine** (`pke.sv`, 1580 lines) is genuinely capable. Its function decode
-selects between three modes:
-
-```systemverilog
-    assign cr_func_ec  = ( cr_func[7:4] == 4'h0 );   // short Weierstrass
-    assign cr_func_rsa = ( cr_func[7:4] == 4'h1 );
-    assign cr_func_ed  = ( cr_func[7:4] == 4'h2 );   // twisted Edwards
-```
-
-with segment allocations sized for **RSA up to 4096 bits** (the comment on the `H`
-segment reads *"H is higher by 2 word for lenght=4096 the H will need 4097 bit"*) and
-separate Edwards-curve point representation including a `T` coordinate — i.e. extended
-projective coordinates, which is the Ed25519 formulation. There's also a `maskseed`
-register feeding operand masking, so side-channel countermeasures were designed in.
-
-So: **RSA-2048/3072/4096, P-256/P-384-class prime curves, and Ed25519 are all in scope
-for hardware acceleration.** That covers essentially the whole YubiHSM 2 algorithm list.
-
-**Hashing** (`libs/bao1x-api/src/sce/combohash.rs`) is the one block with a software API
-already defined, and it's generous: SHA-256, SHA-512, RIPEMD, BLAKE2s, BLAKE2b, BLAKE3,
-SHA-3, plus HMAC-256 and HMAC-512 as first-class hardware modes.
-
-**AES** on this target does *not* go through the SCE `aes.sv` block. `services/aes`
-routes bao1x builds to `zkn.rs` — the **RISC-V Zkn scalar crypto extension**, i.e. AES
-instructions in the VexRiscv core itself — with a `chaffing` variant that injects decoy
-operations for side-channel resistance. (The older `vex.rs` custom-instruction path is
-explicitly excluded on bao1x: `not(feature = "bao1x")`.) This is fine; it's real
-acceleration, and it's already in use.
-
-**TRNG** is driven and working (`libs/bao1x-hal/src/sce/trng.rs`, plus `services/trng`).
-
-Alongside: a hardware key store, monotonic one-way counters (anti-rollback and
-usage-limit counters for free), glitch sensors, ECC-protected RAM, and a secure mesh.
-A real YubiHSM 2 is a smartcard MCU with none of the introspection story — this chip is
-IRIS-inspectable against published RTL, which for a security device is a genuinely
-better position than the thing we're cloning.
-
-### 2.2 What the software has — and this is the gap
-
-> **`libs/bao1x-hal/src/sce/` contains exactly one file: `trng.rs`.**
-> **`libs/bao1x-api/src/sce/` contains exactly one file: `combohash.rs`.**
->
-> Verified against upstream `main` via the GitHub API today, not just the local
-> checkout. As of 2026-09-25 **there is no PKE driver in Xous.** The hardware is there,
-> the RTL is public, and nobody has written the software to drive it.
-
-That is the headline finding of this brief. Everything the badge currently does with
-asymmetric crypto — the FIDO2/CTAP2 P-256 work in `dc34-vault` — runs in **software**,
-via the OpenSK-derived `ctap-crypto` library.
-
-Two consequences:
-
-1. **A software-only BAOKEY is possible today.** RustCrypto (`p256`, `p384`, `ed25519`,
-   `rsa`) on a 350 MHz RV32-IMAC with an MMU and 2 MiB of SRAM will work. It'll be slow
-   — an RSA-4096 signature is plausibly seconds, not milliseconds — and constant-time
-   behaviour is on us. But it unblocks the entire protocol stack immediately, and it
-   means the PKE driver is an *optimization*, not a prerequisite.
-2. **Writing the PKE driver is the highest-value contribution this project could make**,
-   and it's useful to the whole Baochip ecosystem, not just us. It's also the riskiest
-   item: driving an undocumented-from-software crypto DMA engine from SystemVerilog
-   plus the auto-generated register docs at `ci.betrusted.io/bao1x/` is real work, and
-   getting it *wrong* in a way that's subtly non-constant-time is worse than not doing
-   it. Budget it as its own project phase with its own test vectors.
-
-### 2.3 Storage
-
-A YubiHSM 2 gives you 128 KB and 256 objects. We have **4 MiB of RRAM** plus external
-SPI flash behind the swap mechanism, and — importantly — `services/pddb`, an existing
-encrypted, authenticated object database with an established API, already a dependency
-of the vault app.
-
-The hardware key store itself is small: `KEY_SLOTS` on baosec is 7–8 entries. That's
-the right size for *root* keys, not for user objects. The architecture that falls out
-of this is the same one a real HSM uses: a device master key lives in the hardware
-keystore, and it wraps a PDDB-backed object store holding everything else. Object count
-and total storage stop being meaningful limits.
-
----
-
-## 3. The differentiator: screen and buttons
-
-This is the part that isn't a clone, and it's worth designing deliberately rather than
-bolting on.
-
-A YubiHSM 2 cannot tell you what it's doing. If a host is compromised, it will sign
-whatever it's told to sign, forever, silently — the password lives in the host's config
-file. The entire security model is "the key can't be extracted", not "the key can't be
-misused".
-
-With a 128×128 OLED and three buttons we can add:
-
-- **Per-operation confirmation.** Hold-to-approve on a signature, with the digest (or a
-  decoded summary, for structured payloads like an X.509 CSR or an SSH certificate)
-  shown on screen. This is the Ledger model and it defeats host compromise.
-- **Policy per key, set at creation.** "Always confirm", "confirm once per session",
-  "rate-limit to N/hour", "never confirm" (for the server-in-a-rack use case). Expressed
-  as an extension to the capability bitmask, which has spare bits.
-- **Out-of-band unlock.** A PIN entered on the device, not typed into the host. The
-  device password stops being the only thing standing between an attacker and the keys.
-- **Trustworthy attestation of what happened.** The audit log is only as good as your
-  trust in the device; a screen lets the device *show* you the log entry as it's written.
-- **Usage counters in hardware.** The one-way counters mean "this key may be used 100
-  times, ever" is enforceable in silicon, not policy.
-
-Protocol-wise these fit cleanly: an operation that needs confirmation returns a
-"pending / touch required" error that existing clients already know how to retry on, or
-simply blocks until the timeout. Clients that don't know about the feature still work;
-they just see a slow HSM. **Compatibility should be the default and every extension
-should degrade to standard behaviour.**
-
----
-
-## 4. Risks and hard constraints
-
-### 4.1 Flashing is a one-way door
-
-Loading our own firmware puts the module into developer mode: irreversible, erases the
-provisioned secrets, increments a permanent counter. `THE_FLAG_1` and the light-exchange
-key are gone for good.
-
-The post-con Bird Challenge deadline (~2026-09-20) has passed, so that's no longer a
-reason to wait. But **`THE_FLAG_1` has been extracted by others and its value was
-deliberately withheld — it is still findable, and flashing forfeits it.** If that matters,
-extract it first via the sealed-mode route documented in
-`~/Projects/BAOSEC/research/dc34badge`.
-
-**We have two core modules, which largely defuses this.** One becomes the dev unit and
-gets flashed; the other stays sealed as a reference — for diffing behaviour, for
-verifying that a stock badge still interoperates with whatever we build, and as the
-fallback if the dev unit gets bricked. Restocking is not an option on any useful
-timescale: the `dabao` breakout is pre-order only, shipping 2026-12-15 at $12 plus
-$10–18 postage, and Baochip-1x chips themselves aren't generally available until Q4
-2026. **Treat both modules as irreplaceable for the duration of this project.**
-
-Either way, phases 0–3 don't need hardware at all: `cargo xtask baosec-emu` runs the UX
-hosted on x86, and the whole protocol stack can be developed and tested there against
-real Yubico client tooling. Don't spend the door earlier than necessary.
-
-### 4.2 The USB endpoint budget is nearly exhausted
-
-From the SoC docs (`docs/src/ch05-00-usb.md`):
-
-> Supports 5 endpoints: EP0 supports Control Transfer; EP1/2/3/4 support Bulk and
-> Interrupt Transfer.
-
-`CRG_EP_NUM = 8` in the driver counts directions (four physical endpoints, IN and OUT
-each). The current baosec-lite composite device spends them on an NKRO keyboard, the
-RawFido HID pair, and CDC-ACM serial (notification + bulk IN + bulk OUT). There's a
-comment in `services/usb-bao1x/src/hw.rs` making the squeeze explicit:
-
-> there are not enough endpoints availbale to concurrently add that in - you have to
-> kick out one of the interfaces above to add mass storage!
-
-A native YubiHSM-shaped bulk pair needs two more, and there aren't two spare.
-
-**But the connector shim (§5) means we don't need a YubiHSM-shaped USB interface at
-all.** Nothing on the host talks to the device directly — everything goes through
-`baokey-connector`, which we write. The device-side transport is therefore entirely our
-choice, and the protocol framing is transport-agnostic: `T L V` frames of a few hundred
-bytes will run over the **existing CDC-ACM serial interface** with zero new endpoints.
-
-That reorders the constraint. Options, cheapest first:
-
-| Transport | New endpoints | Notes |
+| Where | Size | Holds |
 |---|---|---|
-| Frame over existing CDC-ACM | **0** | Works today. Serial console and HSM traffic must share or the console moves. |
-| Vendor command on the FIDO HID pair | 0 | 64-byte reports; more framing work, no `dialout` group needed. |
-| Dedicated bulk pair | 2 | Needs the NKRO keyboard dropped. Cleanest, most YubiHSM-like. |
+| On-chip RRAM | 4 MiB | `boot0`, `boot1`, loader, kernel image (2.8 MB, ~570 KB free), key slots |
+| SPI flash: app region | 4 MiB | App code. The stock DC34 vault uses **1.1 MiB** |
+| SPI flash: PDDB | 4 MiB | Encrypted, authenticated database: keys, TOTP seeds, passkeys |
+| PSRAM | 8 MiB | Encrypted swap |
+| SRAM | 2 MiB | Working memory |
 
-So "HSM + FIDO2 together" is comfortably achievable — drop the keyboard, which BAOKEY
-has no use for anyway. Adding PIV/CCID *on top of both* is where it genuinely runs out
-of room. This is still an argument for BAOKEY being its own firmware image rather than
-an app bolted onto the DC34 vault, but it is not the hard "pick two" I first read it as.
+For scale, a Ledger Nano S Plus has 1.5 MB for apps and a Nano X has 2 MB. Secrets are tiny
+(a wallet seed is 64 bytes, a TOTP entry about 100), so storage limits nothing planned
+here. Code size is the budget that matters, and there's about 2.9 MiB of headroom.
 
-### 4.3 High speed vs. full speed
+### 2.2 Crypto hardware: present in silicon, mostly undriven
 
-The badge's USB is HS-capable and the serial interface uses 512-byte packets. A real
-YubiHSM 2 is full-speed with 64-byte bulk packets. Whether Yubico's host libraries care
-is **untested** — a well-behaved libusb client reads the max packet size from the
-descriptor, but "well-behaved" is an assumption, and Yubico had no reason to test
-against a HS device. Declaring the interface as full-speed is the conservative move and
-costs us nothing at HSM message sizes. Flag this as a thing to verify early against
-`yubihsm-shell`, because it's cheap to test and expensive to discover late.
-
-### 4.4 Don't claim Yubico's USB IDs
-
-`1050:0030` is Yubico's. Shipping a device that presents those IDs is trademark
-infringement, will confuse host software about what it's talking to, and would make the
-project un-publishable. See §5 for the way around it, which turns out to be better
-anyway.
-
-### 4.5 Secure boot requires Baochip's signature — and that's the real ceiling
-
-This is the most consequential thing in the brief and I missed it on the first pass.
-Baochip documents a **supported third-party firmware path** (`README-baochip.md`,
-"Third Party Firmware"), built on a policy of *mutual distrust*:
-
-- `boot0` is indelible and holds Baochip's `reference keys` plus a well-known
-  `developer key` in slot 3.
-- A stage's `key manifest` is four Ed25519 public keys declaring what it will accept
-  for the *next* stage.
-- **A bank of 4 × 256-bit `collateral` keys** (slots 261–264) is preserved *only* when
-  manifest slots 0, 1 and 2 all differ from Baochip's reference keys. Third-party
-  firmware is **required** to mix at least one of slots 261–263 into its master key
-  derivation, and to expose slot 264 for inspection.
-
-The effect is elegant: if anyone swaps a Baochip-signed image back in, the collateral is
-erased and our data becomes permanently undecryptable. **That is hardware-enforced
-anti-downgrade key destruction, and we get it for free.**
-
-The catch is which route we take to a boot1 that runs our keys:
-
-**Path A — developer mode, devkey-signed boot1.** Available today, no one's permission
-needed. `boot1` is writeable and "the chip has to be set into developer mode in which
-case any pre-existing secrets are erased and anyone can install their own `boot1` code."
-Our manifest can carry our own keys, so collateral is preserved for us.
-**But the developer key can never be revoked**, because `boot1` only boots by virtue of
-being devkey-signed. `boot1`'s REPL enforces exactly this:
-
-```rust
-"lockdown" => match validate_image(BOOT0_TO_BOOT1, ...) {
-    ...
-    "Boot1 is signed with the developer key. Refusing to lockdown, as that would brick the chip."
-```
-
-So anyone with five minutes of physical access can install *their* boot1 — also
-devkey-signed, also with non-Baochip manifest keys, so **also inheriting live collateral
-keys** — and unwrap our object store. Path A gives us a fully functional HSM with **no
-secure boot and no physical-access resistance.**
-
-**Path B — Baochip-signed boot1 carrying our key manifest.** `boot0` accepts it on
-Baochip's signature; we then sign every downstream app image ourselves, and `lockdown`
-becomes legal, revoking the developer key so nothing else can ever boot. This is real
-secure boot. Baochip's four stated conditions are mechanical, not subjective: manifest
-entirely distinct from the reference keys, collateral demonstrably populated, demonstrated
-permanent data loss on a Baochip-signed swap-and-revert, and a changed inspection value
-afterwards. It costs a relationship and a review cycle with bunnie, not money.
-
-(The third option — our own `reference keys` burned into `boot0` — needs ~50,000 chips
-plus a retooling fee. Not for us.)
-
-One thing Path A is sometimes confused with: the published DC34 break (an unsigned jump
-in the loader's first 132 bytes) yields machine-mode execution while the badge stays
-*Sealed*, so in principle BAOKEY could run without ever entering developer mode and keep
-`THE_FLAG_1` intact. Don't. It is a live vulnerability rather than a boot path, it grants
-no secure boot, it wouldn't survive a firmware update, and upstream closed it in
-`4c054806e` ("make sure that the entrypoint is in signed code", 2026-08-22) — which we'd
-want in our own build anyway. Building a security device on a bug we're trying to fix is
-backwards.
-
-**Path A is the right place to develop. Path B is the only place a device holding real
-keys can end up.** They are not mutually exclusive and the firmware is identical; only
-who signs `boot1` differs. Design for B from the start — specifically, derive the master
-key from the collateral slots *now*, because retrofitting that later means re-keying
-every stored object.
-
-### 4.6 The keystore has no access control against code running on the device
-
-`~/Projects/BAOSEC/research/dc34badge/docs/05-fetch-acl-bypass.md` documents a **silicon**
-bug, distinct from the firmware break everything else in that repo rests on. Every
-access-control term in the RRAM controller is ANDed with `data_op`, and `data_op` is
-always zero during an instruction fetch:
-
-```
-rrc.sv:679              assign data_op = !axprot_reg[2];
-VexRiscv_CramSoC.sv:7508 assign iBusAxi_ar_payload_prot = 3'b110;   // AxPROT[2]=1 on every fetch
-rrc.sv:717              key_access_error_pre  = (...) & data_op & keysel   → 0
-rrc.sv:726              data_access_error_pre = (...) & data_op & datasel  → 0
-```
-
-Nothing is forged; `satp` is never touched and no privilege mode helps. The check is
-structurally absent. Measured scope explicitly includes "the key/data apertures", and it
-was confirmed on hardware in both M-mode and U-mode.
-
-**This lands directly on us.** The keystore is at `0x603F_0000`, the data slots at
-`0x603E_0000` — and the `collateral` keys that §4.5 makes our master-key derivation
-depend on are **data slots 261–264**. So the hardware guarantee we'd most want from an
-HSM — *even code running on this device cannot read the root keys* — does not exist on
-this die revision, and per the writeup it "cannot be fixed in firmware on fielded
-badges."
-
-Path B (§4.5) still does its job: with the developer key revoked, only our signed code
-runs, so nobody gets to execute anything in the first place. What we lose is
-defence-in-depth. **Any code-execution bug in BAOKEY's own firmware becomes an immediate
-and total key compromise, with no hardware backstop behind it.** For a device whose
-entire premise is "the keys don't leave even when everything else is owned", that's a
-real demotion, and it belongs in the README rather than in a footnote.
-
-Practical consequences:
-
-- Attack surface discipline matters more than it would on a chip with a working
-  keystore ACL. The USB parser and the SCP03 implementation are the exposed surface;
-  keep them small, keep them `#![forbid(unsafe_code)]`, fuzz them.
-- It strengthens the argument for the *screen*: a device that shows every operation
-  is one where silent misuse is detectable even when extraction isn't preventable.
-- A future die revision fixes this, and the suggested fix in the writeup is two lines.
-  Worth tracking; it's the one limitation here that has an expiry date.
-
-> **Embargo.** That document is marked unpatched and disclosed privately to the chip
-> author, under the same embargo as the rest of that repo. The firmware break was later
-> published with permission; this one may not have been. **Do not reference it in
-> anything public** without checking first. See §8.6.
-
-### 4.7 This is a security device built by us
-
-Worth saying plainly. A clone of an HSM protocol with a home-grown SCP03 implementation,
-software RSA, and a hand-written crypto driver is a research artifact. It should carry
-an unambiguous "not audited, not for production key material" warning, and we should
-resist the temptation to soften that later just because it works well.
-
----
-
-## 5. Proposed architecture
-
-The insight that makes this cheap: **`yubihsm-connector` is a trivially reimplementable
-HTTP shim.**
-
-Yubico's own tooling doesn't have to talk to USB. The connector is a small daemon that
-listens on `localhost:12345` and exposes `POST /connector/api` with
-`Content-Type: application/octet-stream`, passing raw protocol frames through to the
-device, plus a `/connector/status` endpoint. `yubihsm-shell`, the PKCS#11 module,
-python-yubihsm, yubihsm.rs and the Go library can all be pointed at an arbitrary
-connector URL.
-
-So we write **`baokey-connector`**: same HTTP API, our own USB transport, our own
-VID/PID under the OpenMoko `1d50` space the Baochip devices already use. Every piece of
-Yubico host software then works **unmodified**, we never touch their USB IDs, and we get
-a natural place to put host-side extensions the standard protocol has no room for.
-
-```
-  ┌───────────────────────────────────────────────┐
-  │ unmodified Yubico ecosystem                   │
-  │ yubihsm-shell · PKCS#11 · python · Go · Rust  │
-  └────────────────────┬──────────────────────────┘
-                       │ HTTP POST /connector/api
-                       │ application/octet-stream
-  ┌────────────────────┴──────────────────────────┐
-  │ baokey-connector        (host, Rust)          │
-  │  · yubihsm-connector-compatible HTTP API      │
-  │  · USB bulk transport, VID 1d50 / our PID     │
-  └────────────────────┬──────────────────────────┘
-                       │ USB bulk  ·  T(1) L(2) V framing
-  ┌────────────────────┴──────────────────────────┐
-  │ BAOKEY firmware         (Xous, baosec-lite)   │
-  │  ┌─────────────────────────────────────────┐  │
-  │  │ transport    bulk EP pair, TLV framing  │  │
-  │  │ session      SCP03 · 16 sessions        │  │
-  │  │ dispatch     command table · caps · ACL │  │
-  │  │ policy   ◄── OLED + buttons ── NEW      │  │
-  │  │ objects      PDDB, wrapped by keystore  │  │
-  │  │ crypto       RustCrypto → PKE driver    │  │
-  │  └─────────────────────────────────────────┘  │
-  └───────────────────────────────────────────────┘
-```
-
-Suggested phasing, each phase independently useful:
-
-| Phase | Deliverable | Where it runs |
+| Block | In silicon | Driven today |
 |---|---|---|
-| 0 | Protocol crate: TLV framing, SCP03, command/response types, capability model. Tested against `virtual-yubihsm` and real Yubico clients. | host only |
-| 1 | `baokey-connector` + a software device backend. Proves the ecosystem accepts us. | host only |
-| 2 | Firmware: transport, session layer, object store on PDDB, software crypto. Master key derived from the `collateral` slots from day one (§4.5). | `baosec-emu` |
-| 3 | Screen/button policy engine. The actual point of the project. | `baosec-emu` |
-| 4 | Flash the dev module, devkey-signed. ← the one-way door | badge A |
-| 5 | PKE hardware driver. Upstreamable to xous-core on its own merits. | badge A |
-| 6 | Own `boot1` + key manifest; satisfy Baochip's four conditions; get it signed; `lockdown`. Turns a working HSM into a *trustworthy* one. | badge A |
+| Public key engine (`pke.sv`) | RSA up to 4096-bit; short-Weierstrass curves with the curve parameters loaded as operands (P-256, secp256k1, …); twisted Edwards (Ed25519); operand masking | **No.** No driver exists upstream (checked via the GitHub API, 2026-09-25) |
+| Hash engine (`combohash`) | SHA-256/512, SHA-3, BLAKE2s/2b, BLAKE3, RIPEMD-160, HMAC-SHA256/512 | The bootloader's SHA-2 (`bao1x-boot/sha2-bao1x`); userland coverage unverified |
+| AES | RISC-V Zkn instructions in the CPU, with a "chaffing" side-channel mode | Yes (`services/aes`, `zkn.rs`) |
+| TRNG, key slots, one-way counters | | Yes |
 
-Phases 0–3 need no badge and cost no secrets. That's most of the project. Phase 6 is
-the difference between a demo and a device (§4.5) and depends on someone else's
-timeline, so start the conversation with Baochip early rather than at the end.
+All asymmetric crypto today, the vault's passkeys included, runs in software. That's fine
+for P-256 and Ed25519 and slow for RSA. A PKE driver would be the most useful low-level
+contribution this project could make, and it's worth upstreaming on its own.
 
----
+The hash list reads like a wallet spec: RIPEMD-160's main real-world use today is Bitcoin
+addresses, and HMAC-SHA512 is the primitive under BIP32 key derivation and BIP39 seeds.
 
-## 6. The alternative worth considering
+### 2.3 USB endpoints
 
-If the goal is "a useful key device" rather than "a YubiHSM-compatible device",
-**PIV over CCID** beats the HSM protocol on almost every axis:
-
-- It's an actual standard (NIST SP 800-73), not one vendor's protocol.
-- OpenSC gives you PKCS#11 for free, already packaged on every distro.
-- It works with no connector daemon, no custom host software, nothing to install.
-- SSH, TLS client auth, code signing, and Windows login all work out of the box.
-- `ykman`/`yubikey-piv-tool` become usable management tools.
-
-The catch is that PIV is *small*: four key slots in the base spec (plus retired slots),
-no domains, no capability model, no wrapping, no audit log. It's a smartcard, not an
-HSM. And it needs a CCID interface, which is another endpoint pair (§4.2).
-
-SmartCard-HSM / Nitrokey HSM sits in between — APDU-based like PIV, with a real
-key-management model, and an open PKCS#11 in OpenSC — but its own docs concede it's
-"not a cryptographic accelerator", asymmetric-only.
-
-My read: **YubiHSM 2 compatibility is the right primary target.** It has the richest
-authorization model to hang the screen-and-buttons features off, its host ecosystem is
-reachable through a connector we control, and the protocol is small enough to implement
-correctly. PIV is the right *second* target if we want everyday usefulness, and the
-object store from phase 2 would back both.
+EP0 plus four endpoints, per the SoC docs. The stock vault spends them on a keyboard (for
+autotyping), a FIDO HID pair, and USB serial (CDC-ACM), and a comment in
+`services/usb-bao1x/src/hw.rs` notes there's no room for another interface without dropping
+one. BAOKEY needs nothing new: passkeys use FIDO HID, and everything else (signing
+requests, setting the time, installing apps) rides the vault's existing vendor-command
+channel over FIDO HID, or the serial port.
 
 ---
 
-## 7. What this buys us over the real thing
+## 3. Security model
 
-Not a rhetorical question — worth being able to answer it.
+### 3.1 What the screen protects
 
-| | YubiHSM 2 | BAOKEY |
+Every key operation shows what it's about to do and waits for a button press, and keys
+never leave the badge over USB. That defeats the common attack on hardware keys: host
+malware triggering an operation the user didn't intend.
+
+### 3.2 The rule that makes it real
+
+**Show only what the badge verified itself, or mark it as unverified.** A screen that
+displays whatever the host claims is decoration.
+
+The stock vault slips here (*verified*, `vault2/src/ctap/mod.rs:845,862`). On passkey
+registration it shows `rp.name` when the site sets one, which is free text the website
+chooses, instead of `rp.id`, the domain the browser checked. A phishing page on `evil.com`
+can make the screen say "GitHub". The impact is low because the passkey is still bound to
+`evil.com`, but it's the pattern to avoid, and fixing it upstream is about one line.
+
+The same rule shapes every app in §4: the badge must receive the *whole* message, not a
+hash, and derive what it displays from the same bytes it signs.
+
+### 3.3 The hardware can't stop code already running on the badge
+
+`~/Projects/BAOSEC/research/dc34badge/docs/05-fetch-acl-bypass.md` documents a silicon bug:
+every access-control check in the RRAM controller is gated on `data_op`, which is always
+zero during an instruction fetch. Fetching from the key and data slots returns their real
+contents in any privilege mode, and it can't be fixed in firmware on this die.
+
+So there's no hardware backstop, and any code-execution bug in BAOKEY is a full key
+compromise. Keep the exposed surface small: the USB parsers, the signing-request decoders
+and the app loader should be `#![forbid(unsafe_code)]` and fuzzed.
+
+> **Embargo.** That writeup is marked unpatched and privately disclosed, under the same
+> embargo as the rest of its repo. Before BAOKEY goes public, clear it with bunnie, or
+> describe the constraint without the mechanism.
+
+### 3.4 Optional passphrase
+
+For people who want some theft resistance: mix a passphrase, entered on the badge, into the
+key that encrypts the PDDB. A thief who reflashes then faces an offline brute force, which
+only helps with a real passphrase, not a 6-digit PIN (the lesson of the early Trezors). The
+stock baosec vault doesn't have this; it would be new work.
+
+---
+
+## 4. Apps
+
+In build order. Every app uses the same pipeline (full message in, parse, display, button,
+sign) at rising stakes.
+
+### 4.1 Passkeys and TOTP: already exists
+
+`apps-baosec/vault2`, the upstream vault without the DEF CON game code, already does FIDO2
+passkeys with the site on screen, TOTP and password storage, on an OpenSK-derived CTAP2
+stack. BAOKEY forks it rather than rebuilding.
+
+Two changes:
+
+- **Set the time over USB.** The vault reads the time from a QR code because the module has
+  no battery. Its `set_time()` is a single message to the RTC service, so a USB command is
+  a few lines. But the host now controls the clock: it could wind it forward to harvest
+  future codes, which matters because the vault can autotype them. Show the time on screen
+  when it's set, and require a button press for large jumps. If we ever want it airtight,
+  Roughtime gives signed time the host can relay but can't forge.
+- **Fix the `rp.name` display** (§3.2).
+
+### 4.2 SSH and git signing
+
+- **SSH:** a host-side ssh-agent that forwards to the badge. The agent protocol hands over
+  the full login message, so the badge can show the username and key from the bytes it
+  signs. It can't verify *which server*, and shouldn't pretend to.
+- **git:** a helper set as git's `gpg.ssh.program`. It sends the whole commit, and the badge
+  hashes it itself and shows the author and subject.
+- **Zero-install fallback:** `ssh-keygen -t ecdsa-sk` should already work through the FIDO
+  interface (untested), but that way the badge only sees a hash and has nothing to show.
+
+### 4.3 Bitcoin wallet, for pocket money
+
+The natural end state of a key that shows what it signs, and the highest stakes.
+
+- **Don't store the seed.** Keep it as a SeedQR (a QR code of the 12 or 24 words) and scan it
+  with the camera for each signing session; the badge forgets it on unplug. This is
+  SeedSigner's model, and it makes §3.3 irrelevant for the wallet's most important secret.
+- **Bitcoin only, at first.** Its transaction format (PSBT, BIP174) can be decoded and shown
+  honestly. Ethereum contract calls are opaque blobs, the "blind signing" problem Ledger
+  still fights.
+- **Build it after §4.2.** The transaction decoder is the most dangerous parser we'd write,
+  so the pipeline should be proven on something low-stakes first.
+- **Camera:** SeedQR codes are 21×21 to 29×29 modules, easy at 256×240. The dense animated
+  QR codes that air-gapped wallets use for transactions are plausible but untested.
+
+### 4.4 Community apps
+
+Whatever people build: things that use the camera, the BIO coprocessors (already
+programmable over serial with `dc34-bio`), games, anything that's fun on a small screen with
+three buttons. §5.2 keeps them away from the keys.
+
+### 4.5 Later, maybe
+
+- **YubiHSM 2 protocol**, as an app for a homelab CA or signing box (Appendix A).
+- **PIV / OpenPGP card.** Standard and widely supported, but they hand the device a 32-byte
+  hash, so there's nothing to show, and they'd need CCID endpoints we don't have.
+
+---
+
+## 5. The app platform
+
+### 5.1 What exists
+
+Nobody has built an app store or loader for Baochip. Apps are compiled into one signed
+image, and the whole thing is reflashed. But the kernel primitive exists:
+`xous::create_process()` starts a process from a blob of bytes (*verified*; the only user
+is a test, `services/test-spawn`).
+
+Prior art to copy:
+
+- **Flipper Lab**, Flipper's official store at lab.flipper.net, installs apps over Web
+  Serial with no drivers, and lists about 419 apps. Chromium browsers only. The catalog
+  behind it is a GitHub repo of app manifests.
+- **Ledger:** apps declare in signed metadata which keys they may use, and the OS derives
+  only those. The Bitcoin app can't compute your Ethereum keys even if it asks.
+
+### 5.2 Isolation, the part to get right first
+
+Stock Xous trusts every process, which is reasonable while one author signs one image.
+Three findings (*verified*) that matter once strangers write apps:
+
+1. The keystore registers with unlimited connections, and its app-key call reads and
+   writes slots by index without checking the caller.
+2. The kernel maps raw physical memory, executable included, for any process that asks, as
+   long as no other process has claimed that page (`kernel/src/syscall.rs`, `MapMemory`).
+3. A process can install its own exception handler, and an illegal-instruction exception
+   delivers the faulting instruction's bits to it.
+
+Together, 2 and 3 give an ordinary app the §3.3 read primitive. Not verified: whether every
+key page is already claimed while the system runs. The platform shouldn't depend on it.
+
+Requirements:
+
+- **Apps get no raw hardware.** The loader launches catalog apps with physical mappings
+  disabled, which is a small kernel change.
+- **Apps never talk to the keystore.** A broker service derives per-app keys from the device
+  key and the app's identity, which the loader records at launch. The raw keystore only
+  accepts connections from the broker and system services.
+- **The system owns a strip of the screen** that names the app asking, so one app can't fake
+  another's confirmation screen.
+
+### 5.3 Distribution
+
+- **Catalog:** a GitHub repo of app manifests pinned to source commits, built by CI, as
+  Flipper does. Trust comes from reviewable source and reproducible builds.
+- **Installer:** a web page that talks to the badge over Web Serial.
+- **On-device confirmation.** Any website you grant serial access can talk to the badge, so
+  the badge shows the app's name, publisher key and requested permissions, and waits for a
+  button before installing. That's §3.2 applied to code.
+- **Sideloading** unreviewed apps sits behind an on-device developer switch with a permanent
+  indicator.
+
+---
+
+## 6. Plan
+
+| Step | What | Where |
 |---|---|---|
-| Object storage | 128 KB / 256 objects | 4 MiB RRAM + external flash |
-| User presence | none | OLED + 3 buttons, per-key policy |
-| Shows what it signs | no | yes |
-| Auth | host-held password | password + on-device PIN |
-| Usage limits | none | hardware one-way counters |
-| Firmware | closed | open, reproducible (`baobit`) |
-| Silicon | opaque | IRIS-inspectable against public RTL |
-| Anti-downgrade | firmware policy | hardware key destruction via `collateral` |
-| Secure boot | yes | only via Baochip-signed `boot1` (§4.5) |
-| Physical attack resistance | sealed, certified | bare PCB in clear plastic |
-| Keystore ACL vs. on-device code | enforced | **absent on this die** (§4.6) |
-| Device attestation | chains to Yubico | ours only — Baochip secrets are erased |
-| Audited | yes, FIPS options | **no** |
-| Costs you | ~$650 | a badge you already own, and its secrets |
+| 0 | Set up the build: fork `vault2`, pin `xous-core` (layout per §8, question 4); run it in `baosec-emu` | emulator |
+| 1 | Flash badge A with an unmodified developer-key build of the vault. Proves the flash path and crosses the one-way door deliberately | badge A |
+| 2 | Time over USB; the `rp.name` fix | both |
+| 3 | Isolation: broker, loader, no-raw-hardware flag, screen strip | emulator first |
+| 4 | SSH and git signing | both |
+| 5 | Web Serial installer and catalog | host + badge |
+| 6 | Bitcoin wallet | both |
+| 7 | PKE driver | badge |
 
-The bottom half of that table is the honest half.
+Badge B stays sealed throughout, as a reference.
 
----
+## 7. Before flashing badge A
+
+- **Label both badges.** After the flash they look identical.
+- **Everything stored on badge A is lost.** Developer mode erases the keys its storage is
+  encrypted under. Move its TOTP codes to another authenticator (re-enrol from each site),
+  and make sure every site using it as a passkey has another way in. Passkeys can't be
+  exported, by design.
+- **`THE_FLAG_1`:** last chance for this unit. The sealed-mode extraction route is in
+  `~/Projects/BAOSEC/research/dc34badge`. Skip it if you don't care.
+- **Build from the known-good tree** (`~/Projects/BAOSEC/xous-core`), pin the commit, and
+  flash all three of `loader.uf2`, `xous.uf2` and `swap.uf2` the first time.
+- **The flash:** hold a button while pressing reset to reach "Update mode" (it enumerates as
+  `Baochip_1x`), copy the three files, `sync` and unmount (the most common cause of failed
+  updates on Linux), then press a button to commit. The first boot erases the old keys and
+  asks for a reboot. Don't touch `boot1`.
 
 ## 8. Open questions
 
-1. **Which of the two modules becomes the dev unit?** Resolved that we have two (§4.1),
-   so one gets flashed and one stays sealed. Worth labelling them physically before the
-   first flash, because once dev mode is set there is no way to tell them apart from the
-   host except by what they no longer know.
-2. **Do we want `THE_FLAG_1` off the sacrificial module first?** Extracting it via the
-   sealed-mode route in `~/Projects/BAOSEC/research/dc34badge` costs nothing but time,
-   and it's the last chance for that specific unit.
-3. **Do we commit to Path B (§4.5)?** If yes, the master-key derivation must mix the
-   `collateral` slots from the first line of storage code, and we should open a
-   conversation with Baochip early. If no, BAOKEY is explicitly a device that cannot
-   hold keys worth stealing, and the README should say so.
-4. **Primary target: HSM protocol, or PIV?** §6. This determines phase ordering.
-5. **How compatible is "compatible"?** Pass Yubico's own test suites and the
-   `virtual-yubihsm` qualification harness, or just "works with `yubihsm-shell` and
-   PKCS#11"? The first is a much bigger commitment.
-6. **Public or private long-term?** A clean-room YubiHSM-protocol implementation is
-   publishable and interesting. It also invites scrutiny we'd need to be ready for —
-   and §4.6 is under embargo, so any public writeup that explains *why* our threat model
-   is shaped the way it is needs clearance first. Staying private costs nothing for now.
+1. **License.** `xous-core` is Apache-2.0, and `vault2`'s CTAP stack is Google's OpenSK, also
+   Apache-2.0. This repo is BSD-3-Clause. Forked files stay Apache-2.0 regardless; switching
+   BAOKEY to Apache-2.0, or Rust's usual MIT/Apache-2.0, would let code move to and from
+   upstream without friction. There's no code yet, so changing now is free.
+2. **Going public.** A community firmware has to be public eventually, and §3.3's embargo has
+   to be cleared or worked around first.
+3. **Upstream first?** The PKE driver and the `rp.name` fix belong in `xous-core`. The kernel
+   changes for §5.2 might too, so it's worth asking bunnie early whether he'd take them.
+4. **Out-of-tree or fork?** Building out-of-tree against a pinned `xous-core` (the
+   `bunnie/dabao-console` pattern) keeps this repo small, but the kernel changes for §5.2 may
+   force a fork.
 
 ---
 
-## 9. Links
+## Appendix A: YubiHSM 2 (set aside)
 
-**Protocol**
-- Command reference (authoritative): https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-cmd-reference.html
-- User guide: https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/
-- Connector: https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-tools-connector.html
+Kept for a possible future app.
 
-**Reference implementations**
-- `virtual-yubihsm` — full device protocol in Rust, the key reference: https://github.com/qpernil/virtual-yubihsm
-- `yubihsm.rs` — pure-Rust client, USB constants: https://github.com/iqlusioninc/yubihsm.rs
-- `python-yubihsm`: https://developers.yubico.com/python-yubihsm/
-- `yubihsm-connector` (Go, the shim we're reimplementing): https://github.com/Yubico/yubihsm-connector
-- `yubihsm-shell` + PKCS#11: https://github.com/Yubico/yubihsm-shell
+- **Wire protocol:** `T(1) L(2, big-endian) V`. Responses echo the command with the top bit
+  set, or `0x7f` on error. Sessions use GlobalPlatform SCP03: two round trips (Create Session
+  `0x03`, Authenticate Session `0x04`), then everything is wrapped in Session Message `0x05`.
+  16 sessions, 30-second inactivity timeout.
+- **USB:** `1050:0030`, interface 0, bulk OUT `0x01` and IN `0x81`, full-speed, 64-byte
+  packets.
+- **Don't clone the USB IDs.** `yubihsm-connector` is just `POST /connector/api`
+  (`application/octet-stream`) on `localhost:12345`, and every Yubico tool can be pointed at
+  a connector URL. A connector we write for our own device gets the whole ecosystem (PKCS#11,
+  `yubihsm-shell`, the Python/Go/Rust clients) unmodified.
+- **Reference implementation:** `qpernil/virtual-yubihsm`, the full device side in Rust.
 
-**Hardware**
-- Baochip-1x RTL (`rtl/modules/crypto_top/rtl/pke.sv`): https://github.com/baochip/baochip-1x
+## Appendix B: the Baochip-signed `boot1` path (set aside)
+
+For a possible future locked edition. Source: `README-baochip.md`, "Third Party Firmware".
+
+- Baochip will sign a third party's `boot1` whose key manifest carries the third party's
+  keys. That party then signs everything downstream and can run `lockdown` to revoke the
+  developer key.
+- `boot1` refuses to lock down while it's developer-signed ("Refusing to lockdown, as that
+  would brick the chip"), so there's no secure boot without Baochip's signature.
+- A bank of 4×256-bit `collateral` keys (slots 261–264) survives only when `boot1`'s keys all
+  differ from Baochip's. Third-party firmware must mix it into its master key, so swapping a
+  Baochip-signed image back in destroys the third party's data.
+- Baochip's four conditions for signing are mechanical: a distinct manifest, collateral that
+  is demonstrably populated, demonstrated data loss after a swap-and-revert, and a changed
+  inspection value afterwards.
+- Even then, §3.3 means a code-execution bug is still a full compromise.
+
+## Links
+
+**Baochip / Xous**
+- xous-core (start at `README-baochip.md`): https://github.com/betrusted-io/xous-core
+- Baochip-1x RTL: https://github.com/baochip/baochip-1x
 - Coder's guide: https://baochip.github.io/baochip-1x/
-- Peripheral register docs: https://ci.betrusted.io/bao1x/
-- Xous: https://github.com/betrusted-io/xous-core
+- Register docs: https://ci.betrusted.io/bao1x/
+- Out-of-tree app pattern: https://github.com/bunnie/dabao-console
 
-**Adjacent**
-- SmartCard-HSM in OpenSC: https://github.com/OpenSC/OpenSC/wiki/SmartCardHSM
-- PIV (NIST SP 800-73): https://csrc.nist.gov/pubs/sp/800/73/4/final
+**Prior art**
+- Flipper Lab: https://lab.flipper.net/apps
+- Flipper app catalog: https://github.com/flipperdevices/flipper-application-catalog
+- Ledger app isolation: https://developers.ledger.com/docs/device-app/explanation/psd/application-isolation
+- SeedQR spec: https://github.com/SeedSigner/seedsigner/blob/dev/docs/seed_qr/README.md
+- Roughtime: https://datatracker.ietf.org/doc/draft-ietf-ntp-roughtime/
+
+**YubiHSM (Appendix A)**
+- Command reference: https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-cmd-reference.html
+- Connector: https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-tools-connector.html
+- virtual-yubihsm: https://github.com/qpernil/virtual-yubihsm
