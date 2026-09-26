@@ -7,19 +7,25 @@ for your keys.
 > **Status: early development.** The custom firmware is named **maki**. It builds and boots in an
 > emulator with a home screen, the vault, and a serial link; a desktop app in the tray
 > ([maki-desktop](https://github.com/KaraZajac/maki-desktop)) keeps it linked and its clock verified
-> with Roughtime. Nothing runs on a badge yet. [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan,
-> [RESEARCH.md](./RESEARCH.md) the background, [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
+> with Roughtime, and a browser extension asks maki for logins and TOTP codes, which you approve
+> on maki's screen. The browser side is tested in real Chromium and Firefox against a stand-in
+> for maki; the screens below are maki's firmware in the emulator. Nothing runs on a badge yet.
+> [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan, [RESEARCH.md](./RESEARCH.md) the background,
+> [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
+
+![maki asking to keep two logins for github.com, to pick which one to fill on gist.github.com, and to keep a login for a long hostname cut at the start so its end still shows](docs/approvals.png)
 
 ## The idea
 
 A YubiKey's touch proves you're there. It doesn't prove what you approved: you tap, and
 whatever your computer asked for gets signed. The DC34 core module has a 128×128 OLED and
-three buttons, so BAOKEY shows you what you're signing (the site you're logging into, the
-SSH user, the commit, the transaction) and waits for you to press a button.
+buttons, so BAOKEY shows you what you're signing (the site you're logging into, the SSH
+user, the commit, the transaction) and waits for you to press a button.
 
 Planned apps:
 
-- **Passkeys and TOTP**, building on the stock vault
+- **Passkeys, passwords and TOTP**, building on the stock vault, with the browser extension
+  filling logins and codes once you approve them on maki
 - **SSH and git signing**: see the user and the commit before you approve
 - **A small Bitcoin wallet**: your seed stays on a QR code you scan, never stored on the badge
 - **Community apps**, installed from the browser over USB, each isolated from your keys

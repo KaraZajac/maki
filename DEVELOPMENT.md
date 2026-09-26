@@ -63,17 +63,21 @@ What's where in the fork:
 
 | Path | What |
 |---|---|
-| `apps-baosec/maki-launcher` | boot image, home screen (name, link dot, clock), input focus |
-| `apps-baosec/vault2` | the upstream vault, registered with the launcher |
-| `services/maki-link` | the serial end of the desktop link: time sync, link state |
+| `apps-baosec/maki-launcher` | boot image, home screen (name, link dot, clock), input focus, and the approval screen (`Launcher::ask`) shown over whatever is in front |
+| `apps-baosec/vault2` | the upstream vault, registered with the launcher; `src/link.rs` answers the browser's requests for logins and codes |
+| `services/maki-link` | the serial end of the desktop link: time sync, link state, and handing requests to the vault |
 | `libs/maki-proto` | the protocol (framing, messages, device logic) and `PROTOCOL.md`; `examples/fake_maki.rs` |
+| `libs/maki-vault-api` | how maki-link asks the vault (one connection only, made at boot) |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
 Host-side tests need no badge: `cargo test -p roughtime -p maki-proto`. The desktop app's tests
 drive the real protocol logic through `fake_maki`; see its README.
 
 The emulator has no USB, so maki-link sits idle there; the link is exercised end to end against
-`fake_maki` instead.
+`fake_maki` instead. To see the approval screens in the emulator, build with `MAKI_DEMO_ASKS=1`
+in the environment: maki-link then queues three requests at boot as if the desktop had sent
+them (keep a login for github.com, fill it for gist.github.com, keep one for a long hostname).
+Rebuild without it before flashing; the demo code isn't compiled in otherwise.
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `0` Down,
 `1` Select, `2` Up, `3` Right, `4` Left, `5` Center. The emulator runs at roughly

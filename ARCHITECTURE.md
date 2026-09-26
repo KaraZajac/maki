@@ -31,8 +31,8 @@ extensions for the web, and maki's screen and button as the approval for everyth
 | **Link** | desktop ⇄ maki over serial; heartbeat every 10 s; a dot on maki's home screen while linked | **built** |
 | **Time** | maki builds Roughtime requests, desktop relays them, maki verifies two agreeing signed answers | **built** |
 | **Passkeys** | browser ⇄ maki over FIDO2 directly; maki shows the site, you press | works in the stock vault |
-| **Passwords** | page → extension → desktop → maki: "log in to *site*?" → press → credential back to the page | next |
-| **TOTP** | extension spots the code field → "code for *site*?" → press → filled | next |
+| **Passwords** | page → extension → desktop → maki: "*site* — Fill login?" → press → credential back to the page; a login typed and submitted → "Keep new login?" | **built**, tested against the fake maki in real Chromium and Firefox; on maki, built and emulated |
+| **TOTP** | extension spots the code field → "*site* — Send code?" → press → filled; the first time, the owner picks which entry is the site's | **built**, as above; needs a Roughtime-verified clock |
 | **Wallets** | dApp → extension (a wallet provider) or wallet software → maki switches to that wallet, shows the decoded transaction → press → signature back | later |
 | **App store** | desktop lists apps, installs them over serial | later (see RESEARCH.md §5) |
 
@@ -51,17 +51,22 @@ maki adds differs by flow, and it's worth being exact.
   extraction: nothing leaves without a press for that site, so malware can't quietly dump the vault.
   That's a real gain over a password manager on the computer, but it's weaker than passkeys, and
   the app should nudge toward passkeys wherever a site offers them.
-- **The extension ⇄ desktop channel should be paired**, so other software on the computer can't
-  pose as the extension. maki's button stays the final gate either way.
+- **The extension ⇄ desktop channel isn't paired.** Native messaging only lets the maki extension
+  start the host, but the host talks to the tray app over a user-only local socket, which other
+  software running as you can reach and name any site on. maki's screen, which shows the site
+  every time, stays the final gate; pairing would narrow who can ask.
+- **Codes need verified time.** A host that could set maki's clock could collect codes for later,
+  so GET_TOTP waits for Roughtime; the host's own clock is only good for display.
 
 ## Order of work
 
 1. ~~Link and verified time~~ — done: protocol, maki-link, desktop app in the tray.
-2. **Home screen entries for the vault**: Authenticator and Passwords, then a new Passkeys screen
+2. ~~Approval screens on maki~~ — done: the launcher asks over whatever is in front;
+   `GET_LOGIN`, `GET_TOTP`, `SAVE_LOGIN` go through the vault.
+3. ~~Native messaging host and a Chrome/Firefox extension~~ — done: fills logins and codes,
+   offers typed logins to maki.
+4. **Home screen entries for the vault**: Authenticator and Passwords, then a new Passkeys screen
    (passkeys have no screen of their own today).
-3. **Approval screens on maki** and the protocol messages behind them: `GET_LOGIN(site)`,
-   `GET_TOTP(site)`, each answered only after a press on a screen naming the site.
-4. **Native messaging host and a Chrome/Firefox extension** that find login and code fields and fill them.
 5. **Wallets**: Bitcoin first (PSBT, decoded on-device), Ethereum later (EIP-1193 provider).
 6. **App store** over serial, building on Xous's Precursor app loader.
 
@@ -70,8 +75,7 @@ maki adds differs by flow, and it's worth being exact.
 - **One serial owner.** maki desktop holds the port; the extension and the app store go through it.
 - **USB interfaces are fixed**: FIDO HID (passkeys), serial (everything else), keyboard (typing codes
   where there's no extension). Enough for all of the above.
-- **Replies carry no request ID yet.** One request at a time works; a request that times out and
-  then gets a late reply costs the next request one failure. Add IDs before the extension shares
-  the link with the time sync.
+- **Replies carry the request's ID** (protocol v2), so a request waiting on the owner doesn't hold
+  up heartbeats or time sync, and a late reply to a request the host gave up on is dropped.
 - **maki and a stock DC34 badge share USB IDs.** maki names itself `maki` over USB; the desktop app
   sends one inert HELLO to anything with the IDs and leaves non-answering devices alone.
