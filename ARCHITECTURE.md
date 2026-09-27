@@ -283,10 +283,12 @@ quota.
 
 Whether it goes in the backup is a choice. The manifest sets the default (yes for data you'd
 miss; no for caches, or secrets that should never leave maki), and the owner can change it for
-each app in App info. The backup always lists the installed apps (ID, version, developer key,
-where from) and keeps sideloaded bundles too, since there's nowhere else to fetch them again.
-After a restore, maki desktop offers to put the apps back, each through its install screen, and
-then their data. Keys from **keys** come back from the phrase, not the backup.
+each app in App info. For each app kept in the backup, the backup holds its record (ID,
+version, developer key, the owner's choice) and its data, but not the app itself: maki builds
+the whole backup in its RAM, which apps would soon outgrow, so an app goes back on from its
+`.maki` file (or the store). A restore brings the data back into the same developer's app,
+whether it's installed then or later, and never into another developer's app of the same ID,
+which starts empty. Keys from **keys** come back from the phrase, not the backup.
 
 ### The host
 

@@ -1,0 +1,112 @@
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index 8bb931e..af681fd 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -57,6 +57,12 @@ struct Press {
+ 
+ struct Args {
+     checkpoints: Vec<u64>,
++    /// `--sample FROM:TO:STEP`: every STEP instructions in [FROM, TO), note which process is
++    /// running and where (samples.txt in the output directory).
++    sample: Option<(u64, u64, u64)>,
++    /// `--rpt AT[@ADDR]`: at AT instructions, dump the kernel's page ownership table (512
++    /// eight-byte entries at physical ADDR, default 0x611f4000) to rpt.txt.
++    rpt: Option<(u64, u32)>,
+     presses: Vec<Press>,
+     out_dir: String,
+     prefix: String,
+@@ -113,6 +119,8 @@ fn parse_press(s: &str) -> Option<Press> {
+ fn parse_args() -> Args {
+     let mut a = Args {
+         checkpoints: Vec::new(),
++        sample: None,
++        rpt: None,
+         presses: Vec::new(),
+         out_dir: "/tmp/baomulator-shots".into(),
+         prefix: "shot".into(),
+@@ -161,6 +169,22 @@ fn parse_args() -> Args {
+             }
+             "--console" => a.console_each = parse_count(&next(&mut i)).unwrap_or(0) as usize,
+             "--console-final" => a.console_final = parse_count(&next(&mut i)).unwrap_or(0) as usize,
++            "--rpt" => {
++                let v = next(&mut i);
++                let (at, addr) = v.split_once('@').unwrap_or((v.as_str(), "611f4000"));
++                match (parse_count(at), u32::from_str_radix(addr.trim_start_matches("0x"), 16)) {
++                    (Some(at), Ok(addr)) => a.rpt = Some((at, addr)),
++                    _ => eprintln!("shot: bad --rpt spec {v:?} (want AT or AT@ADDR)"),
++                }
++            }
++            "--sample" => {
++                let v = next(&mut i);
++                let parts: Vec<Option<u64>> = v.split(':').map(parse_count).collect();
++                match parts.as_slice() {
++                    [Some(from), Some(to), Some(step)] if *step > 0 => a.sample = Some((*from, *to, *step)),
++                    _ => eprintln!("shot: bad --sample spec {v:?} (want FROM:TO:STEP)"),
++                }
++            }
+             "-h" | "--help" => {
+                 print_help();
+                 std::process::exit(0);
+@@ -375,11 +399,46 @@ fn main() {
+     let mut total: u64 = 0;
+     // Run in slices so virtual time advances the same way as the web UI does.
+     const SLICE: u64 = 10_000_000;
++    let mut samples = String::new();
++    let mut rpt_at = a.rpt.map(|(at, _)| at).unwrap_or(u64::MAX);
++    let mut next_sample = a.sample.map(|(from, _, _)| from).unwrap_or(u64::MAX);
+     for (at, kind, btn) in events {
+         while total < at {
+-            let chunk = SLICE.min(at - total);
++            let chunk = SLICE
++                .min(at - total)
++                .min(next_sample.saturating_sub(total).max(1))
++                .min(rpt_at.saturating_sub(total).max(1));
+             baomulator::emu_run(e, chunk as u32, 10);
+             total += chunk;
++            if total >= rpt_at {
++                let base = a.rpt.unwrap().1;
++                let mut dump = String::new();
++                for i in 0..512u32 {
++                    let ts = baomulator::emu_dbg_read32(e, base + i * 8);
++                    let vpn = baomulator::emu_dbg_read32(e, base + i * 8 + 4);
++                    dump.push_str(&format!("{i} {} {:x} {:08x} {ts}\n", vpn & 0xff, (vpn >> 8) & 0xf, vpn & !0xfff));
++                }
++                let path = format!("{}/rpt.txt", a.out_dir);
++                std::fs::write(&path, dump).ok();
++                println!("shot: page table at {total} in {path}");
++                rpt_at = u64::MAX;
++            }
++            if let Some((_, to, step)) = a.sample {
++                if total >= next_sample && total < to {
++                    let satp = baomulator::emu_dbg_csr(e, 0x180);
++                    samples.push_str(&format!(
++                        "{} {} {} {} {:08x}\n",
++                        total,
++                        (satp >> 22) & 0x1ff,
++                        baomulator::emu_dbg_prv(e),
++                        baomulator::emu_dbg_wfi(e) as u8,
++                        baomulator::emu_dbg_pc(e)
++                    ));
++                    next_sample += step;
++                } else if total >= to {
++                    next_sample = u64::MAX;
++                }
++            }
+         }
+         match kind {
+             Kind::Press => {
+@@ -405,6 +464,14 @@ fn main() {
+         }
+     }
+ 
++    if a.sample.is_some() {
++        let path = format!("{}/samples.txt", a.out_dir);
++        match std::fs::write(&path, &samples) {
++            Ok(()) => println!("shot: {} samples in {path}", samples.lines().count()),
++            Err(err) => eprintln!("shot: {path}: {err}"),
++        }
++    }
++
+     // ---- summary ----
+     println!();
+     println!("== shot summary ==");

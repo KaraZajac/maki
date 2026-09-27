@@ -55,15 +55,25 @@ git switch baokey && git merge dev
 ## The loop
 
 ```sh
-cd xous-core && cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-apps && cd ..   # ~6 min cold, ~2 warm
+cd xous-core && cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host && cd ..   # ~6 min cold, ~2 warm
 scripts/emu.sh 3G,4G                                                             # ~2 min for 4G instructions
 ```
+
+`~flash` builds the launcher into the kernel's image in RRAM, beside the PDDB and the
+display, rather than into swap: code there runs in place, so the launcher, which wakes for
+every press, never pages its code through RAM. The RRAM holds about 3.38 MB for that image, and
+it's 3.06 MB with the launcher; nothing else of ours fits (the app host is 1.46 MB).
 
 What's where in the fork:
 
 | Path | What |
 |---|---|
 | `apps-baosec/maki-launcher` | boot image, the home carousel, input focus, menus, the PIN and setup screens, and asks (`Launcher::ask`, `Launcher::review` with pages) shown over whatever is in front |
+| `apps-baosec/maki-app-host` | apps you install (ARCHITECTURE.md, "Apps you can install"): checks `.maki` bundles and asks the owner before installing or removing one, keeps them and their data in the secret basis (`maki.apps`, `maki.app.<id>`, `maki.data.<id>`), puts them on the home screen, and runs the one in front in `maki-wasm`, below maki's bar; App info in each app's menu |
+| `libs/maki-app-host-api` | how maki-link asks the app host to install, list and remove apps |
+| `libs/maki-bundle` | the `.maki` format, host-tested and fuzzed: manifest, code, icon, Ed25519 signature; permissions and their warnings; who may update an app |
+| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness), fuel, memory and storage limits, `admit` (what maki takes); the same code runs in the SDK's simulator |
+| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator), example apps (Hello, Dice, Tally); see `sdk/README.md` |
 | `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: Bitcoin (receiving addresses and the account key as QR codes and text) and Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes) |
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
 | `libs/maki-eth` | the Ethereum account, host-tested: BIP44 keys, EIP-55, strict RLP, EIP-1559 and EIP-155 transactions and EIP-191 messages, reviewed and signed; tested against alloy |
@@ -75,9 +85,11 @@ What's where in the fork:
 | `libs/maki-vault-api` | how maki-link asks the vault (one connection only, made at boot) |
 | `services/maki-keys` | the boot PIN: the secret basis's key, wrapped under the PIN's, the wrong-try count and the wipe; the recovery phrase, backups (passkeys included), the FIDO keys, and the Bitcoin account (`src/bitcoin.rs`) |
 | `libs/maki-icons` | the home screen's icons, drawn by `icons.py` |
+| `apps-baosec/maki-launcher/assets/splash.py` | the boot image (a maki roll, and the name in the tall font); writes `src/splash.rs` |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
-Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc -p maki-fido -p maki-eth`. The desktop app's tests
+Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc -p maki-fido -p maki-eth -p maki-bundle -p maki-wasm`.
+The SDK builds apart (`cd sdk && cargo build -p maki && cargo build --release --target wasm32-unknown-unknown -p hello -p dice -p tally`); `libs/maki-wasm/tests/fixtures` holds the examples as `maki build` packs them, for the tests, the fake maki and the emulator demo. The desktop app's tests
 drive the real protocol logic through `fake_maki`; see its README.
 
 The emulator has no USB, so maki-link sits idle there; the link is exercised end to end against
@@ -85,8 +97,9 @@ The emulator has no USB, so maki-link sits idle there; the link is exercised end
 compiled in unless set, so rebuild without them before flashing:
 
 - `MAKI_DEMO=1`: every PIN position starts at 0 instead of a random digit (so a script can type
-  a PIN blind), and asks wait 600 s instead of 30 (the emulator skips through idle time, so 30
-  device seconds pass in a moment).
+  a PIN blind), and asks wait six hours instead of seconds (`maki_launcher::ask_timeout`): the
+  emulator skips through idle time, the faster the quieter maki is, so many device minutes can
+  pass between two scripted presses.
 - `MAKI_DEMO_ASKS=1`: maki-link queues four requests at boot as if the desktop had sent them
   (keep two logins for github.com, fill one for gist.github.com, keep one for a long hostname).
   They wait until maki is unlocked.
@@ -95,6 +108,10 @@ compiled in unless set, so rebuild without them before flashing:
   The only way to exercise the backup's encryption on firmware without USB. With no USB there's
   no passkey either, so the backup gets a made-up one for demo.maki, taken out once sealed: the
   restore asks to bring it back (a page, then "restore"), and the Passkeys app then lists it.
+- `MAKI_DEMO_APP=1`: once maki has its PIN and phrase, maki-link hands the app host two of the
+  SDK's examples (Dice and Tally, from `libs/maki-wasm/tests/fixtures`) as if the desktop had
+  sent them, each asking the owner to install it, then a copy of Hello changed after it was
+  signed, which maki refuses, and logs `demo app ...` lines along the way.
 - `MAKI_DEMO_BTC=1`: once maki has its PIN and phrase, maki-link does what the desktop's
   Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
   sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
@@ -104,6 +121,13 @@ compiled in unless set, so rebuild without them before flashing:
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `0` Down,
 `1` Select, `2` Up, `3` Right, `4` Left, `5` Center. The emulator runs at roughly
 30 million instructions per second, so `1G` ≈ 30 s of wall clock.
+
+For RAM and CPU questions, our second Baomulator patch adds two `shot` options, which
+`scripts/emu.sh` passes through: `--sample FROM:TO:STEP` notes which process is running every
+STEP instructions (`samples.txt`: instructions, PID, privilege, waiting for an interrupt, PC;
+`nm` on the ELFs in `target/` turns PCs into functions), and `--rpt AT` dumps the kernel's page
+ownership table at AT instructions (`rpt.txt`: page, PID, flags with wired as bit 0, virtual
+address, and the kernel's page clock), which shows who holds RAM, and what's wired.
 
 First boot of a fresh image, as observed: the PDDB finds blank flash, formats and mounts
 **with no prompt**, swap encryption comes on, and the BAOKEY home screen is up by ~3G.
@@ -132,8 +156,9 @@ Presses: 3 is left (`←`), 4 is right (`→`): the emulator's labels have them 
 round. Hold a tap for 2M instructions (`+2M`): the emulator's default of 20M is long enough
 to count as a hold.
 
-When the first screen appears depends on how many processes boot: with maki-apps in the
-image it's about 2.8G rather than 2.3G. Take a few screenshots early to find it, and shift the
+When the first screen appears depends on how many processes boot and how big the image is:
+with maki-apps in the image it's about 2.8G rather than 2.3G, and with maki-app-host too about
+4.1G (`OFFSET=2.0` for the script below). Take a few screenshots early to find it, and shift the
 presses to match.
 
 `scripts/presses-test-phrase.sh` prints the presses that restore the BIP39 test phrase
@@ -163,6 +188,23 @@ message, sign a transaction (0.05 ETH on Ethereum), checked against `libs/maki-e
 the emulator, so space the presses: continue at 10.9G, then 12.3 (connect), 12.8 and 13.1 (the
 message: next, sign), 13.6, 13.8 and 14.0 (the transaction's pages) and 14.2 (sign), with
 `OFFSET=0.6` as above.
+
+`MAKI_DEMO_APP=1` installs Dice and Tally and opens Dice. With the test phrase's presses
+(`OFFSET=2.0`, for the app host): continue to the home screen at 12.3G; seven presses of the
+centre go through each install screen (the app, where it's from, the developer key, what it
+needs, then install); two to the right and the centre open Dice:
+
+```sh
+MAKI_DEMO=1 MAKI_DEMO_APP=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
+bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
+  for t in 14.7 14.8 14.9 15.0 15.1 15.2 15.3 17.3 17.4 17.5 17.6 17.7 17.8 17.9; do P+=(--press 5@${t}G+2M); done
+  P+=(--press 4@19.5G+2M --press 4@19.6G+2M --press 5@19.7G+2M)
+  scripts/emu.sh 14.6G,17.2G,21.0G "${P[@]}" --console-final 400000' | grep "demo app\|first frame"
+```
+
+Dice's install screen is up by 14.6G and Tally's by 17.2G. The log shows both installs
+(`result 0`), the altered Hello refused (`result 3 'the signature doesn't match: changed since
+it was signed'`), the list, and `first frame after 6187 ms` for Dice, up by about 20.5G.
 
 With `MAKI_DEMO_ASKS` instead, the vault's four requests come after "continue"; space the
 answers 0.7G apart (the vault saves each login before it sends the next request), then left and
@@ -214,12 +256,55 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
   (`maki-apps`), which spares RAM. Worth sending upstream. (The swapper's `oom-doom` feature,
   which evicts ahead of time, doesn't compile in this version.)
 
+- **RAM, and paging.** The badge has 2 MiB of RAM, 512 pages, and in the app demo about 295
+  are wired for good: the kernel's 41; the swapper's 120, mostly shadow page tables (one for
+  each 4 MiB of a process that has pages swapped out, and a root per process); and 8 to 10 for
+  each process's own page tables and kernel pages. So every process costs pages before it does
+  anything, and maki's share the other ~215. Measured in the emulator (`shot --sample` and
+  `--rpt`, in our Baomulator patch):
+  - Wake-ups were the worst of it. Anything that wakes on a timer pages its process back in and
+    pushes out whatever runs, and there were plenty: vault2's TOTP pump (four times a second from
+    boot, on screen or not), the keyboard's chord timer (every 40 ms), three vault2 threads
+    polling maki-keys until unlock, the app host polling the lock through maki-keys (which read
+    the PDDB each time), the launcher's clock (every second). An app, once opened, never drew
+    its first frame. Now they all wait for something to happen, and new code should too: block
+    on a message rather than poll, and don't tick while nothing's on screen.
+  - The kernel handed out addresses for new mappings next-fit and never went back, so a process
+    that maps and frees buffers (a memory message each time it calls a server) walked through
+    its 256 MiB area, and each 4 MiB cost a page table, wired, for good: maki-keys got to 32.
+    Fixed in the fork's kernel (freed addresses are used again, lowest first). Worth sending
+    upstream.
+  - The kernel dates a page by when it came in, not when it was last used, so hot pages go
+    oldest first, and every eviction re-encrypts the page to a new swap slot, even code that
+    never changed. Swapper time is mostly AES-GCM-SIV: POLYVAL in software (45%) and AES (29%).
+    The fork's swapper takes other processes' pages before the needy one's, 12 at a time rather
+    than 24. Next, and upstream-worthy: keep the swap copy of pages that can't have changed
+    instead of re-encrypting them (needs the kernel to track writes), and something closer to
+    least-recently-used.
+  - Where it stands, in the app demo: the swapper does about 18% of the work from setup to the
+    app; opening Dice costs it about 0.6 G instructions, paging the app host's code back in,
+    and Dice's first frame comes 6.2 s after it's opened, in the emulator's time (10 ns an
+    instruction). The badge runs at 700 MHz, so expect less there, but swap goes through the
+    PSRAM, which the emulator doesn't time. To measure on a badge.
+  - The preemption timer interrupts 100 times a second through bao1x-hal-service, even with
+    nothing to run. A page or two of RAM, but most of what the CPU does while idle; on a
+    battery it would matter.
+  - Thread stacks aren't a problem: the kernel maps them on demand.
+
+- **The app host is big.** Its code is 1.46 MB, most of it wasmi (the interpreter and its
+  validator), against 1 MB for vault2 and 0.2 to 0.5 MB for maki's other processes; the swap
+  image holding them is 3.47 MB of its 4 MiB. Release builds already optimise for size
+  (`opt-level = "s"` for the whole workspace, which is why a per-crate override changed
+  nothing), and it can't run from RRAM (0.3 MB left there). Worth a look: leaner wasmi features,
+  and compiling an app's code eagerly at install, so opening it needs wasmi's executor but not
+  its translator.
+
 ## Boot sequence
 
-Baochip's loader logo ("bao", with a progress bar) → the BAOKEY boot image (at least 1.5 s)
-→ on first boot only, the PDDB's "Cryptographic wipe" progress → the home screen. The boot
-image is drawn by `apps-baosec/baokey-launcher/assets/splash.py`; rerun it after editing.
-The loader is part of our build, so its logo could be replaced too.
+Baochip's loader logo ("bao", with a progress bar) → maki's boot image, a maki roll (at least
+1.5 s) → on first boot only, the PDDB's "Cryptographic wipe" progress → setup, or the PIN → the
+home screen. The boot image is drawn by `apps-baosec/maki-launcher/assets/splash.py`; rerun it
+after editing. The loader is part of our build, so its logo could be replaced too.
 
 ## Emulator fidelity notes
 
