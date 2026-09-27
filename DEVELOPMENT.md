@@ -201,8 +201,16 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
   false`: a hard out-of-memory request reached the kernel while the swapper was still busy with
   another, a case the kernel's comment calls vestigial. Every process carries its own runtime and
   stacks, and the badge is near its limit at boot, so maki's own small apps share one process
-  (`maki-apps`). Not yet understood; worth an upstream issue, and a fix before the app store adds
-  processes.
+  (`maki-apps`). Reproduced with an idle process of a few lines added to the image, so it's the
+  count, not what runs. With `--kernel-feature debug-swap` the sequence is: PID 8 (the HAL
+  service) runs out of RAM and the kernel starts the swapper's hard-OOM eviction (`SwapOp(4)`,
+  "hard_oom - userspace activate"); before it completes, PID 16 runs and page-faults on a page in
+  swap (`SwapOp(3)`, RetrievePage), whose swapper call finds the first still marked in progress.
+  The swapper's handler assumes nothing else runs until it finishes, and the IRQs are masked, so
+  how PID 16 got scheduled is the open question. The swapper's proactive eviction (feature
+  `oom-doom`, a thread that evicts below 48 free pages) would keep boot out of the hard-OOM path,
+  but doesn't compile in this version (a `*mut u32` that isn't `Send`). Worth an upstream issue
+  with this reproduction, and a fix before the app store adds processes.
 
 ## Boot sequence
 
