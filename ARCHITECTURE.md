@@ -258,7 +258,9 @@ each one could do:
   developer who loses their key can't update the app, and a new key means new app keys.
 - **keyboard**: typing into the computer as a USB keyboard, only while the app is in front,
   with a mark in the strip while it types. The strongest warning: it could type commands.
-- **camera**: frames from the camera while the app is in front, with a mark in the strip.
+- **camera**: QR codes, through maki's own scanner, while the app is in front: the camera's
+  view fills the screen while it scans, and any button cancels. (Frames themselves, for apps
+  that see more than QR codes, could come later.)
 - **motion**: the accelerometer, which can pick up typing nearby.
 
 No permission gives an app: the recovery phrase; the vault's logins, codes and passkeys; the
@@ -268,9 +270,16 @@ buttons; drawing over maki's strip, or while it isn't in front.
 ### The strip and App info
 
 While an app is open, the top bar is maki's: the app's name, a mark on sideloaded apps that
-never goes away, the typing and camera marks, and the clock. The app draws below it. Since no
+never goes away, "typing" while it types, and the clock. (While it scans, the camera's view
+fills the screen.) The app draws below it. Since no
 app can draw the bar, none can pass for maki's own screens (the PIN, asks, backups), and maki
 never asks for the PIN while an app is open.
+
+An ask can't be answered unseen. It ends a QR scan the app in front has going (the camera's
+view would hide it, and the press that ends a scan would reach it), the app host draws nothing
+for an app the launcher has sent to the back, and presses count only once the ask has been on
+the screen a moment and been drawn again: one queued up before it appeared, or pressed while
+something was still drawn over it, redraws it instead of answering it.
 
 Left+right in an app shows its own items, then App info (where it's from, the version, the
 developer key, its permissions, the storage it uses, whether its data goes in the backup, and
@@ -340,14 +349,22 @@ device:
   stolen catalogue key can't update an existing app, which needs its developer's key, and a
   stolen developer key can't get an update into the store.
 - **Revocation.** The list can name store apps, versions and developer keys, sideloaded ones
-  too (malware found in the wild). maki marks a revoked app, warns each time it's opened, and
-  offers to remove it; the owner decides.
+  too (malware found in the wild). maki won't install a revoked app; one installed before is
+  marked (in App info, and in maki desktop), never started for the computer, and opened only
+  after a page with the store's reason and "Open it anyway?", each time; removing it is the
+  owner's to decide.
 - **Reviewable and reproducible.** The store is a Git repository of manifests pinned to source
   commits and built by CI, as Flipper's is, so anyone can check that what was reviewed is what
-  was stamped.
+  was stamped: `maki reproduce` builds an app from its source and checks the developer's signed
+  bundle against it (manifest, icon and code, byte for byte, given the same Rust).
 - **maki checks it all itself.** maki desktop fetches the store and passes things along, and is
   as untrusted as the rest of the computer. Installing from the store needs verified time, as
-  codes do.
+  codes do. maki desktop checks the same things for the owner's sake (the root chain, the index
+  and revocation list, each bundle against the index), and the **index** it shows, signed by
+  the catalogue key, expires within a month and its version only goes up, so a server can't
+  show an old one to hide an update.
+- **A stolen catalogue key** is replaced by a new root naming a new one; whatever the old key
+  signed goes with it, a revocation list included, whatever its version.
 
 ## Order of work
 
@@ -391,13 +408,19 @@ device:
        install screen (an altered bundle refused); App info; maki desktop's Apps page; app data
        in backups; the SDK, a simulator, example apps. Opening an app is slow while RAM is this
        short (DEVELOPMENT.md, "Known issues"); not yet on a badge.
-    2. The other permissions: ask, link (and waking), keys and keyboard are done in the emulator
-       and against the fake maki; camera and motion aren't yet. On them, the SDK's SSH app: an
+    2. ~~The other permissions~~ — done in the emulator and against the fake maki: ask, link
+       (and waking), keys, keyboard, camera (QR codes) and motion. On them, the SDK's SSH app: an
        SSH key from the phrase, and maki desktop as the SSH agent ssh and git talk to, which hands
        each request to the app; the app reads what's to be signed on maki and asks first
        (checked with OpenSSH's own `ssh-add` and `ssh-keygen -Y sign`).
-    3. The store: root and catalogue keys, stamps, revocations, the store in maki desktop, CI
-       builds.
+    3. The store: root and catalogue keys, stamps, revocations and the signed index are done,
+       checked on maki (in the emulator) and in maki desktop (against the fake maki), which
+       lists the store's apps, installs them and hands maki the store's newest root and
+       revocation list as it links; the SDK's `maki store` makes every record, keys as 24 words
+       for paper included. A development store stands in until Kara makes the real keys offline
+       (DEVELOPMENT.md, "The maki store"). `maki reproduce` checks a bundle against its source
+       (the SDK's examples all reproduce). Not yet: the store's Git repository, and the CI that
+       runs `maki reproduce` on each app submitted.
     4. Native apps: confinement in the kernel and services, then the loader. The out-of-memory
        panic one more process used to cause at boot is fixed (DEVELOPMENT.md, "Known issues"),
        and three more boot.

@@ -1,0 +1,79 @@
+diff --git a/src/bus/devices/udma_i2c.rs b/src/bus/devices/udma_i2c.rs
+index 4a4f084..29c3b18 100644
+--- a/src/bus/devices/udma_i2c.rs
++++ b/src/bus/devices/udma_i2c.rs
+@@ -5,9 +5,10 @@
+ //! CMD_SIZE self-clear after a transfer, R_BUSY reads 0.
+ //!
+ //! Bus traffic itself is modelled only far enough to answer the **GC2145
+-//! camera** (device 0x3C). The driver builds a command-word stream in IFRAM
++//! camera** (device 0x3C) and the **LIS2DH12 accelerometer** (0x19, lying
++//! still, face up: 1 g on z). The driver builds a command-word stream in IFRAM
+ //! and hands it to the "custom" uDMA channel; `exec` walks that stream, and
+-//! for read commands addressed to 0x3C it deposits response bytes into the
++//! for read commands addressed to either it deposits response bytes into the
+ //! armed RX buffer. Every other device is still left silent (nothing written
+ //! to RX), which is what the drivers already tolerate.
+ 
+@@ -26,6 +27,9 @@ pub const REG_SETUP: u32 = 0x34;
+ /// 7-bit I2C address of the GC2145 camera (`GC2145_DEV`, bao1x-hal
+ /// `gc2145/gc2145.rs`).
+ pub const GC2145_DEV: u8 = 0x3C;
++/// 7-bit I2C address of the LIS2DH12 accelerometer (SA0 high, bao1x-hal
++/// `lis2dh12.rs`).
++pub const LIS2DH12_DEV: u8 = 0x19;
+ 
+ pub struct UdmaI2c {
+     /// R_BUSY: set when a transfer is armed, reported once on the next
+@@ -58,6 +62,10 @@ pub struct UdmaI2c {
+     cam_regs: [u8; 256],
+     /// number of GC2145 register reads served (test/debug visibility)
+     pub cam_reads: u32,
++    /// LIS2DH12 register file, 7-bit addresses (the top bit of the register
++    /// pointer asks for auto-increment): WHO_AM_I, data ready, and a reading
++    /// of a badge lying still, face up.
++    accel_regs: [u8; 128],
+ }
+ 
+ impl UdmaI2c {
+@@ -69,6 +77,13 @@ impl UdmaI2c {
+         cam_regs[0xFB] = 0x78;
+         // GC2145_REG_OUTPUT_FMT power-on default (YCbYCr bits get RMW'd by init)
+         cam_regs[0x84] = 0x02;
++        let mut accel_regs = [0u8; 128];
++        accel_regs[0x0F] = 0x33; // WHO_AM_I
++        accel_regs[0x27] = 0x0F; // STATUS_REG: new x, y and z
++        // OUT_X/Y/Z, left-justified: 0, 0 and +1 g (in normal mode at +-2 g,
++        // 250 steps of 4 mg, shifted up 6 bits: 16000 = 0x3E80)
++        accel_regs[0x2C] = 0x80;
++        accel_regs[0x2D] = 0x3E;
+         UdmaI2c {
+             r_busy: false,
+             channel,
+@@ -88,6 +103,7 @@ impl UdmaI2c {
+             cmd_ready: false,
+             cam_regs,
+             cam_reads: 0,
++            accel_regs,
+         }
+     }
+ 
+@@ -175,6 +191,9 @@ impl UdmaI2c {
+     pub fn dev_write(&mut self, dev: u8, reg: u8, val: u8) {
+         if dev == GC2145_DEV {
+             self.cam_regs[reg as usize] = val;
++        } else if dev == LIS2DH12_DEV && (0x1E..0x27).contains(&(reg & 0x7f)) {
++            // its control registers; the data stays what the badge reads lying still
++            self.accel_regs[(reg & 0x7f) as usize] = val;
+         }
+     }
+ 
+@@ -184,6 +203,8 @@ impl UdmaI2c {
+         if dev == GC2145_DEV {
+             self.cam_reads = self.cam_reads.wrapping_add(1);
+             Some(self.cam_regs[reg as usize])
++        } else if dev == LIS2DH12_DEV {
++            Some(self.accel_regs[(reg & 0x7f) as usize])
+         } else {
+             None
+         }

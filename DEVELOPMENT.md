@@ -116,15 +116,26 @@ compiled in unless set, so rebuild without them before flashing:
   and SSH examples (each asks, with a page for each permission), then does what maki desktop's
   SSH agent does: asks the SSH app for its key (maki starts the app without the screen) and to
   sign a sign-in, which the app asks the owner about first. It logs `demo perms ...` lines.
+- `MAKI_DEMO_SENSORS=1`: once maki has its PIN and phrase, maki-link installs the SDK's
+  Sensors example (camera and motion). Opened, its level shows what the emulated accelerometer
+  reads (flat: `0,0,1000`; our third Baomulator patch answers for the LIS2DH12), and its centre
+  scans the QR code the emulator's camera shows (`test://baomulator`).
+- `MAKI_DEMO_STORE=1`: once maki has its PIN and phrase, maki-link does what maki desktop does
+  with the development store (below, "The maki store"): sets maki's clock and calls it verified
+  (standing in for Roughtime, which needs the desktop's network), hands over root 2, installs
+  Sensors from the store ("maki store" on the install screen) and Tally sideloaded, then hands
+  over the revocation list, which revokes Tally. It logs `demo store ...` lines, among them
+  Tally refused when it's sent again (`the maki store revoked it`).
 - `MAKI_DEMO_BTC=1`: once maki has its PIN and phrase, maki-link does what the desktop's
   Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
   sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
   `demo btc signed: N bytes, as expected: true` if the signature is the one maki-btc makes on a
   computer. The PSBT belongs to the BIP39 test phrase, so restore that at setup (below).
 
-Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `0` Down,
-`1` Select, `2` Up, `3` Right, `4` Left, `5` Center. The emulator runs at roughly
-30 million instructions per second, so `1G` ≈ 30 s of wall clock.
+Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `3` is maki's left, `4` its
+right and `5` the centre; `3` and `4` together are the menu. (Baomulator names `3` and `4` the
+other way round, as Right and Left.) The emulator runs at
+roughly 30 million instructions per second, so `1G` ≈ 30 s of wall clock.
 
 For RAM and CPU questions, our second Baomulator patch adds two `shot` options, which
 `scripts/emu.sh` passes through: `--sample FROM:TO:STEP` notes which process is running every
@@ -194,33 +205,36 @@ message: next, sign), 13.6, 13.8 and 14.0 (the transaction's pages) and 14.2 (si
 `OFFSET=0.6` as above.
 
 `MAKI_DEMO_APP=1` installs Dice and Tally and opens Dice. With the test phrase's presses
-(`OFFSET=2.0`, for the app host): continue to the home screen at 12.3G; seven presses of the
+(`OFFSET=2.0`, for the app host): continue to the home screen at 12.3G; five presses of the
 centre go through each install screen (the app, where it's from, the developer key, what it
-needs, then install); two to the right and the centre open Dice:
+needs, then install); two to the right and the centre open Dice. (The launcher logs `showing
+the ask from Dice (6 stops)`: an install takes one press fewer than its stops, the last being
+cancel.)
 
 ```sh
 MAKI_DEMO=1 MAKI_DEMO_APP=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
 bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
-  for t in 14.7 14.8 14.9 15.0 15.1 15.2 15.3 17.3 17.4 17.5 17.6 17.7 17.8 17.9; do P+=(--press 5@${t}G+2M); done
+  for t in 14.7 14.8 14.9 15.0 15.1 17.3 17.4 17.5 17.6 17.7; do P+=(--press 5@${t}G+2M); done
   P+=(--press 4@19.5G+2M --press 4@19.6G+2M --press 5@19.7G+2M)
   scripts/emu.sh 14.6G,17.2G,21.0G "${P[@]}" --console-final 400000' | grep "demo app\|first frame"
 ```
 
 Dice's install screen is up by 14.6G and Tally's by 17.2G. The log shows both installs
 (`result 0`), the altered Hello refused (`result 3 'the signature doesn't match: changed since
-it was signed'`), the list, and `first frame after 6187 ms` for Dice, up by about 20.5G.
+it was signed'`), the list, and `first frame after 6220 ms` for Dice, up by about 20.5G.
 
-`MAKI_DEMO_PERMS=1` shows the permissions: Signer's install takes sixteen presses of the centre
-(the app, where it's from, the developer key, three screens for each of its three permissions,
-what it needs, install) and SSH's seventeen. The SSH app's sign-in ask then comes up on the home
-screen, under the app's own bar; four to the right and the centre open Signer, whose centre asks
-before it signs, and whose menu item types (the emulator's USB takes the keystrokes):
+`MAKI_DEMO_PERMS=1` shows the permissions: Signer's install takes nine presses of the centre
+(the app, where it's from, the developer key, a page for each of its three permissions, one of
+them running on to a second, what it needs, install) and SSH's ten. The SSH app's sign-in ask
+then comes up on the home screen, under the app's own bar; four to the right and the centre open
+Signer, whose centre asks before it signs, and whose menu item types (the emulator's USB takes
+the keystrokes):
 
 ```sh
 MAKI_DEMO=1 MAKI_DEMO_PERMS=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
 bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
-  for i in $(seq 0 15); do P+=(--press 5@$(echo "14.7 + 0.1*$i" | bc)G+2M); done    # install Signer
-  for i in $(seq 0 16); do P+=(--press 5@$(echo "17.3 + 0.1*$i" | bc)G+2M); done    # install SSH
+  for i in $(seq 0 8); do P+=(--press 5@$(echo "14.7 + 0.1*$i" | bc)G+2M); done     # install Signer
+  for i in $(seq 0 9); do P+=(--press 5@$(echo "17.3 + 0.1*$i" | bc)G+2M); done     # install SSH
   P+=(--press 5@21.5G+2M)                                                           # SSH: sign
   for t in 22.5 22.7 22.9 23.1; do P+=(--press 4@${t}G+2M); done; P+=(--press 5@23.3G+2M)  # open Signer
   P+=(--press 5@24.8G+2M --press 5@25.8G+2M)                                        # ask, sign
@@ -232,6 +246,38 @@ The log shows both installs, `demo perms ssh keys: result 0` with the key, and `
 sign: result 0, 88 bytes, a signature: true`; the SSH app then ends by itself after 30 s with
 nothing to do. Signer shows the same key as `maki run` in the SDK (both from the BIP39 test
 phrase): `21b3e138b1d4cf60…`; the host logs `typed 16 characters: done`.
+
+`MAKI_DEMO_SENSORS=1` installs Sensors (seven presses), then one to the left and the centre
+open it: its level shows `x 0 y 0 z 1000`, and the centre scans. The camera's view fills the
+screen, the emulator's camera shows a QR code, and Sensors shows what it says,
+`test://baomulator`:
+
+```sh
+MAKI_DEMO=1 MAKI_DEMO_SENSORS=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
+bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
+  for i in $(seq 0 6); do P+=(--press 5@$(echo "14.7 + 0.1*$i" | bc)G+2M); done     # install Sensors
+  P+=(--press 3@15.8G+2M --press 5@16.0G+2M --press 5@17.5G+2M)                    # open it, scan
+  scripts/emu.sh 14.6G,17.4G,18.5G "${P[@]}" --console-final 400000' | grep "demo sensors\|first frame\|scanned"
+```
+
+`MAKI_DEMO_STORE=1` installs Sensors from the development store and Tally sideloaded, with the
+store's revocation list between them and opening Tally: Sensors' install says where from,
+"maki store", in seven presses; Tally's, up by 17.2G, takes five; one to the left and the
+centre then open Tally, and maki asks first: a page with the store's reason ("Revoked by the
+maki store"), then "Open it anyway?" ("open anyway" or "don't"):
+
+```sh
+MAKI_DEMO=1 MAKI_DEMO_STORE=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
+bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
+  for i in $(seq 0 6); do P+=(--press 5@$(echo "14.7 + 0.1*$i" | bc)G+2M); done     # Sensors, from the store
+  for i in $(seq 0 4); do P+=(--press 5@$(echo "17.3 + 0.1*$i" | bc)G+2M); done     # Tally, sideloaded
+  P+=(--press 3@18.0G+2M --press 5@18.2G+2M)                                       # open Tally
+  scripts/emu.sh 14.8G,17.2G,19.0G "${P[@]}" --console-final 400000' | grep "demo store\|revoked"
+```
+
+The log shows root 2 taken (`root now 2`), both installs, the list taken (`list 1`) and not
+again (`older than what maki has`), Tally refused when it's sent again (`the maki store revoked
+it: ...`), and the list of apps with where each is from.
 
 With `MAKI_DEMO_ASKS` instead, the vault's four requests come after "continue"; space the
 answers 0.7G apart (the vault saves each login before it sends the next request), then left and
@@ -245,6 +291,59 @@ shows `✕✕✕✕✕✕` in the code box, with the white bar under it as the 3
 
 The first cold build signs with the post-quantum developer key (SLH-DSA), which is
 slow; later builds reuse `devkey/dev-pq.cache`.
+
+## The maki store
+
+The store's design is in ARCHITECTURE.md ("The store"); its records are `libs/maki-store` in the
+fork, and the `maki store` commands in the SDK make them. A store is a directory of files to
+publish anywhere maki desktop can fetch them: `roots/1.bin`, `roots/2.bin`, ... (each root signed
+to replace the one before), `revocations.bin`, `index.json` with `index.sig`, and the stamped
+bundles under `apps/`.
+
+**The development store.** Until the real store opens, the firmware and maki desktop both start
+from the development store's root: `xous-core/libs/maki-store/dev-store`, made by its `make.sh`
+from keys that are never committed (they live outside the repos; anyone can make a new set and
+run it again, since nothing flashed trusts them yet). Its root 2 replaces root 1's catalogue key,
+so maki and maki desktop have to follow the chain before anything else checks out; its apps are
+the SDK's examples, stamped; its revocation list revokes Tally 1, which isn't in it, to show a
+revocation covering a sideloaded app. Try it with the fake maki:
+
+```sh
+(cd xous-core && cargo run -p maki-proto --features fake --example fake_maki -- --clock-verified) &
+MAKI_STORE=$PWD/xous-core/libs/maki-store/dev-store npm --prefix desktop run dev   # "connect to fake maki"
+```
+
+maki desktop hands the fake maki root 2 and the list as it links (its log says so), lists the
+store's apps under Apps, and installs them as the store's. `MAKI_STORE` also takes an address
+(`https://`, or `http://localhost` for a local server); without it maki desktop says the store
+isn't open yet.
+
+**The store's keys.** Before the store opens, Kara makes its real keys, offline:
+
+1. On a computer that stays offline, with the SDK's `maki` built for it: three root keys and a
+   catalogue key, `maki store keygen root1.key` and so on. Each prints its public key and 24
+   words: write each root key's words on paper, and keep the three papers in different places.
+   `maki store recover FILE` makes a key again from its words.
+2. Root 1: `maki store root --version 1 --threshold 2 --keys root1.key,root2.key,root3.key
+   --catalogue catalogue.key --expires-days 365 --sign root1.key,root2.key -o roots/1.bin`.
+   Then delete the root key files, keeping their public keys (later roots name them); the
+   catalogue key goes to wherever the store is run from.
+3. The firmware and maki desktop carry root 1 in place of the development store's:
+   `FIRST_ROOT` in `apps-baosec/maki-app-host/src/store.rs` (and the fake maki's, in
+   `libs/maki-proto/examples/fake_maki.rs`), and `FIRST_ROOT` in `desktop/src/shared/store.ts`
+   (base64). maki desktop's store address goes where `storeWhere` looks
+   (`desktop/src/main/store-source.ts`).
+
+Running it: `maki reproduce BUNDLE SOURCE` checks that a developer's bundle is what its source
+builds to (with the Rust the source pins); `maki store add DIR BUNDLE --catalogue
+catalogue.key` stamps a reviewed bundle into the store and signs a new index; `maki store index
+DIR --catalogue catalogue.key` signs the index again, which it needs within 30 days (maki
+desktop won't use an expired one); `maki store revoke` signs a new revocation list, with a
+higher `--version` than the last. Before the catalogue key expires, or if it's lost or stolen,
+a new root names a new one: `maki store root --version N+1` with the next catalogue key, signed
+by two root keys of the current root (recovered from paper, offline) and two of its own; then
+every bundle is stamped again with the new catalogue key, and the revocation list and index
+signed again. maki and maki desktop take a new root only when it's signed so.
 
 ## Two emulators
 
