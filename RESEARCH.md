@@ -285,7 +285,7 @@ Prior art to copy:
 ### 5.2 Isolation, the part to get right first
 
 Stock Xous trusts every process, which is reasonable while one author signs one image.
-Three findings (*verified*) that matter once strangers write apps:
+Five findings (*verified*) that matter once strangers write apps:
 
 1. The keystore registers with unlimited connections, and its app-key call reads and
    writes slots by index without checking the caller.
@@ -293,6 +293,13 @@ Three findings (*verified*) that matter once strangers write apps:
    long as no other process has claimed that page (`kernel/src/syscall.rs`, `MapMemory`).
 3. A process can install its own exception handler, and an illegal-instruction exception
    delivers the faulting instruction's bits to it.
+4. Any process can press the buttons. The keyboard service registers with unlimited
+   connections and injects a key for anyone who sends `InjectKey`, and `keyboard_bouncer`, a
+   server at a fixed address meant for the log server's serial console, does the same for
+   anyone who connects (`bao1x-hal-service/src/servers/keyboard.rs`). Injected keys take the
+   path real presses do, so an app could answer maki's asks itself. (Added 2026-09-27.)
+5. The PDDB has no access control between processes: any process can open any dictionary in
+   a basis that's unlocked, maki's recovery phrase included. (Added 2026-09-27.)
 
 Together, 2 and 3 give an ordinary app the §3.3 read primitive. Not verified: whether every
 key page is already claimed while the system runs. The platform shouldn't depend on it.
@@ -308,6 +315,10 @@ Requirements:
   another's confirmation screen.
 
 ### 5.3 Distribution
+
+*Superseded 2026-09-27 by ARCHITECTURE.md, "Apps you can install": maki desktop installs,
+since it owns the serial port, and sideloading needs no switch; sideloaded apps carry a mark
+that never goes away instead. Apps are WebAssembly first, which sidesteps most of §5.2.*
 
 - **Catalog:** a GitHub repo of app manifests pinned to source commits, built by CI, as
   Flipper does. Trust comes from reviewable source and reproducible builds.
