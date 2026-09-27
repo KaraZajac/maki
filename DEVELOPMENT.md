@@ -147,9 +147,15 @@ transaction (Send, Change, Fee) and signs:
 ```sh
 MAKI_DEMO=1 MAKI_DEMO_BTC=1 cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-apps
 bash -c 'mapfile -t P < <(OFFSET=0.6 scripts/presses-test-phrase.sh)
-  for t in 10.9 11.8 12.2 12.6 12.8 13.0 13.2; do P+=(--press 5@${t}G+2M); done
-  scripts/emu.sh 11.7G,12.1G,12.5G,13.5G "${P[@]}"' | grep "demo btc"
+  for t in 10.9 11.8 12.6 13.1 13.3 13.5 13.7; do P+=(--press 5@${t}G+2M); done
+  scripts/emu.sh 12.5G,13.0G,14.0G "${P[@]}"' | grep "demo btc"
 ```
+
+The times follow the work maki does after a restore (the passkeys' keys and store come first),
+measured by screenshots every 0.2G: the account ask is up by 11.75G, the address by 12.5G, the
+transaction's first page by 13.0G. A press before its screen is up lands on whatever is there
+(on the home screen, it opens Authenticator), so when something changes what maki does after
+setup, measure again.
 
 `MAKI_DEMO_ETH=1` does the same for Ethereum, for a site called demo.maki: connect, sign a
 message, sign a transaction (0.05 ETH on Ethereum), checked against `libs/maki-eth/tests/fixtures`
@@ -195,22 +201,18 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
   always faults, 8 never does. Why the handler needed more than 8 KiB is not yet understood.
   Worth an upstream issue once we know more.
 
-- **Out of memory at boot: a kernel panic in the swapper.** With one more process in the image
-  (the Passkeys app on its own), boot stopped at `PANIC in PID 2: panicked at
-  kernel/src/swap.rs:773: Nesting should not happen`, after `Nesting HardOomSyscall(9, 8)
-  false`: a hard out-of-memory request reached the kernel while the swapper was still busy with
-  another, a case the kernel's comment calls vestigial. Every process carries its own runtime and
-  stacks, and the badge is near its limit at boot, so maki's own small apps share one process
-  (`maki-apps`). Reproduced with an idle process of a few lines added to the image, so it's the
-  count, not what runs. With `--kernel-feature debug-swap` the sequence is: PID 8 (the HAL
-  service) runs out of RAM and the kernel starts the swapper's hard-OOM eviction (`SwapOp(4)`,
-  "hard_oom - userspace activate"); before it completes, PID 16 runs and page-faults on a page in
-  swap (`SwapOp(3)`, RetrievePage), whose swapper call finds the first still marked in progress.
-  The swapper's handler assumes nothing else runs until it finishes, and the IRQs are masked, so
-  how PID 16 got scheduled is the open question. The swapper's proactive eviction (feature
-  `oom-doom`, a thread that evicts below 48 free pages) would keep boot out of the hard-OOM path,
-  but doesn't compile in this version (a `*mut u32` that isn't `Send`). Worth an upstream issue
-  with this reproduction, and a fix before the app store adds processes.
+- **Out of memory at boot: a panic in the swapper (fixed).** With one more process in the image,
+  boot stopped at `PANIC in PID 2: panicked at kernel/src/swap.rs:773: Nesting should not
+  happen`. Traced with `--kernel-feature debug-swap` and progress markers in the swapper: the
+  swapper made its hard-OOM handler's heap only after waiting for the log server, and a boot
+  with many processes ran out of RAM first. The handler's `expect` on the missing heap panicked;
+  the panic's logging made syscalls that let other processes run in the middle of the hard OOM;
+  one page-faulted into swap, and the kernel, finding a swap operation already in progress,
+  panicked. The fork's swapper now makes the heap, and does its boot dry run, before anything
+  else, and if a hard OOM ever finds no heap it evicts in table order instead of panicking. An
+  image with three extra idle processes boots. maki's own apps still share one process
+  (`maki-apps`), which spares RAM. Worth sending upstream. (The swapper's `oom-doom` feature,
+  which evicts ahead of time, doesn't compile in this version.)
 
 ## Boot sequence
 

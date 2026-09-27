@@ -174,8 +174,7 @@ it's never typed into the computer, which is what a hardware key defends against
 9. ~~Passkeys from the phrase, and a Passkeys screen~~ — done: the authenticator's keys from
    the phrase (above), passkeys in the backup, and a Passkeys app that lists them (site and
    user) and deletes one with the owner's yes, telling the vault to re-read its store. It shares
-   a process with the Bitcoin app (`maki-apps`): one more process ran the badge out of memory at
-   boot (DEVELOPMENT.md, "Known issues"). The
+   a process with the Bitcoin app (`maki-apps`), which spares RAM. The
    emulator has no USB, so FIDO itself hasn't run there: the key hand-off, backup, restore and
    the app have.
 10. ~~Ethereum~~ — done: an account from the phrase (BIP44, `libs/maki-eth`), given to sites
@@ -186,9 +185,9 @@ it's never typed into the computer, which is what a hardware key defends against
     most the fee can be) and signed there; maki desktop fills in nonce, gas and fees and
     broadcasts through public servers. Signatures match alloy's, byte for byte. Not yet: typed
     data (EIP-712), which maki can't show; token names and decimals, which maki can't verify.
-11. **The app store** over serial, building on Xous's Precursor app loader. First: the kernel's
-    out-of-memory panic when one more process boots (DEVELOPMENT.md, "Known issues"), since
-    every installed app is a process.
+11. **The app store** over serial, building on Xous's Precursor app loader. Every installed app
+    is a process; the out-of-memory panic one more process used to cause at boot is fixed
+    (DEVELOPMENT.md, "Known issues"), and three more boot.
 
 ## Constraints to design around
 
