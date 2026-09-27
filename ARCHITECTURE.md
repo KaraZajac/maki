@@ -178,8 +178,17 @@ it's never typed into the computer, which is what a hardware key defends against
    boot (DEVELOPMENT.md, "Known issues"). The
    emulator has no USB, so FIDO itself hasn't run there: the key hand-off, backup, restore and
    the app have.
-10. **Ethereum** (an EIP-1193 provider in the extension), then the **app store** over serial,
-    building on Xous's Precursor app loader.
+10. ~~Ethereum~~ — done: an account from the phrase (BIP44, `libs/maki-eth`), given to sites
+    through an EIP-1193 provider the extension puts in pages (and announces the EIP-6963 way).
+    A site sees the account once the owner connects it on maki; messages (EIP-191) and
+    transactions (EIP-1559, EIP-155) are shown on maki page by page (network, recipient and
+    amount, ERC-20 transfers and approvals spelled out, any other call flagged as unreadable, the
+    most the fee can be) and signed there; maki desktop fills in nonce, gas and fees and
+    broadcasts through public servers. Signatures match alloy's, byte for byte. Not yet: typed
+    data (EIP-712), which maki can't show; token names and decimals, which maki can't verify.
+11. **The app store** over serial, building on Xous's Precursor app loader. First: the kernel's
+    out-of-memory panic when one more process boots (DEVELOPMENT.md, "Known issues"), since
+    every installed app is a process.
 
 ## Constraints to design around
 

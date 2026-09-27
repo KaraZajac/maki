@@ -8,9 +8,9 @@ for your keys.
 > emulator: a boot PIN, a recovery phrase, a home screen, the vault, a Bitcoin wallet and a serial
 > link. A desktop app in the tray ([maki-desktop](https://github.com/KaraZajac/maki-desktop)) keeps
 > it linked, its clock verified with Roughtime and its backups encrypted on the computer; a browser
-> extension asks maki for logins and TOTP codes, which you approve on maki's screen; and Bitcoin
-> wallet software (Sparrow, Bitcoin Core) sends transactions through it for maki to show you and
-> sign. The desktop side is tested against a stand-in for maki that runs maki's own code; the
+> extension asks maki for logins and TOTP codes, which you approve on maki's screen, and gives
+> sites maki's Ethereum account; and Bitcoin wallet software (Sparrow, Bitcoin Core) sends
+> transactions through it for maki to show you and sign. The desktop side is tested against a stand-in for maki that runs maki's own code; the
 > screens below are maki's firmware in the emulator. Nothing runs on a badge yet.
 > [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan, [RESEARCH.md](./RESEARCH.md) the background,
 > [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
@@ -33,6 +33,9 @@ Planned apps:
 - **A small Bitcoin wallet** (working in the emulator): keys on maki behind the boot PIN, from a
   recovery phrase you write down; every payment, the change and the fee shown on maki's screen
   before a transaction is signed; receiving addresses as QR codes that never touch the computer
+- **An Ethereum account** (working in the emulator and in the browser): sites connect only when
+  you allow them on maki, and every message and transaction is shown on maki before it's signed,
+  token transfers and approvals spelled out
 - **Community apps**, installed from the browser over USB, each isolated from your keys
 
 ## Who it's for

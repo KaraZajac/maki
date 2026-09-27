@@ -66,6 +66,7 @@ What's where in the fork:
 | `apps-baosec/maki-launcher` | boot image, the home carousel, input focus, menus, the PIN and setup screens, and asks (`Launcher::ask`, `Launcher::review` with pages) shown over whatever is in front |
 | `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: Bitcoin (receiving addresses and the account key as QR codes and text) and Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes) |
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
+| `libs/maki-eth` | the Ethereum account, host-tested: BIP44 keys, EIP-55, strict RLP, EIP-1559 and EIP-155 transactions and EIP-191 messages, reviewed and signed; tested against alloy |
 | `libs/maki-ui` | the keys and drawing every maki screen shares: status bar, action bar, arrows, icons, QR codes |
 | `libs/maki-btc` | the Bitcoin wallet, host-testable: BIP32/BIP84 keys, addresses, descriptors, PSBT parsing, the checks before signing, signing; tested against rust-bitcoin and Bitcoin Core's consensus code |
 | `apps-baosec/vault2` | the upstream vault, registered with the launcher; `src/link.rs` answers the browser's requests for logins and codes |
@@ -76,7 +77,7 @@ What's where in the fork:
 | `libs/maki-icons` | the home screen's icons, drawn by `icons.py` |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
-Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc -p maki-fido`. The desktop app's tests
+Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc -p maki-fido -p maki-eth`. The desktop app's tests
 drive the real protocol logic through `fake_maki`; see its README.
 
 The emulator has no USB, so maki-link sits idle there; the link is exercised end to end against
@@ -149,6 +150,13 @@ bash -c 'mapfile -t P < <(OFFSET=0.6 scripts/presses-test-phrase.sh)
   for t in 10.9 11.8 12.2 12.6 12.8 13.0 13.2; do P+=(--press 5@${t}G+2M); done
   scripts/emu.sh 11.7G,12.1G,12.5G,13.5G "${P[@]}"' | grep "demo btc"
 ```
+
+`MAKI_DEMO_ETH=1` does the same for Ethereum, for a site called demo.maki: connect, sign a
+message, sign a transaction (0.05 ETH on Ethereum), checked against `libs/maki-eth/tests/fixtures`
+(`demo eth signed: 117 bytes, as expected: true`). Deriving the account the first time is slow in
+the emulator, so space the presses: continue at 10.9G, then 12.3 (connect), 12.8 and 13.1 (the
+message: next, sign), 13.6, 13.8 and 14.0 (the transaction's pages) and 14.2 (sign), with
+`OFFSET=0.6` as above.
 
 With `MAKI_DEMO_ASKS` instead, the vault's four requests come after "continue"; space the
 answers 0.7G apart (the vault saves each login before it sends the next request), then left and
