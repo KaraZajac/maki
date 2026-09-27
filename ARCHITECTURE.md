@@ -386,9 +386,11 @@ device:
     broadcasts through public servers. Signatures match alloy's, byte for byte. Not yet: typed
     data (EIP-712), which maki can't show; token names and decimals, which maki can't verify.
 11. **Apps** (above), each step emulated first:
-    1. WebAssembly apps, sideloaded: the bundle format and the `maki` tool; the host, with
-       drawing, buttons, storage and menus; installing over serial with the install screen; App
-       info; maki desktop's Apps page; app data in backups; the SDK, a simulator, example apps.
+    1. ~~WebAssembly apps, sideloaded~~ — done in the emulator: the bundle format and the `maki`
+       tool; the host, with drawing, buttons, storage and menus; installing over serial with the
+       install screen (an altered bundle refused); App info; maki desktop's Apps page; app data
+       in backups; the SDK, a simulator, example apps. Opening an app is slow while RAM is this
+       short (DEVELOPMENT.md, "Known issues"); not yet on a badge.
     2. The other permissions: ask, link (and waking), keys, keyboard, camera, motion.
     3. The store: root and catalogue keys, stamps, revocations, the store in maki desktop, CI
        builds.

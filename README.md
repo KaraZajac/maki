@@ -10,12 +10,16 @@ for your keys.
 > it linked, its clock verified with Roughtime and its backups encrypted on the computer; a browser
 > extension asks maki for logins and TOTP codes, which you approve on maki's screen, and gives
 > sites maki's Ethereum account; and Bitcoin wallet software (Sparrow, Bitcoin Core) sends
-> transactions through it for maki to show you and sign. The desktop side is tested against a stand-in for maki that runs maki's own code; the
+> transactions through it for maki to show you and sign. Apps anyone can write (in Rust, compiled to
+> WebAssembly with the SDK) install from a signed `.maki` file after maki shows you what they are
+> and who signed them, and run below maki's own bar. The desktop side is tested against a stand-in for maki that runs maki's own code; the
 > screens below are maki's firmware in the emulator. Nothing runs on a badge yet.
 > [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan, [RESEARCH.md](./RESEARCH.md) the background,
 > [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
 
 ![maki's screens in the emulator: the home screen on Bitcoin; asks to keep a login for github.com, to pick which login to fill on gist.github.com, and to keep one for a long hostname cut at the start so its end still shows; a Bitcoin transaction's payment, fee and sign pages; and a receiving address as a QR code](docs/screens.png)
+
+![maki's app screens in the emulator: the install screen for Dice, a sideloaded example app (its name, version and ID); Dice running below maki's bar, which marks it as sideloaded; its menu, on App info; and App info's pages: the app, where it's from, its developer's key, whether its data is in the backup (with "leave it out"), and Remove](docs/apps.png)
 
 ## The idea
 
@@ -36,7 +40,11 @@ Planned apps:
 - **An Ethereum account** (working in the emulator and in the browser): sites connect only when
   you allow them on maki, and every message and transaction is shown on maki before it's signed,
   token transfers and approvals spelled out
-- **Community apps**, installed from the browser over USB, each isolated from your keys
+- **Community apps** (working in the emulator): signed `.maki` bundles, installed through maki
+  desktop after maki shows you the app, where it's from and its developer's key, and run in a
+  WebAssembly sandbox that reaches nothing it wasn't given; an SDK with a simulator and example
+  apps. Next: the permissions that let apps do more (secrets from your phrase, typing, messages
+  with the computer), and a reviewed store
 
 ## Who it's for
 
