@@ -12,6 +12,8 @@
 #   FW_UF2_DIR  where loader/xous/swap .uf2 live
 #               (default: xous-core/target/riscv32imac-unknown-xous-elf/release)
 #   OUT         screenshot directory (default: .emu/shots)
+#   FW_BIN      where the images are unpacked for the emulator (default: .emu/fw); give
+#               each run its own when running several at once, or they boot each other's
 #
 # The emulator starts at the loader and never runs boot1, so it can't cross the
 # developer-mode door itself. --dev-mode presets one-way counter 85 so that
@@ -22,7 +24,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 EMU="$ROOT/tools/baomulator"
 FW_UF2_DIR="${FW_UF2_DIR:-$ROOT/xous-core/target/riscv32imac-unknown-xous-elf/release}"
 OUT="${OUT:-$ROOT/.emu/shots}"
-FW_BIN="$ROOT/.emu/fw"
+FW_BIN="${FW_BIN:-$ROOT/.emu/fw}"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/.emu/target}"
 
 CHECKPOINTS="${1:-3G,5G,8G}"

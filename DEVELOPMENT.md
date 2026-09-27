@@ -69,11 +69,13 @@ What's where in the fork:
 | Path | What |
 |---|---|
 | `apps-baosec/maki-launcher` | boot image, the home carousel, input focus, menus, the PIN and setup screens, and asks (`Launcher::ask`, `Launcher::review` with pages) shown over whatever is in front |
-| `apps-baosec/maki-app-host` | apps you install (ARCHITECTURE.md, "Apps you can install"): checks `.maki` bundles and asks the owner before installing or removing one, keeps them and their data in the secret basis (`maki.apps`, `maki.app.<id>`, `maki.data.<id>`), puts them on the home screen, and runs the one in front in `maki-wasm`, below maki's bar; App info in each app's menu |
+| `apps-baosec/maki-app-host` | apps you install (ARCHITECTURE.md, "Apps you can install"): checks `.maki` bundles and asks the owner before installing or removing one, keeps them and their data in the secret basis (`maki.apps`, `maki.app.<id>`, `maki.data.<id>`), puts them on the home screen, and runs the one in front, below maki's bar: in `maki-wasm`, or a native app in a process of its own, served over IPC (`src/native.rs`); App info in each app's menu |
+| `apps-baosec/maki-spawn` | the stub a native app's process starts as: loads the app's ELF, connects to the app service, the ticktimer and the log, confines itself and jumps to the app. Built apart by `build-stub.sh` into `maki-app-host/src/spawn.bin`, which is checked in (a rebuild gives the same bytes) |
+| `libs/maki-native` | native apps: the ELF check, the stub's load request, the app service's operations and the drawing a native app sends |
 | `libs/maki-app-host-api` | how maki-link asks the app host to install, list and remove apps |
 | `libs/maki-bundle` | the `.maki` format, host-tested and fuzzed: manifest, code, icon, Ed25519 signature; permissions and their warnings; who may update an app |
-| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer), fuel, memory and storage limits, `admit` (what maki takes); the same code runs in the SDK's simulator and the fake maki |
-| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator), example apps (Hello, Dice, Tally; Signer, which asks, signs and types; SSH, maki's SSH key for maki desktop's SSH agent); see `sdk/README.md` |
+| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
+| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator, store records, reproduce), example apps (Hello, Dice, Tally; Signer, which asks, signs and types; SSH, maki's SSH key for maki desktop's SSH agent; Hello Native, Hello built as a native app); see `sdk/README.md` |
 | `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: Bitcoin (receiving addresses and the account key as QR codes and text) and Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes) |
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
 | `libs/maki-eth` | the Ethereum account, host-tested: BIP44 keys, EIP-55, strict RLP, EIP-1559 and EIP-155 transactions and EIP-191 messages, reviewed and signed; tested against alloy |
@@ -88,7 +90,11 @@ What's where in the fork:
 | `apps-baosec/maki-launcher/assets/splash.py` | the boot image (a maki roll, and the name in the tall font); writes `src/splash.rs` |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
-Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc -p maki-fido -p maki-eth -p maki-bundle -p maki-wasm`.
+Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc -p maki-fido -p maki-eth -p maki-bundle -p maki-wasm -p maki-native -p maki-store`.
+The kernel's own tests run hosted (`cd kernel && cargo test`), confinement and `TerminateChild`
+among them. The workspace builds against the fork's `xous-rs` (`[patch.crates-io.xous]` in
+`Cargo.toml`), since maki's syscalls aren't in the published crate; `cargo xtask`'s check that
+crates match crates.io skips patched ones.
 The SDK builds apart (`cd sdk && cargo build -p maki && cargo build --release --target wasm32-unknown-unknown -p hello -p dice -p tally`); `libs/maki-wasm/tests/fixtures` holds the examples as `maki build` packs them, for the tests, the fake maki and the emulator demo. The desktop app's tests
 drive the real protocol logic through `fake_maki`; see its README.
 
@@ -128,6 +134,9 @@ compiled in unless set, so rebuild without them before flashing:
   Sensors from the store ("maki store" on the install screen) and Tally sideloaded, then hands
   over the revocation list, which revokes Tally. It logs `demo store ...` lines, among them
   Tally refused when it's sent again (`the maki store revoked it`).
+- `MAKI_DEMO_NATIVE=1`: once maki has its PIN and phrase, maki-link installs the SDK's Hello
+  Native (Hello built as a native app, from `libs/maki-native/tests/fixtures`). Opened, it runs
+  in a process of its own, and the app host logs `running in PID N, confined`.
 - `MAKI_DEMO_BTC=1`: once maki has its PIN and phrase, maki-link does what the desktop's
   Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
   sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
@@ -223,7 +232,7 @@ bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--pres
 
 Dice's install screen is up by 14.6G and Tally's by 17.2G. The log shows both installs
 (`result 0`), the altered Hello refused (`result 3 'the signature doesn't match: changed since
-it was signed'`), the list, and `first frame after 6220 ms` for Dice, up by about 20.5G.
+it was signed'`), the list, and `first frame after 6689 ms` for Dice, up by about 20.5G.
 
 `MAKI_DEMO_PERMS=1` shows the permissions: Signer's install takes nine presses of the centre
 (the app, where it's from, the developer key, a page for each of its three permissions, one of
@@ -280,6 +289,20 @@ bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--pres
 The log shows root 2 taken (`root now 2`), both installs, the list taken (`list 1`) and not
 again (`older than what maki has`), Tally refused when it's sent again (`the maki store revoked
 it: ...`), and the list of apps with where each is from.
+
+`MAKI_DEMO_NATIVE=1` installs Hello Native in five presses; two to the right and the centre
+open it (the home screen is in name order), and its counter goes up each second. Left and right
+together bring up its menu, and right, then the centre, choose Exit: the app sees Exit when it
+next waits, returns, and its process ends:
+
+```sh
+MAKI_DEMO=1 MAKI_DEMO_NATIVE=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
+bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
+  for i in $(seq 0 4); do P+=(--press 5@$(echo "14.7 + 0.1*$i" | bc)G+2M); done     # install
+  P+=(--press 4@15.5G+2M --press 4@15.6G+2M --press 5@15.8G+2M)                    # open it
+  P+=(--press 3@17.6G+2M --press 4@17.6G+2M --press 4@18.0G+2M --press 5@18.2G+2M)  # menu, Exit
+  scripts/emu.sh 17.4G,17.8G,18.4G "${P[@]}" --console-final 400000' | grep "confined\|first frame\|exited\|stopped"
+```
 
 With `MAKI_DEMO_ASKS` instead, the vault's four requests come after "continue"; space the
 answers 0.7G apart (the vault saves each login before it sends the next request), then left and
@@ -384,6 +407,27 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
   (`maki-apps`), which spares RAM. Worth sending upstream. (The swapper's `oom-doom` feature,
   which evicts ahead of time, doesn't compile in this version.)
 
+- **Native apps and the kernel (fixed).** A native app is the first process started after
+  boot, and ends while maki runs; three things went wrong once one ran:
+  - The swapper records where each process's evicted pages went in page tables of its own, made
+    by the loader for the processes in the image; one started later had none. Evicting one of
+    its pages indexed past the end, the swapper panicked mid-OOM, and the kernel after it
+    (`Nesting should not happen`). The fork's swapper makes a process's tables the first time
+    it evicts one of its pages, and the kernel tells it which processes ended (`SwapAbi::
+    TakeEnded`, new), so before it next evicts anything it frees what they had in swap and
+    empties their tables for whatever gets the PID next. Keeping native apps' pages in RAM
+    instead doesn't fit: about 300 of the 512 pages are wired already, and an app may ask for
+    up to 256 more (1 MiB).
+  - The kernel starts the swapper by making a syscall itself, as the process that ran out of
+    memory or touched a swapped page. For a confined process that call was refused like any
+    other it may not make, and the kernel retried it forever: maki froze the first time a native
+    app needed a page while RAM was full. Calls made from supervisor mode are the kernel's, and
+    confinement no longer applies to them.
+  - A process slot could be used only once: ending a process left the slot naming its page
+    tables, which went with its memory, so the next process given the PID was refused
+    (`InternalError`), and the slot stayed allocated to nothing. An app opened a second time
+    couldn't start. Ending a process now clears the slot.
+
 - **RAM, and paging.** The badge has 2 MiB of RAM, 512 pages, and in the app demo about 295
   are wired for good: the kernel's 41; the swapper's 120, mostly shadow page tables (one for
   each 4 MiB of a process that has pages swapped out, and a root per process); and 8 to 10 for
@@ -411,7 +455,7 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
     least-recently-used.
   - Where it stands, in the app demo: the swapper does about 18% of the work from setup to the
     app; opening Dice costs it about 0.6 G instructions, paging the app host's code back in,
-    and Dice's first frame comes 6.2 s after it's opened, in the emulator's time (10 ns an
+    and Dice's first frame comes 6.7 s after it's opened, in the emulator's time (10 ns an
     instruction). The badge runs at 700 MHz, so expect less there, but swap goes through the
     PSRAM, which the emulator doesn't time. To measure on a badge.
   - The preemption timer interrupts 100 times a second through bao1x-hal-service, even with

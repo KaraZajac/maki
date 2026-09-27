@@ -165,8 +165,8 @@ work the same for both.
 
 - **WebAssembly**, run by maki's app host: one process that interprets the app's module with
   wasmi, a WebAssembly interpreter written in Rust. First.
-- **Native**: an ordinary Xous program, started as a process of its own the way Precursor's app
-  loader does it. Once the kernel can confine it (below).
+- **Native**: an ordinary Xous program, run in a process of its own that confines itself before
+  any of the app's code runs (below).
 
 Speed isn't the only difference between the two, or the biggest:
 
@@ -312,20 +312,47 @@ computer), storage, time, randomness, the app's menu items, and a set for each p
 SDK (a Rust crate, a C header, examples) wraps them, and a simulator runs the same `.wasm` on a
 computer, maki desktop included.
 
-### Native apps: what confinement takes
+### Native apps: how they're confined
 
-Until all of this is done, maki refuses native bundles and says why:
+Done in the emulator; not yet on a badge.
 
-- **The kernel** gives processes the loader starts no physical mappings, no interrupts, no new
-  processes, no shutdown, no raising their own memory limit, and connections only to the
-  servers the loader names: the app services, the ticktimer and the log. Stock Xous lets every
-  process do all of these.
-- **The loader**, Precursor's with the ELF read from the PDDB instead of WiFi, can stop an app
-  that hangs. That takes letting a parent end its child; today a process can only end itself.
-- **The app services** offer native apps the host's functions over IPC, so one SDK builds
-  either kind.
-- **Key injection** (`InjectKey`, and `keyboard_bouncer`) only from the log server's serial
-  console, and only in debug builds.
+- **The kernel.** A process can confine itself, for good (`ConfineSelf`, a syscall the fork
+  adds): from then on it can make only the calls an app needs (memory, messages, threads,
+  time, ending itself), connect only to servers it's already connected to, and map no physical
+  addresses, flash, devices or executable memory. What it maps is held to a page budget, and
+  what it unmaps is refunded. A process may end one it started (`TerminateChild`), and ask
+  whether it's still running (`ChildRunning`); stock Xous only lets a process end itself. Calls
+  the kernel makes itself on a confined process's behalf (to swap its pages) aren't the
+  process's, and confinement doesn't apply to them.
+- **The stub** (`apps-baosec/maki-spawn`, 5.5 KB, built into the host) is what an app's process
+  starts as. The host starts a process from it and lends it the app's code; the stub checks the
+  ELF, maps its segments, connects to the only servers the app may use (the app service, the
+  ticktimer and the log), sets its heap limit to what's left of the app's memory, confines
+  itself with that as its budget, and only then jumps to the app. None of the app's code runs
+  unconfined.
+- **The app service** is the host serving the app over IPC with the same code (`Session`) a
+  WebAssembly app's functions go through: the same functions, rules and permissions. Messages
+  from anyone else are refused.
+- **Stopping.** An app told to exit (the owner left it, or maki is stopping it) sees Exit when
+  it next waits, and has two seconds to return, whether or not it was waiting; then the host
+  ends its process. An app that panics says why, and maki shows it. One the kernel ends for a
+  fault says nothing: the host finds it gone the next time it looks (a button press, say) and
+  says it crashed.
+- **Memory swaps like everyone else's.** The swapper had page tables only for the processes in
+  the firmware image, and the kernel never told it when a process ended. It now makes them
+  for a process started later, and the kernel tells it which processes ended, so it frees what
+  they had in swap before their PIDs are used again. Keeping a native app's pages in RAM
+  instead doesn't fit: about 300 of the badge's 512 pages are wired already (DEVELOPMENT.md,
+  "Known issues"), and an app that filled its memory would have hung maki.
+- **Key injection** (`InjectKey`, which presses maki's buttons) exists only in firmware built
+  with the `key-injection` feature, for driving a badge from its serial console; maki's own
+  builds leave it out.
+
+The SDK builds either kind from the same source: `kind = "native"` in `maki.toml`, and `maki
+build` compiles it for maki's processor with Xous's Rust toolchain. The manifest names the
+firmware it was built for (`maki-native-1`), and other firmware refuses it.
+
+Not yet: running on a badge, and granting a native app hardware.
 
 ### The store
 
@@ -421,9 +448,13 @@ device:
        (DEVELOPMENT.md, "The maki store"). `maki reproduce` checks a bundle against its source
        (the SDK's examples all reproduce). Not yet: the store's Git repository, and the CI that
        runs `maki reproduce` on each app submitted.
-    4. Native apps: confinement in the kernel and services, then the loader. The out-of-memory
-       panic one more process used to cause at boot is fixed (DEVELOPMENT.md, "Known issues"),
-       and three more boot.
+    4. ~~Native apps~~ — done in the emulator (above, "Native apps: how they're confined"): the
+       kernel confines a process and lets the one that started it end it or ask after it; the
+       stub loads and confines each app; the host serves it the same functions a WebAssembly
+       app gets; its memory swaps like everyone else's; the SDK builds either kind from one
+       source, reproducibly. Hello Native opens, runs, exits and opens again; an app that fills
+       800 KiB runs through swap with its memory intact; a fault or a panic shows as a crash.
+       Not yet on a badge.
 
 ## Constraints to design around
 
