@@ -391,7 +391,11 @@ device:
        install screen (an altered bundle refused); App info; maki desktop's Apps page; app data
        in backups; the SDK, a simulator, example apps. Opening an app is slow while RAM is this
        short (DEVELOPMENT.md, "Known issues"); not yet on a badge.
-    2. The other permissions: ask, link (and waking), keys, keyboard, camera, motion.
+    2. The other permissions: ask, link (and waking), keys and keyboard are done in the emulator
+       and against the fake maki; camera and motion aren't yet. On them, the SDK's SSH app: an
+       SSH key from the phrase, and maki desktop as the SSH agent ssh and git talk to, which hands
+       each request to the app; the app reads what's to be signed on maki and asks first
+       (checked with OpenSSH's own `ssh-add` and `ssh-keygen -Y sign`).
     3. The store: root and catalogue keys, stamps, revocations, the store in maki desktop, CI
        builds.
     4. Native apps: confinement in the kernel and services, then the loader. The out-of-memory

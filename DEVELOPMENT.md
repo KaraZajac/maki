@@ -72,8 +72,8 @@ What's where in the fork:
 | `apps-baosec/maki-app-host` | apps you install (ARCHITECTURE.md, "Apps you can install"): checks `.maki` bundles and asks the owner before installing or removing one, keeps them and their data in the secret basis (`maki.apps`, `maki.app.<id>`, `maki.data.<id>`), puts them on the home screen, and runs the one in front in `maki-wasm`, below maki's bar; App info in each app's menu |
 | `libs/maki-app-host-api` | how maki-link asks the app host to install, list and remove apps |
 | `libs/maki-bundle` | the `.maki` format, host-tested and fuzzed: manifest, code, icon, Ed25519 signature; permissions and their warnings; who may update an app |
-| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness), fuel, memory and storage limits, `admit` (what maki takes); the same code runs in the SDK's simulator |
-| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator), example apps (Hello, Dice, Tally); see `sdk/README.md` |
+| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer), fuel, memory and storage limits, `admit` (what maki takes); the same code runs in the SDK's simulator and the fake maki |
+| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator), example apps (Hello, Dice, Tally; Signer, which asks, signs and types; SSH, maki's SSH key for maki desktop's SSH agent); see `sdk/README.md` |
 | `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: Bitcoin (receiving addresses and the account key as QR codes and text) and Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes) |
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
 | `libs/maki-eth` | the Ethereum account, host-tested: BIP44 keys, EIP-55, strict RLP, EIP-1559 and EIP-155 transactions and EIP-191 messages, reviewed and signed; tested against alloy |
@@ -112,6 +112,10 @@ compiled in unless set, so rebuild without them before flashing:
   SDK's examples (Dice and Tally, from `libs/maki-wasm/tests/fixtures`) as if the desktop had
   sent them, each asking the owner to install it, then a copy of Hello changed after it was
   signed, which maki refuses, and logs `demo app ...` lines along the way.
+- `MAKI_DEMO_PERMS=1`: once maki has its PIN and phrase, maki-link installs the SDK's Signer
+  and SSH examples (each asks, with a page for each permission), then does what maki desktop's
+  SSH agent does: asks the SSH app for its key (maki starts the app without the screen) and to
+  sign a sign-in, which the app asks the owner about first. It logs `demo perms ...` lines.
 - `MAKI_DEMO_BTC=1`: once maki has its PIN and phrase, maki-link does what the desktop's
   Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
   sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
@@ -205,6 +209,29 @@ bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--pres
 Dice's install screen is up by 14.6G and Tally's by 17.2G. The log shows both installs
 (`result 0`), the altered Hello refused (`result 3 'the signature doesn't match: changed since
 it was signed'`), the list, and `first frame after 6187 ms` for Dice, up by about 20.5G.
+
+`MAKI_DEMO_PERMS=1` shows the permissions: Signer's install takes sixteen presses of the centre
+(the app, where it's from, the developer key, three screens for each of its three permissions,
+what it needs, install) and SSH's seventeen. The SSH app's sign-in ask then comes up on the home
+screen, under the app's own bar; four to the right and the centre open Signer, whose centre asks
+before it signs, and whose menu item types (the emulator's USB takes the keystrokes):
+
+```sh
+MAKI_DEMO=1 MAKI_DEMO_PERMS=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
+bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
+  for i in $(seq 0 15); do P+=(--press 5@$(echo "14.7 + 0.1*$i" | bc)G+2M); done    # install Signer
+  for i in $(seq 0 16); do P+=(--press 5@$(echo "17.3 + 0.1*$i" | bc)G+2M); done    # install SSH
+  P+=(--press 5@21.5G+2M)                                                           # SSH: sign
+  for t in 22.5 22.7 22.9 23.1; do P+=(--press 4@${t}G+2M); done; P+=(--press 5@23.3G+2M)  # open Signer
+  P+=(--press 5@24.8G+2M --press 5@25.8G+2M)                                        # ask, sign
+  P+=(--press 3@26.5G+2M --press 4@26.5G+2M --press 5@27.0G+2M)                     # menu, type
+  scripts/emu.sh 21.4G,24.7G,25.7G,26.2G,28.0G "${P[@]}" --console-final 400000' | grep "demo perms\|typed"
+```
+
+The log shows both installs, `demo perms ssh keys: result 0` with the key, and `demo perms ssh
+sign: result 0, 88 bytes, a signature: true`; the SSH app then ends by itself after 30 s with
+nothing to do. Signer shows the same key as `maki run` in the SDK (both from the BIP39 test
+phrase): `21b3e138b1d4cf60…`; the host logs `typed 16 characters: done`.
 
 With `MAKI_DEMO_ASKS` instead, the vault's four requests come after "continue"; space the
 answers 0.7G apart (the vault saves each login before it sends the next request), then left and

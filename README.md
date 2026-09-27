@@ -33,7 +33,11 @@ Planned apps:
 - **Passkeys, passwords and TOTP**, building on the stock vault, with the browser extension
   filling logins and codes once you approve them on maki; passkeys come from the same recovery
   phrase as everything else, so a restored maki still opens every site
-- **SSH and git signing**: see the user and the commit before you approve
+- **SSH and git signing** (working in the emulator and against the stand-in): an SSH key from
+  your recovery phrase, in maki's SSH app; maki desktop is the SSH agent ssh and git use, and
+  every sign-in (with the user, and the server's host key when ssh passes it on) and every git
+  signature waits for your yes on maki. Not yet: the commit itself on maki's screen (git hands
+  the agent only its hash)
 - **A small Bitcoin wallet** (working in the emulator): keys on maki behind the boot PIN, from a
   recovery phrase you write down; every payment, the change and the fee shown on maki's screen
   before a transaction is signed; receiving addresses as QR codes that never touch the computer
@@ -41,10 +45,11 @@ Planned apps:
   you allow them on maki, and every message and transaction is shown on maki before it's signed,
   token transfers and approvals spelled out
 - **Community apps** (working in the emulator): signed `.maki` bundles, installed through maki
-  desktop after maki shows you the app, where it's from and its developer's key, and run in a
-  WebAssembly sandbox that reaches nothing it wasn't given; an SDK with a simulator and example
-  apps. Next: the permissions that let apps do more (secrets from your phrase, typing, messages
-  with the computer), and a reviewed store
+  desktop after maki shows you the app, where it's from, its developer's key and what it asks
+  to do, and run in a WebAssembly sandbox that reaches nothing it wasn't given. With your
+  permission, an app can ask you things on maki's own screen, have secrets of its own from your
+  phrase, type into your computer, and talk to software on it. An SDK with a simulator and
+  example apps. Next: a reviewed store
 
 ## Who it's for
 
