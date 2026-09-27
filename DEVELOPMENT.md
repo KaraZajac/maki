@@ -93,7 +93,9 @@ The SDK builds apart (`cd sdk && cargo build -p maki && cargo build --release --
 drive the real protocol logic through `fake_maki`; see its README.
 
 The emulator has no USB, so maki-link sits idle there; the link is exercised end to end against
-`fake_maki` instead. Two build-time switches make the emulator easier to drive; neither is
+`fake_maki` instead. On a badge, keys typed at the log server's serial console press maki's
+buttons only in a build with `--feature bao1x-hal-service/key-injection` (the keyboard's
+`keyboard_bouncer`); maki's own builds take presses from the buttons alone. Two build-time switches make the emulator easier to drive; neither is
 compiled in unless set, so rebuild without them before flashing:
 
 - `MAKI_DEMO=1`: every PIN position starts at 0 instead of a random digit (so a script can type
