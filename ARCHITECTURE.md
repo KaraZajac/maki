@@ -129,11 +129,19 @@ checked by asking for a few of them back. It's the root of everything that can't
 - **the Bitcoin wallet's keys**, derived the standard way (BIP32, BIP84), so the phrase also
   works in other wallets;
 - **the key that encrypts maki's backup**;
-- later, **passkeys**: FIDO credential keys derived from the phrase, as Trezor does, so they
-  survive a restore.
+- **passkeys**: the FIDO authenticator's master keys come from the phrase (HKDF over the
+  BIP39 seed, "fido v1"): the key that encrypts and the key that authenticates the credential
+  IDs maki gives sites (which carry each credential's private key, sealed), and hmac-secret's
+  CredRandom. A maki restored from the phrase opens every credential ID it gave out before.
+  Discoverable passkeys, which live on maki, travel in the backup. The vault's FIDO thread, the
+  only process maki-keys gives these to, waits until there's a phrase (during setup the PIN
+  comes first) and answers nothing while maki is locked. A CTAP reset from a browser deletes
+  the passkeys stored on maki, but credentials held by sites keep working until the phrase
+  changes.
 
-**Backups.** maki desktop keeps an encrypted copy of the passwords, codes and passkey store,
-refreshed when they change. The key comes from the recovery phrase, never the PIN: a backup
+**Backups.** maki desktop keeps an encrypted copy of the passwords, codes and discoverable
+passkeys (with the signature counter, which a restore only ever raises), refreshed when they
+change. A restore adds what maki doesn't have, matching passkeys by credential ID. The key comes from the recovery phrase, never the PIN: a backup
 file is exactly what an attacker gets to try PINs against offline.
 
 **Restore.** A new or wiped maki: set a PIN, enter the recovery phrase on maki, and maki desktop
@@ -163,8 +171,13 @@ it's never typed into the computer, which is what a hardware key defends against
    spends), gone through page by page (each payment, change, fee) and signed, through maki
    desktop. Signatures match rust-bitcoin's and pass Bitcoin Core's consensus code. Not yet:
    taproot, multisig, and a run against Sparrow with real coins on a badge.
-9. **Passkeys from the phrase**, and a Passkeys screen. Passkeys live in OpenSK's store, owned
-   by the vault's FIDO thread, which blocks on USB; listing them needs a way into that thread.
+9. ~~Passkeys from the phrase, and a Passkeys screen~~ — done: the authenticator's keys from
+   the phrase (above), passkeys in the backup, and a Passkeys app that lists them (site and
+   user) and deletes one with the owner's yes, telling the vault to re-read its store. It shares
+   a process with the Bitcoin app (`maki-apps`): one more process ran the badge out of memory at
+   boot (DEVELOPMENT.md, "Known issues"). The
+   emulator has no USB, so FIDO itself hasn't run there: the key hand-off, backup, restore and
+   the app have.
 10. **Ethereum** (an EIP-1193 provider in the extension), then the **app store** over serial,
     building on Xous's Precursor app loader.
 

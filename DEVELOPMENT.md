@@ -55,7 +55,7 @@ git switch baokey && git merge dev
 ## The loop
 
 ```sh
-cd xous-core && cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-bitcoin && cd ..   # ~6 min cold, ~2 warm
+cd xous-core && cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-apps && cd ..   # ~6 min cold, ~2 warm
 scripts/emu.sh 3G,4G                                                             # ~2 min for 4G instructions
 ```
 
@@ -64,18 +64,19 @@ What's where in the fork:
 | Path | What |
 |---|---|
 | `apps-baosec/maki-launcher` | boot image, the home carousel, input focus, menus, the PIN and setup screens, and asks (`Launcher::ask`, `Launcher::review` with pages) shown over whatever is in front |
-| `apps-baosec/maki-bitcoin` | the Bitcoin app: receiving addresses and the account key as QR codes and text |
+| `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: Bitcoin (receiving addresses and the account key as QR codes and text) and Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes) |
+| `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
 | `libs/maki-ui` | the keys and drawing every maki screen shares: status bar, action bar, arrows, icons, QR codes |
 | `libs/maki-btc` | the Bitcoin wallet, host-testable: BIP32/BIP84 keys, addresses, descriptors, PSBT parsing, the checks before signing, signing; tested against rust-bitcoin and Bitcoin Core's consensus code |
 | `apps-baosec/vault2` | the upstream vault, registered with the launcher; `src/link.rs` answers the browser's requests for logins and codes |
 | `services/maki-link` | the serial end of the desktop link: time sync, link state, and handing requests to the vault |
 | `libs/maki-proto` | the protocol (framing, messages, device logic) and `PROTOCOL.md`; `examples/fake_maki.rs` |
 | `libs/maki-vault-api` | how maki-link asks the vault (one connection only, made at boot) |
-| `services/maki-keys` | the boot PIN: the secret basis's key, wrapped under the PIN's, the wrong-try count and the wipe; the recovery phrase, backups, and the Bitcoin account (`src/bitcoin.rs`) |
+| `services/maki-keys` | the boot PIN: the secret basis's key, wrapped under the PIN's, the wrong-try count and the wipe; the recovery phrase, backups (passkeys included), the FIDO keys, and the Bitcoin account (`src/bitcoin.rs`) |
 | `libs/maki-icons` | the home screen's icons, drawn by `icons.py` |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
-Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc`. The desktop app's tests
+Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc -p maki-fido`. The desktop app's tests
 drive the real protocol logic through `fake_maki`; see its README.
 
 The emulator has no USB, so maki-link sits idle there; the link is exercised end to end against
@@ -90,7 +91,9 @@ compiled in unless set, so rebuild without them before flashing:
   They wait until maki is unlocked.
 - `MAKI_DEMO_BACKUP=1`: once maki has its PIN and phrase, maki-link takes a backup through
   maki-keys and restores it, logging `demo backup: N bytes sealed` and `demo restore: ...`.
-  The only way to exercise the backup's encryption on firmware without USB.
+  The only way to exercise the backup's encryption on firmware without USB. With no USB there's
+  no passkey either, so the backup gets a made-up one for demo.maki, taken out once sealed: the
+  restore asks to bring it back (a page, then "restore"), and the Passkeys app then lists it.
 - `MAKI_DEMO_BTC=1`: once maki has its PIN and phrase, maki-link does what the desktop's
   Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
   sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
@@ -128,7 +131,7 @@ Presses: 3 is left (`←`), 4 is right (`→`): the emulator's labels have them 
 round. Hold a tap for 2M instructions (`+2M`): the emulator's default of 20M is long enough
 to count as a hold.
 
-When the first screen appears depends on how many processes boot: with maki-bitcoin in the
+When the first screen appears depends on how many processes boot: with maki-apps in the
 image it's about 2.8G rather than 2.3G. Take a few screenshots early to find it, and shift the
 presses to match.
 
@@ -141,7 +144,7 @@ Bitcoin asks follow: the centre answers the account and the address, then goes t
 transaction (Send, Change, Fee) and signs:
 
 ```sh
-MAKI_DEMO=1 MAKI_DEMO_BTC=1 cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-bitcoin
+MAKI_DEMO=1 MAKI_DEMO_BTC=1 cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-apps
 bash -c 'mapfile -t P < <(OFFSET=0.6 scripts/presses-test-phrase.sh)
   for t in 10.9 11.8 12.2 12.6 12.8 13.0 13.2; do P+=(--press 5@${t}G+2M); done
   scripts/emu.sh 11.7G,12.1G,12.5G,13.5G "${P[@]}"' | grep "demo btc"
@@ -183,6 +186,15 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
   fork raises it to 32 KiB in `loader/src/phase2.rs`. Deterministic in the emulator: 2 pages
   always faults, 8 never does. Why the handler needed more than 8 KiB is not yet understood.
   Worth an upstream issue once we know more.
+
+- **Out of memory at boot: a kernel panic in the swapper.** With one more process in the image
+  (the Passkeys app on its own), boot stopped at `PANIC in PID 2: panicked at
+  kernel/src/swap.rs:773: Nesting should not happen`, after `Nesting HardOomSyscall(9, 8)
+  false`: a hard out-of-memory request reached the kernel while the swapper was still busy with
+  another, a case the kernel's comment calls vestigial. Every process carries its own runtime and
+  stacks, and the badge is near its limit at boot, so maki's own small apps share one process
+  (`maki-apps`). Not yet understood; worth an upstream issue, and a fix before the app store adds
+  processes.
 
 ## Boot sequence
 

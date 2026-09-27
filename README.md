@@ -27,7 +27,8 @@ user, the commit, the transaction) and waits for you to press a button.
 Planned apps:
 
 - **Passkeys, passwords and TOTP**, building on the stock vault, with the browser extension
-  filling logins and codes once you approve them on maki
+  filling logins and codes once you approve them on maki; passkeys come from the same recovery
+  phrase as everything else, so a restored maki still opens every site
 - **SSH and git signing**: see the user and the commit before you approve
 - **A small Bitcoin wallet** (working in the emulator): keys on maki behind the boot PIN, from a
   recovery phrase you write down; every payment, the change and the fee shown on maki's screen
