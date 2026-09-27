@@ -179,7 +179,9 @@ Speed isn't the only difference between the two, or the biggest:
 - **What a bug costs.** On this chip, code that runs can read the keys unless the MMU keeps it
   away from them (RESEARCH.md §3.3), so for a native app one missed mapping or one kernel bug is
   the whole device. A WebAssembly app's code never runs on the CPU; getting out takes a bug in
-  the interpreter, which is memory-safe Rust.
+  the interpreter, a much smaller target: it checks every module before running it, turns
+  "can't happen" into a stop rather than undefined behaviour (wasmi's `extra-checks`), and
+  earlier versions have been audited twice.
 - **Firmware updates.** A WebAssembly app keeps working on any maki whose host has the
   functions it uses (the manifest names the API version). A native app is built against one
   version of Xous and its services, and an update can break it, so its manifest names the
