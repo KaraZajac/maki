@@ -497,8 +497,12 @@ device:
     connects to the account as a site of its own, `desktop.maki`, which maki asks about like any
     other (the browser bridge refuses the name from sites); what it holds on each network maki
     desktop knows, its coin and the tokens maki knows; and sending either, which maki spells
-    out. Not yet: prices in money, fee bumping (RBF) and Ethereum's history, which needs an
-    indexer.
+    out, to an address or an ENS name (looked up on Ethereum; maki shows the address). Bitcoin
+    payments are replaceable (BIP125), and one still waiting for a block can be sped up: the same
+    coins and payments, the extra fee out of its change, reviewed on maki like any other. Values
+    in money if the owner picks a currency (CoinGecko, asked the same question for everyone).
+    An end-to-end test drives the app itself through all of it against the fake maki and
+    stand-in networks. Not yet: Ethereum's history, which needs an indexer.
 
 ## Constraints to design around
 
