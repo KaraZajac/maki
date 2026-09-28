@@ -165,7 +165,11 @@ hash, and derive what it displays from the same bytes it signs.
 
 Treat the key and data slots as readable by any code running on the badge, in any privilege
 mode: on this die the hardware's access controls aren't a backstop against code that's already
-running, and firmware can't change that.
+running, and firmware can't change that. The RRAM controller checks its access rules only on
+data reads, and an instruction fetch never counts as one, so code can read the keystore by
+fetching from it. nastea1 found it and disclosed it to bunnie, who confirmed it; the write-up is
+public, with his permission, since August 2026:
+[nastea1/dc34badge, "instruction fetches read RRAM with no access control"](https://github.com/nastea1/dc34badge/blob/main/docs/05-fetch-acl-bypass.md).
 
 So any code-execution bug in maki is a full key compromise. Keep the exposed surface small:
 the USB parsers, the signing-request decoders and the app loader should be
@@ -361,8 +365,8 @@ Badge B stays sealed throughout, as a reference.
    Apache-2.0. This repo is BSD-3-Clause. Forked files stay Apache-2.0 regardless; switching
    maki to Apache-2.0, or Rust's usual MIT/Apache-2.0, would let code move to and from
    upstream without friction. There's no code yet, so changing now is free.
-2. ~~**Going public.**~~ The firmware, maki desktop and the store are public (2026-09-27); §3.3
-   states the constraint without the mechanism.
+2. ~~**Going public.**~~ Everything is public: the firmware, maki desktop and the store
+   (2026-09-27), and this repository (2026-09-28).
 3. **Upstream first?** The PKE driver and the `rp.name` fix belong in `xous-core`. The kernel
    changes for §5.2 might too, so it's worth asking bunnie early whether he'd take them.
 4. ~~**Out-of-tree or fork?**~~ Settled: a fork, `KaraZajac/maki-firmware` (see
