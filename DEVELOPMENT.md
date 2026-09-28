@@ -1,14 +1,15 @@
 # Development
 
-How to build BAOKEY firmware and run it without a badge. Everything here was run
+How to build maki's firmware and run it without a badge. Everything here was run
 on 2026-09-25 on Fedora 44 with Rust 1.96.0.
 
 ## Layout
 
 ```
-BAOKEY/
-├── xous-core/          our fork: KaraZajac/baokey-firmware (private), branch `baokey`     (gitignored clone)
+maki/
+├── xous-core/          our fork: KaraZajac/maki-firmware (private), branch `maki`         (gitignored clone)
 ├── desktop/            the desktop app: KaraZajac/maki-desktop (private)                 (gitignored clone)
+├── apps/               the maki store: KaraZajac/maki-apps (private)                     (gitignored clone)
 ├── tools/baomulator/   zst123/dc34_baomulator, full-system badge emulator            (gitignored clone)
 ├── patches/baomulator/ our changes to the emulator, applied on top of the clone
 ├── scripts/emu.sh      build → emulate → PNG screenshots, in one command
@@ -20,14 +21,18 @@ BAOKEY/
 ```sh
 # firmware source: our private fork. --reference reuses BAOSEC's objects so it's quick;
 # drop those two flags on a machine without ~/Projects/BAOSEC.
-git clone --reference ~/Projects/BAOSEC/xous-core --dissociate --branch baokey \
-    https://github.com/KaraZajac/baokey-firmware.git xous-core
+git clone --reference ~/Projects/BAOSEC/xous-core --dissociate --branch maki \
+    https://github.com/KaraZajac/maki-firmware.git xous-core
 git -C xous-core remote add upstream https://github.com/betrusted-io/xous-core.git
 git -C xous-core fetch upstream --tags
 
 # emulator
 git clone https://github.com/zst123/dc34_baomulator.git tools/baomulator
 git -C tools/baomulator apply "$PWD"/patches/baomulator/*.patch
+
+# the desktop app, and the maki store
+git clone https://github.com/KaraZajac/maki-desktop.git desktop
+git clone https://github.com/KaraZajac/maki-apps.git apps
 ```
 
 The Xous toolchain (`riscv32imac-unknown-xous-elf`) must match your `rustc` exactly;
@@ -37,8 +42,8 @@ this one.
 
 ## The fork
 
-`KaraZajac/baokey-firmware` is private, holds upstream's full history, and has two
-branches: `dev`, an untouched mirror of upstream `dev`, and `baokey`, where our work
+`KaraZajac/maki-firmware` is private, holds upstream's full history, and has two
+branches: `dev`, an untouched mirror of upstream `dev`, and `maki`, where our work
 goes. **GitHub Actions is switched off on it**: upstream's workflows would otherwise run
 on every push (two of them trigger on any branch) and spend private-repo minutes. Turn
 it back on deliberately if we want our own CI.
@@ -49,7 +54,7 @@ Syncing with upstream:
 cd xous-core
 git fetch upstream --tags
 git switch dev && git merge --ff-only upstream/dev && git push origin dev --tags
-git switch baokey && git merge dev
+git switch maki && git merge dev
 ```
 
 ## The loop
@@ -158,7 +163,7 @@ ownership table at AT instructions (`rpt.txt`: page, PID, flags with wired as bi
 address, and the kernel's page clock), which shows who holds RAM, and what's wired.
 
 First boot of a fresh image, as observed: the PDDB finds blank flash, formats and mounts
-**with no prompt**, swap encryption comes on, and the BAOKEY home screen is up by ~3G.
+**with no prompt**, swap encryption comes on, and maki's home screen is up by ~3G.
 Every emulator run starts from blank flash, so every run is a first boot.
 
 Every emulator run is a first boot, so it starts with PIN setup. With `MAKI_DEMO=1`, typing
@@ -331,6 +336,18 @@ publish anywhere maki desktop can fetch them: `roots/1.bin`, `roots/2.bin`, ... 
 to replace the one before), `revocations.bin`, `index.json` with `index.sig`, and the stamped
 bundles under `apps/`.
 
+**The maki store's repository** is [KaraZajac/maki-apps](https://github.com/KaraZajac/maki-apps),
+cloned at `apps/`: each app's developer-signed bundle with an `app.toml` naming the commit it's
+built from (the SDK's examples name this fork's), and the published store in `store/`, which is
+where maki desktop fetches it from by default (on GitHub's file server). `scripts/check.sh`
+rebuilds every app from its source and checks it with `maki reproduce`; `scripts/publish.sh
+CATALOGUE.key DAYS` stamps each app's newest bundle, signs the revocation list again if
+`revocations.txt` changed, and signs a new index, whose version is the hour (UTC, YYYYMMDDHH) so
+it always goes up. Its apps are Pomodoro, Dice, Tally, Sensors and SSH; it's signed with the
+development keys, for ten years, as the development store is. While the repository is private,
+maki desktop reads it with a GitHub token: `MAKI_STORE_TOKEN=$(gh auth token) npm --prefix
+desktop run dev`. Its README says how an app gets in.
+
 **The development store.** Until the real store opens, the firmware and maki desktop both start
 from the development store's root: `xous-core/libs/maki-store/dev-store`, made by its `make.sh`
 from keys that are never committed (they live outside the repos; anyone can make a new set and
@@ -346,8 +363,8 @@ MAKI_STORE=$PWD/xous-core/libs/maki-store/dev-store npm --prefix desktop run dev
 
 maki desktop hands the fake maki root 2 and the list as it links (its log says so), lists the
 store's apps under Apps, and installs them as the store's. `MAKI_STORE` also takes an address
-(`https://`, or `http://localhost` for a local server); without it maki desktop says the store
-isn't open yet.
+(`https://`, or `http://localhost` for a local server); without it maki desktop reads the maki
+store's repository (above).
 
 **The store's keys.** Before the store opens, Kara makes its real keys, offline:
 
@@ -362,8 +379,10 @@ isn't open yet.
 3. The firmware and maki desktop carry root 1 in place of the development store's:
    `FIRST_ROOT` in `apps-baosec/maki-app-host/src/store.rs` (and the fake maki's, in
    `libs/maki-proto/examples/fake_maki.rs`), and `FIRST_ROOT` in `desktop/src/shared/store.ts`
-   (base64). maki desktop's store address goes where `storeWhere` looks
-   (`desktop/src/main/store-source.ts`).
+   (base64). maki desktop's store address is `STORE` in `desktop/src/main/store-source.ts`.
+4. The maki store's repository is published again with the real catalogue key
+   (`apps/scripts/publish.sh`), its roots replaced by the real ones, and a short life: 30 days
+   for the index, a few weeks for the revocation list, signed again before they run out.
 
 Running it: `maki reproduce BUNDLE SOURCE` checks that a developer's bundle is what its source
 builds to (with the Rust the source pins); `maki store add DIR BUNDLE --catalogue

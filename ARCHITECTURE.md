@@ -290,6 +290,13 @@ Remove), then Exit.
 Each app has its own key-value storage in the secret basis, which only the host touches, with a
 quota.
 
+Apps share maki's encrypted database with its logins, codes and passkeys, and the database won't
+say how much of it is free (that would say how much is hidden in it). So apps have a room of
+their own in it: at most 32 of them, taking at most 2 MiB between them, each its bundle and the
+storage its manifest asks for, kept for it whether it's used or not. maki refuses an install that
+doesn't fit, saying what it needs and what's free, and tells maki desktop how much is taken
+(`APP_SPACE`), which shows it as a bar.
+
 Whether it goes in the backup is a choice. The manifest sets the default (yes for data you'd
 miss; no for caches, or secrets that should never leave maki), and the owner can change it for
 each app in App info. For each app kept in the backup, the backup holds its record (ID,
@@ -452,15 +459,19 @@ device:
        revocation list as it links; the SDK's `maki store` makes every record, keys as 24 words
        for paper included. A development store stands in until Kara makes the real keys offline
        (DEVELOPMENT.md, "The maki store"). `maki reproduce` checks a bundle against its source
-       (the SDK's examples all reproduce). Not yet: the store's Git repository, and the CI that
-       runs `maki reproduce` on each app submitted.
+       (the SDK's examples all reproduce). The store's Git repository is
+       [KaraZajac/maki-apps](https://github.com/KaraZajac/maki-apps): each app's signed bundle and
+       the commit it's built from, scripts that rebuild each from there and publish the store,
+       and the store itself, which maki desktop fetches, lists in a grid and installs from
+       (Pomodoro, Dice, Tally, Sensors and SSH so far). Not yet: the CI that runs its check on
+       each app submitted, which needs the SDK public.
     4. ~~Native apps~~ — done in the emulator (above, "Native apps: how they're confined"): the
        kernel confines a process and lets the one that started it end it or ask after it; the
        stub loads and confines each app; the host serves it the same functions a WebAssembly
        app gets; its memory swaps like everyone else's; the SDK builds either kind from one
        source, reproducibly. Hello Native opens, runs, exits and opens again; an app that fills
        800 KiB runs through swap with its memory intact; a fault or a panic shows as a crash.
-       Not yet on a badge.
+       Pomodoro, a focus timer, is the first native app in the store. Not yet on a badge.
 
 ## Constraints to design around
 
