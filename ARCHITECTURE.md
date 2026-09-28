@@ -34,7 +34,7 @@ extensions for the web, and maki's screen and button as the approval for everyth
 | **Passkeys** | browser ⇄ maki over FIDO2 directly; maki shows the site, you press | works in the stock vault |
 | **Passwords** | page → extension → desktop → maki: "*site* — Fill login?" → press → credential back to the page; a login typed and submitted → "Keep new login?" | **built**, tested against the fake maki in real Chromium and Firefox; on maki, built and emulated |
 | **TOTP** | extension spots the code field → "*site* — Send code?" → press → filled; the first time, the owner picks which entry is the site's | **built**, as above; needs a Roughtime-verified clock |
-| **Wallets** | dApp → extension (a wallet provider) or wallet software → maki switches to that wallet, shows the decoded transaction → press → signature back | planned: Bitcoin first, keys from the recovery phrase (below) |
+| **Wallets** | maki desktop's Wallets page, a dApp through the extension (a wallet provider), or wallet software → maki shows the decoded transaction → press → signature back | **built**: Bitcoin (native SegWit, taproot) and Ethereum, keys from the recovery phrase (below); tested against the fake maki |
 | **Apps** | maki desktop installs `.maki` apps over serial, from the store or a file; maki shows what each may do before installing | designed (below); WebAssembly apps first |
 
 ## What each flow can and can't protect
@@ -452,7 +452,10 @@ device:
     itself, strictly, and hashes exactly what it shows, the network and the app first, then a
     permit (EIP-2612 or Permit2) as who may spend how much of which token until when, and
     anything else field by field. Signatures match alloy's, byte for byte, typed data's hashes
-    included. Not yet: token names and decimals, which maki can't verify.
+    included. The tokens people hold most (USDC, USDT, DAI and WETH on the networks maki desktop
+    knows, and WBTC on Ethereum) maki knows by network and contract, from a table in its
+    firmware, and shows their amounts in their own units ("1.5 USDC"); any other token's are its
+    smallest units, with its contract.
 11. **Apps** (above), each step emulated first:
     1. ~~WebAssembly apps, sideloaded~~ — done in the emulator: the bundle format and the `maki`
        tool; the host, with drawing, buttons, storage and menus; installing over serial with the
@@ -474,8 +477,8 @@ device:
        [KaraZajac/maki-apps](https://github.com/KaraZajac/maki-apps): each app's signed bundle and
        the commit it's built from, scripts that rebuild each from there and publish the store,
        and the store itself, which maki desktop fetches, lists in a grid and installs from
-       (Pomodoro, Dice, Tally, Sensors and SSH so far). Not yet: the CI that runs its check on
-       each app submitted, which needs the SDK public.
+       (Pomodoro, Passphrase, Snake, Status, Dice, Tally, Sensors and SSH so far). Not yet: the
+       CI that runs its check on each app submitted, now the SDK is public.
     4. ~~Native apps~~ — done in the emulator (above, "Native apps: how they're confined"): the
        kernel confines a process and lets the one that started it end it or ask after it; the
        stub loads and confines each app; the host serves it the same functions a WebAssembly
@@ -483,6 +486,19 @@ device:
        source, reproducibly. Hello Native opens, runs, exits and opens again; an app that fills
        800 KiB runs through swap with its memory intact; a fault or a panic shows as a crash.
        Pomodoro, a focus timer, is the first native app in the store. Not yet on a badge.
+12. ~~Wallets in maki desktop~~ — done against the fake maki: the Wallets page is a wallet for
+    each account. Bitcoin: the account's descriptor from maki (with the owner's yes), kept; the
+    balance, coins and activity from mempool.space's Esplora API (a gap-limit scan of both
+    chains, two requests a second, an address asked about again only once it has changed); a
+    fresh address as a QR code, checked on maki's screen; and sending, with mempool.space's fee
+    rates or the owner's, a preview of the payment, the fee and the change, then a PSBT made
+    the way maki reads them (the whole transaction each SegWit coin comes from, each key's
+    derivation, change marked as change), signed on maki and broadcast. Ethereum: maki desktop
+    connects to the account as a site of its own, `desktop.maki`, which maki asks about like any
+    other (the browser bridge refuses the name from sites); what it holds on each network maki
+    desktop knows, its coin and the tokens maki knows; and sending either, which maki spells
+    out. Not yet: prices in money, fee bumping (RBF) and Ethereum's history, which needs an
+    indexer.
 
 ## Constraints to design around
 
