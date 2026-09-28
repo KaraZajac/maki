@@ -209,11 +209,13 @@ transaction's first page by 13.0G. A press before its screen is up lands on what
 setup, measure again.
 
 `MAKI_DEMO_ETH=1` does the same for Ethereum, for a site called demo.maki: connect, sign a
-message, sign a transaction (0.05 ETH on Ethereum), checked against `libs/maki-eth/tests/fixtures`
-(`demo eth signed: 117 bytes, as expected: true`). Deriving the account the first time is slow in
-the emulator, so space the presses: continue at 10.9G, then 12.3 (connect), 12.8 and 13.1 (the
-message: next, sign), 13.6, 13.8 and 14.0 (the transaction's pages) and 14.2 (sign), with
-`OFFSET=0.6` as above.
+message, sign a transaction (0.05 ETH on Ethereum) and sign typed data (EIP-712: a permit to
+spend 1 USDC), checked against `libs/maki-eth/tests/fixtures` (`demo eth signed: 117 bytes, as
+expected: true`, `demo eth typed: result 0, as expected: true`). Deriving the account the first
+time is slow in the emulator, so space the presses: continue at 10.9G, then 12.3 (connect), 12.8
+and 13.1 (the message: next, sign), 13.6, 13.8 and 14.0 (the transaction's pages) and 14.2
+(sign), then 14.6 to 15.6 every 0.2G (the permit's pages: network, app, spender, amount, until,
+token) and 15.8 (sign), with `OFFSET=0.6` as above.
 
 `MAKI_DEMO_APP=1` installs Dice and Tally and opens Dice. With the test phrase's presses
 (`OFFSET=2.0`, for the app host): continue to the home screen at 12.3G; five presses of the

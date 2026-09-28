@@ -427,8 +427,11 @@ device:
     transactions (EIP-1559, EIP-155) are shown on maki page by page (network, recipient and
     amount, ERC-20 transfers and approvals spelled out, any other call flagged as unreadable, the
     most the fee can be) and signed there; maki desktop fills in nonce, gas and fees and
-    broadcasts through public servers. Signatures match alloy's, byte for byte. Not yet: typed
-    data (EIP-712), which maki can't show; token names and decimals, which maki can't verify.
+    broadcasts through public servers. Typed data (EIP-712) too: maki reads the site's JSON
+    itself, strictly, and hashes exactly what it shows, the network and the app first, then a
+    permit (EIP-2612 or Permit2) as who may spend how much of which token until when, and
+    anything else field by field. Signatures match alloy's, byte for byte, typed data's hashes
+    included. Not yet: token names and decimals, which maki can't verify.
 11. **Apps** (above), each step emulated first:
     1. ~~WebAssembly apps, sideloaded~~ — done in the emulator: the bundle format and the `maki`
        tool; the host, with drawing, buttons, storage and menus; installing over serial with the
