@@ -1,4 +1,4 @@
-# BAOKEY — design brief
+# maki — design brief
 
 > Community firmware for the DEF CON 34 badge's core module: a security key with a
 > screen, and an app platform for the hacker community to build on. Flipper-style custom
@@ -51,7 +51,7 @@ What developer mode costs, precisely:
 | Malware on your computer using your keys silently | **Yes.** Every use needs a button press with the details on screen, and keys never leave the badge |
 | A catalog app reading another app's keys | **Yes, once §5.2 is built** |
 | Someone who takes your badge | **No.** Anyone can flash a developer-signed image and read the keys |
-| A code-execution bug in BAOKEY itself | **No.** See §3.3 |
+| A code-execution bug in maki itself | **No.** See §3.3 |
 
 The screen's protection never depended on secure boot, so it survives developer mode
 intact. What's lost is resistance to physical access, which is exactly the Flipper
@@ -78,14 +78,14 @@ configuration, so the key hierarchy shouldn't be designed around it.
 Developer mode means anyone *holding* the badge can replace the firmware. It says nothing
 about what an app you *installed* can do. Those are different threats, and for a community
 catalog the second is the likely one. On a Flipper, apps run with access to the whole
-device. BAOKEY apps each get their own address space from the MMU, and that's worth
+device. maki apps each get their own address space from the MMU, and that's worth
 protecting (§5.2).
 
 ---
 
 ## 2. The hardware
 
-The DC34 badge is two boards. BAOKEY targets the removable **core module** (T6 Torx, two
+The DC34 badge is two boards. maki targets the removable **core module** (T6 Torx, two
 screws), which works standalone over USB-C. Background on the silicon, the boot chain and
 the published attacks is in `~/Projects/BAOSEC/RESEARCH.md`.
 
@@ -134,7 +134,7 @@ addresses, and HMAC-SHA512 is the primitive under BIP32 key derivation and BIP39
 EP0 plus four endpoints, per the SoC docs. The stock vault spends them on a keyboard (for
 autotyping), a FIDO HID pair, and USB serial (CDC-ACM), and a comment in
 `services/usb-bao1x/src/hw.rs` notes there's no room for another interface without dropping
-one. BAOKEY needs nothing new: passkeys use FIDO HID, and everything else (signing
+one. maki needs nothing new: passkeys use FIDO HID, and everything else (signing
 requests, setting the time, installing apps) rides the vault's existing vendor-command
 channel over FIDO HID, or the serial port.
 
@@ -169,12 +169,12 @@ every access-control check in the RRAM controller is gated on `data_op`, which i
 zero during an instruction fetch. Fetching from the key and data slots returns their real
 contents in any privilege mode, and it can't be fixed in firmware on this die.
 
-So there's no hardware backstop, and any code-execution bug in BAOKEY is a full key
+So there's no hardware backstop, and any code-execution bug in maki is a full key
 compromise. Keep the exposed surface small: the USB parsers, the signing-request decoders
 and the app loader should be `#![forbid(unsafe_code)]` and fuzzed.
 
 > **Embargo.** That writeup is marked unpatched and privately disclosed, under the same
-> embargo as the rest of its repo. Before BAOKEY goes public, clear it with bunnie, or
+> embargo as the rest of its repo. Before maki goes public, clear it with bunnie, or
 > describe the constraint without the mechanism.
 
 ### 3.4 Optional passphrase
@@ -202,7 +202,7 @@ sign) at rising stakes.
 
 `apps-baosec/vault2`, the upstream vault without the DEF CON game code, already does FIDO2
 passkeys with the site on screen, TOTP and password storage, on an OpenSK-derived CTAP2
-stack. BAOKEY forks it rather than rebuilding.
+stack. maki forks it rather than rebuilding.
 
 Two changes:
 
@@ -260,7 +260,7 @@ three buttons. §5.2 keeps them away from the keys.
 
 ### 5.1 What exists
 
-**The BAOKEY launcher exists** (`apps-baosec/baokey-launcher` in the fork, 2026-09-26): boot
+**The maki launcher exists** (`apps-baosec/maki-launcher` in the fork, 2026-09-26): boot
 image, home screen with a status bar (name, clock), and the owner of input focus. Keys are
 routed only to the app in front, which is enforced; apps only drawing while in front is
 cooperative for now. Apps are still compiled into the image.
@@ -366,14 +366,14 @@ Badge B stays sealed throughout, as a reference.
 
 1. **License.** `xous-core` is Apache-2.0, and `vault2`'s CTAP stack is Google's OpenSK, also
    Apache-2.0. This repo is BSD-3-Clause. Forked files stay Apache-2.0 regardless; switching
-   BAOKEY to Apache-2.0, or Rust's usual MIT/Apache-2.0, would let code move to and from
+   maki to Apache-2.0, or Rust's usual MIT/Apache-2.0, would let code move to and from
    upstream without friction. There's no code yet, so changing now is free.
 2. **Going public.** A community firmware has to be public eventually, and §3.3's embargo has
    to be cleared or worked around first.
 3. **Upstream first?** The PKE driver and the `rp.name` fix belong in `xous-core`. The kernel
    changes for §5.2 might too, so it's worth asking bunnie early whether he'd take them.
 4. ~~**Out-of-tree or fork?**~~ Settled: a fork, kept private for now at
-   `KaraZajac/baokey-firmware` (see `DEVELOPMENT.md`).
+   `KaraZajac/maki-firmware` (see `DEVELOPMENT.md`).
 
 ---
 

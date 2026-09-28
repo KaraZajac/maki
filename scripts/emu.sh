@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Boot a BAOKEY firmware build in Baomulator and save OLED screenshots as PNG.
+# Boot a maki firmware build in Baomulator and save OLED screenshots as PNG.
 #
 #   scripts/emu.sh [CHECKPOINTS] [extra shot args...]
 #
