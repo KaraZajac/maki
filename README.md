@@ -15,7 +15,9 @@ for your keys.
 > from the maki store ([maki-apps](https://github.com/KaraZajac/maki-apps): reviewed, and rebuilt
 > from their source), after maki shows you what they are and who signed them, and run below maki's
 > own bar. The desktop side is tested against a stand-in for maki that runs maki's own code; the
-> screens below are maki's firmware in the emulator. Nothing runs on a badge yet.
+> screens below are maki's firmware in the emulator. Each maki names itself the first time it
+> starts, after a maki roll (natto, uni, umekyu…); its bar shows the time, and after a minute
+> untouched it rests as a clock the size of its screen. Nothing runs on a badge yet.
 > [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan, [RESEARCH.md](./RESEARCH.md) the background,
 > [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
 
@@ -23,7 +25,7 @@ for your keys.
 
 ![maki's app screens in the emulator: the install screen for Dice, a sideloaded example app (its name, version and ID); Dice running below maki's bar, which marks it as sideloaded; its menu, on App info; and App info's pages: the app, where it's from, its developer's key, whether its data is in the backup (with "leave it out"), and Remove](docs/apps.png)
 
-![Pomodoro, a native app, on maki's firmware in the emulator: before a focus, a triangle cut from the whole circle (focus 25 min); the circle shrinking as the focus runs (19 min, 9 min) down to a dot (57 s); the screen flashing when it's over (time for a break); the dot grown back into the circle as the break runs (break 1 min); paused, two bars cut from the circle; and its menu, Skip ahead](docs/pomodoro.png)
+![Pomodoro, a native app, on maki's firmware in the emulator: its icon on the home screen of a maki named umekyu, the time at the top right; ready, a full pie with the minutes to focus (25); the pie emptying clockwise like a clock's hand as the focus runs; paused, two bars in a dark disc at the centre; the last sliver of the focus; the screen flashing when it's over; and the pie filling back up as the break runs](docs/pomodoro.png)
 
 ![maki desktop's Apps page: maki's room for apps as a bar (131 KiB of 2 MiB, room for 29 more apps), a segment each for Pomodoro, SSH and Dice; the three installed, from the maki store, Pomodoro marked native; and the maki store's apps in a grid by category, fetched from KaraZajac/maki-apps](docs/desktop.png)
 
@@ -56,8 +58,9 @@ Planned apps:
   permission, an app can ask you things on maki's own screen, have secrets of its own from your
   phrase, type into your computer, and talk to software on it. Native apps too, machine code
   in a process of its own that maki's kernel confines. An SDK with a simulator and example apps,
-  and the maki store, reviewed and rebuilt from source, in maki desktop: Pomodoro (a focus timer
-  whose circle shrinks while you work), Dice, Tally, Sensors and SSH so far
+  and the maki store, reviewed and rebuilt from source, in maki desktop: Pomodoro (a focus timer,
+  a pie that empties like a clock while you work and fills back up while you rest), Dice, Tally,
+  Sensors and SSH so far
 
 ## Who it's for
 
@@ -79,8 +82,8 @@ This is unaudited firmware from a hobby project.
 
 ## Background
 
-Research on the silicon, the boot chain and the published attacks lives in
-`~/Projects/BAOSEC`, and the brief links the public sources.
+[RESEARCH.md](./RESEARCH.md) is the design brief: the hardware, the security model, the apps
+and the plan, with links to the public sources at its end.
 
 ## License
 

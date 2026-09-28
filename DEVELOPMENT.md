@@ -7,9 +7,9 @@ on 2026-09-25 on Fedora 44 with Rust 1.96.0.
 
 ```
 maki/
-├── xous-core/          our fork: KaraZajac/maki-firmware (private), branch `maki`         (gitignored clone)
-├── desktop/            the desktop app: KaraZajac/maki-desktop (private)                 (gitignored clone)
-├── apps/               the maki store: KaraZajac/maki-apps (private)                     (gitignored clone)
+├── xous-core/          our fork: KaraZajac/maki-firmware, branch `maki`                   (gitignored clone)
+├── desktop/            the desktop app: KaraZajac/maki-desktop                           (gitignored clone)
+├── apps/               the maki store: KaraZajac/maki-apps                               (gitignored clone)
 ├── tools/baomulator/   zst123/dc34_baomulator, full-system badge emulator            (gitignored clone)
 ├── patches/baomulator/ our changes to the emulator, applied on top of the clone
 ├── scripts/emu.sh      build → emulate → PNG screenshots, in one command
@@ -19,10 +19,9 @@ maki/
 ## One-time setup
 
 ```sh
-# firmware source: our private fork. --reference reuses BAOSEC's objects so it's quick;
-# drop those two flags on a machine without ~/Projects/BAOSEC.
-git clone --reference ~/Projects/BAOSEC/xous-core --dissociate --branch maki \
-    https://github.com/KaraZajac/maki-firmware.git xous-core
+# firmware source: our fork, whole (the build needs upstream's tags). With a clone of
+# xous-core already on the machine, `--reference PATH --dissociate` saves the download.
+git clone --branch maki https://github.com/KaraZajac/maki-firmware.git xous-core
 git -C xous-core remote add upstream https://github.com/betrusted-io/xous-core.git
 git -C xous-core fetch upstream --tags
 
@@ -35,18 +34,19 @@ git clone https://github.com/KaraZajac/maki-desktop.git desktop
 git clone https://github.com/KaraZajac/maki-apps.git apps
 ```
 
-The Xous toolchain (`riscv32imac-unknown-xous-elf`) must match your `rustc` exactly;
-see `~/Projects/BAOSEC/SETUP.md`. The build stamps its version from upstream's git tags
+The Xous toolchain (`riscv32imac-unknown-xous-elf`) must match your `rustc` exactly:
+`cargo xtask install-toolkit`, in `xous-core`, installs the betrusted-io/rust release that
+does (after a `rustup update`, run it again). The build stamps its version from upstream's git tags
 and fails without them, which is why the fork is its own repo rather than a folder in
 this one.
 
 ## The fork
 
-`KaraZajac/maki-firmware` is private, holds upstream's full history, and has two
-branches: `dev`, an untouched mirror of upstream `dev`, and `maki`, where our work
-goes. **GitHub Actions is switched off on it**: upstream's workflows would otherwise run
-on every push (two of them trigger on any branch) and spend private-repo minutes. Turn
-it back on deliberately if we want our own CI.
+`KaraZajac/maki-firmware` holds upstream's full history and has two branches: `dev`, an
+untouched mirror of upstream `dev`, and `maki`, where our work goes. **GitHub Actions is
+switched off on it**: upstream's workflows would otherwise run on every push (two of them
+trigger on any branch), building upstream's targets rather than ours. Turn it back on
+deliberately if we want our own CI.
 
 Syncing with upstream:
 
@@ -139,6 +139,13 @@ compiled in unless set, so rebuild without them before flashing:
   Sensors from the store ("maki store" on the install screen) and Tally sideloaded, then hands
   over the revocation list, which revokes Tally. It logs `demo store ...` lines, among them
   Tally refused when it's sent again (`the maki store revoked it`).
+- `MAKI_DEMO_CLOCK=1`: maki-link sets maki's clock at boot, as maki desktop would (Sunday 27
+  September 2026, 22:38 at UTC-4), and calls it verified: the bar shows 22:38, and the
+  screensaver has a time to show.
+- `MAKI_DEMO_SAVER=1`: the screensaver, which the demos otherwise leave out (the emulator's clock
+  runs far ahead while everything waits, so a minute goes by between scripted presses and each
+  would only wake the screen). With `MAKI_DEMO_CLOCK`, the welcome screen gives way to 22:38 a
+  moment after it appears, and a press brings it back (the launcher logs `resting: the clock`).
 - `MAKI_DEMO_NATIVE=1`: once maki has its PIN and phrase, maki-link installs the SDK's Hello
   Native (Hello built as a native app, from `libs/maki-native/tests/fixtures`). Opened, it runs
   in a process of its own, and the app host logs `running in PID N, confined`.
@@ -344,9 +351,9 @@ rebuilds every app from its source and checks it with `maki reproduce`; `scripts
 CATALOGUE.key DAYS` stamps each app's newest bundle, signs the revocation list again if
 `revocations.txt` changed, and signs a new index, whose version is the hour (UTC, YYYYMMDDHH) so
 it always goes up. Its apps are Pomodoro, Dice, Tally, Sensors and SSH; it's signed with the
-development keys, for ten years, as the development store is. While the repository is private,
-maki desktop reads it with a GitHub token: `MAKI_STORE_TOKEN=$(gh auth token) npm --prefix
-desktop run dev`. Its README says how an app gets in.
+development keys, for ten years, as the development store is. maki desktop reads it straight
+from GitHub; a store in a private repository needs a token, `MAKI_STORE_TOKEN=$(gh auth token)
+npm --prefix desktop run dev`. Its README says how an app gets in.
 
 **The development store.** Until the real store opens, the firmware and maki desktop both start
 from the development store's root: `xous-core/libs/maki-store/dev-store`, made by its `make.sh`

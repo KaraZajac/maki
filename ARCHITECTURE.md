@@ -96,6 +96,17 @@ What it looks like:
 - **Keys underneath:** the keyboard service holds a left or right press for 150 ms to see
   whether the other side joins it. If it does, it sends the menu key (`MENU`) and neither
   arrow, so a menu never also moves; if not, the arrow. Left and right don't auto-repeat.
+- **The bar** across the top of maki's own screens: this maki's name on the left, the clock
+  (local time, from maki desktop) on the right. Through an ask too: its time left is the rule
+  under the bar, shrinking, and the bar counts its last ten seconds.
+- **Its name.** The firmware is maki; each badge picks a name of its own the first time it
+  starts, a maki roll (natto, uni, unagi, kappa...), and keeps it through wipes. The bar,
+  maki's menu and About say it, and maki desktop calls the badge by it (HELLO).
+- **Resting.** maki is always plugged in, so there's no power to save; after a minute with
+  nothing pressed, maki's own screens (home, its menu, a page of text, the PIN pad at boot) give
+  way to a clock that fills the screen, the hours over the minutes. It drifts a few pixels each
+  minute, as an OLED needs. Any key brings back what was there and does nothing else; an ask
+  wakes it first; an app in front keeps the screen.
 
 ### Boot PIN
 

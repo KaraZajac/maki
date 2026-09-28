@@ -6,7 +6,7 @@
 
 Rewritten 2026-09-25, replacing the earlier YubiHSM feasibility brief (its research is
 kept in Appendix A). Hardware facts come from `xous-core` @ `da252db56` and the
-`baochip-1x` RTL in `~/Projects/BAOSEC`. Anything marked *verified* was read in source,
+`baochip-1x` RTL (links at the end). Anything marked *verified* was read in source,
 not recalled. Nothing has run on a badge yet.
 
 ## At a glance
@@ -86,8 +86,7 @@ protecting (§5.2).
 ## 2. The hardware
 
 The DC34 badge is two boards. maki targets the removable **core module** (T6 Torx, two
-screws), which works standalone over USB-C. Background on the silicon, the boot chain and
-the published attacks is in `~/Projects/BAOSEC/RESEARCH.md`.
+screws), which works standalone over USB-C.
 
 | | |
 |---|---|
@@ -349,7 +348,7 @@ Badge B stays sealed throughout, as a reference.
   and make sure every site using it as a passkey has another way in. Passkeys can't be
   exported, by design.
 - **`THE_FLAG_1`:** last chance for this unit, if you want it. Skip it if you don't care.
-- **Build from the known-good tree** (`~/Projects/BAOSEC/xous-core`), pin the commit, and
+- **Build from a known-good tree** (a commit of the fork that has run in the emulator), pin it, and
   flash all three of `loader.uf2`, `xous.uf2` and `swap.uf2` the first time.
 - **The flash:** hold a button while pressing reset to reach "Update mode" (it enumerates as
   `Baochip_1x`), copy the three files, `sync` and unmount (the most common cause of failed
@@ -366,8 +365,8 @@ Badge B stays sealed throughout, as a reference.
    states the constraint without the mechanism.
 3. **Upstream first?** The PKE driver and the `rp.name` fix belong in `xous-core`. The kernel
    changes for §5.2 might too, so it's worth asking bunnie early whether he'd take them.
-4. ~~**Out-of-tree or fork?**~~ Settled: a fork, kept private for now at
-   `KaraZajac/maki-firmware` (see `DEVELOPMENT.md`).
+4. ~~**Out-of-tree or fork?**~~ Settled: a fork, `KaraZajac/maki-firmware` (see
+   `DEVELOPMENT.md`).
 
 ---
 
