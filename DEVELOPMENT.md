@@ -79,8 +79,8 @@ What's where in the fork:
 | `libs/maki-native` | native apps: the ELF check, the stub's load request, the app service's operations and the drawing a native app sends |
 | `libs/maki-app-host-api` | how maki-link asks the app host to install, list and remove apps |
 | `libs/maki-bundle` | the `.maki` format, host-tested and fuzzed: manifest, code, icon, Ed25519 signature; permissions and their warnings; who may update an app |
-| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
-| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator, store records, reproduce), example apps (Hello, Dice, Tally; Signer, which asks, signs and types; SSH, maki's SSH key for maki desktop's SSH agent; Hello Native, Hello built as a native app); see `sdk/README.md` |
+| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer; API 2: BIP340 Schnorr and X25519 keys) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
+| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator, store records, reproduce), fourteen example apps (Hello, Dice, Tally; Signer, which asks, signs and types; Sensors; SSH, maki's SSH key for maki desktop's SSH agent; Nostr; Age, maki's age key for maki desktop's `age-plugin-maki`; Wi-Fi; Passphrase; Snake; Status; Hello Native and Pomodoro, built as native apps); see `sdk/README.md` |
 | `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: Bitcoin (receiving addresses and the account key as QR codes and text) and Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes) |
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
 | `libs/maki-eth` | the Ethereum account, host-tested: BIP44 keys, EIP-55, strict RLP, EIP-1559 and EIP-155 transactions and EIP-191 messages, reviewed and signed; tested against alloy |
@@ -372,14 +372,18 @@ bundles under `apps/`.
 **The maki store's repository** is [KaraZajac/maki-apps](https://github.com/KaraZajac/maki-apps),
 cloned at `apps/`: each app's developer-signed bundle with an `app.toml` naming the commit it's
 built from (the SDK's examples name this fork's), and the published store in `store/`, which is
-where maki desktop fetches it from by default (on GitHub's file server). `scripts/check.sh`
-rebuilds every app from its source and checks it with `maki reproduce`; `scripts/publish.sh
-CATALOGUE.key DAYS` stamps each app's newest bundle, signs the revocation list again if
-`revocations.txt` changed, and signs a new index, whose version is the hour (UTC, YYYYMMDDHH) so
-it always goes up. Its apps are Pomodoro, Dice, Tally, Sensors and SSH; it's signed with the
-development keys, for ten years, as the development store is. maki desktop reads it straight
-from GitHub; a store in a private repository needs a token, `MAKI_STORE_TOKEN=$(gh auth token)
-npm --prefix desktop run dev`. Its README says how an app gets in.
+where maki desktop fetches it from by default (on GitHub's file server). `scripts/lint.sh` checks
+the rules for a submission (the files an app may have, its `app.toml`, its bundles' IDs, versions
+and developer key), and `scripts/check.sh` rebuilds every app from its source and checks it with
+`maki reproduce`, both with the maki tool `scripts/sdk.sh` builds from the commit
+`scripts/sdk.txt` pins; its CI runs them on each pull request, for the apps it touches, and on
+every app weekly. `scripts/publish.sh CATALOGUE.key DAYS` stamps each app's newest bundle, signs
+the revocation list again if `revocations.txt` changed, and signs a new index, whose version is
+the hour (UTC, YYYYMMDDHH) so it always goes up. Its eleven apps are Pomodoro, Age, Nostr, Wi-Fi,
+Passphrase, Snake, Status, Dice, Tally, Sensors and SSH; it's signed with the development keys,
+for ten years, as the development store is. maki desktop reads it straight from GitHub; a store
+in a private repository needs a token, `MAKI_STORE_TOKEN=$(gh auth token) npm --prefix desktop
+run dev`. Its README says how an app gets in.
 
 **The development store.** Until the real store opens, the firmware and maki desktop both start
 from the development store's root: `xous-core/libs/maki-store/dev-store`, made by its `make.sh`
@@ -418,15 +422,17 @@ store's repository (above).
    for the index, a few weeks for the revocation list, signed again before they run out.
 
 Running it: `maki reproduce BUNDLE SOURCE` checks that a developer's bundle is what its source
-builds to (with the Rust the source pins); `maki store add DIR BUNDLE --catalogue
+builds to (with the Rust the source pins; the tool maps the paths a build would leave in the
+code, the source's own, downloaded crates' and Rust's standard library's, to ones that are the
+same on every machine, so a bundle reproduces anywhere); `maki store add DIR BUNDLE --catalogue
 catalogue.key` stamps a reviewed bundle into the store and signs a new index; `maki store index
-DIR --catalogue catalogue.key` signs the index again, which it needs within 30 days (maki
-desktop won't use an expired one); `maki store revoke` signs a new revocation list, with a
-higher `--version` than the last. Before the catalogue key expires, or if it's lost or stolen,
-a new root names a new one: `maki store root --version N+1` with the next catalogue key, signed
-by two root keys of the current root (recovered from paper, offline) and two of its own; then
-every bundle is stamped again with the new catalogue key, and the revocation list and index
-signed again. maki and maki desktop take a new root only when it's signed so.
+DIR --catalogue catalogue.key` signs the index again, which it needs within 30 days (maki desktop
+won't use an expired one); `maki store revoke` signs a new revocation list, with a higher
+`--version` than the last. Before the catalogue key expires, or if it's lost or stolen, a new
+root names a new one: `maki store root --version N+1` with the next catalogue key, signed by two
+root keys of the current root (recovered from paper, offline) and two of its own; then every
+bundle is stamped again with the new catalogue key, and the revocation list and index signed
+again. maki and maki desktop take a new root only when it's signed so.
 
 ## Two emulators
 

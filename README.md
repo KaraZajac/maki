@@ -67,7 +67,10 @@ Planned apps:
   a pie that empties like a clock while you work and fills back up while you rest), Passphrase
   (diceware from maki's random number generator), Status (a sign for your desk, which your
   computer can set), Nostr (your Nostr key for sites, through the extension's `window.nostr`,
-  each event shown on maki before it's signed), Snake, Dice, Tally, Sensors and SSH so far
+  each event shown on maki before it's signed), Age (your age key: anyone encrypts files to it
+  with age, and maki desktop's `age-plugin-maki` asks maki to open each one, which you approve on
+  its screen), Wi-Fi (networks as QR codes for guests to join), Snake, Dice, Tally, Sensors and
+  SSH so far
 
 ## Who it's for
 
