@@ -80,7 +80,7 @@ What's where in the fork:
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
 | `libs/maki-eth` | the Ethereum account, host-tested: BIP44 keys, EIP-55, strict RLP, EIP-1559 and EIP-155 transactions and EIP-191 messages, reviewed and signed; tested against alloy |
 | `libs/maki-ui` | the keys and drawing every maki screen shares: status bar, action bar, arrows, icons, QR codes |
-| `libs/maki-btc` | the Bitcoin wallet, host-testable: BIP32/BIP84 keys, addresses, descriptors, PSBT parsing, the checks before signing, signing; tested against rust-bitcoin and Bitcoin Core's consensus code |
+| `libs/maki-btc` | the Bitcoin wallet, host-testable: BIP32 keys, the BIP84 (native SegWit) and BIP86 (taproot) accounts, addresses, descriptors, PSBT parsing (BIP174, BIP371), the checks before signing, signing (ECDSA, BIP340 Schnorr); tested against rust-bitcoin, miniscript and Bitcoin Core's consensus code |
 | `apps-baosec/vault2` | the upstream vault, registered with the launcher; `src/link.rs` answers the browser's requests for logins and codes |
 | `services/maki-link` | the serial end of the desktop link: time sync, link state, and handing requests to the vault |
 | `libs/maki-proto` | the protocol (framing, messages, device logic) and `PROTOCOL.md`; `examples/fake_maki.rs` |
@@ -141,7 +141,9 @@ compiled in unless set, so rebuild without them before flashing:
   Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
   sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
   `demo btc signed: N bytes, as expected: true` if the signature is the one maki-btc makes on a
-  computer. The PSBT belongs to the BIP39 test phrase, so restore that at setup (below).
+  computer; then the same for the taproot account, whose signatures take fresh randomness, so
+  it logs `as expected but for its signatures: true, fresh signatures: true`. The PSBTs belong
+  to the BIP39 test phrase, so restore that at setup (below).
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `3` is maki's left, `4` its
 right and `5` the centre; `3` and `4` together are the menu. (Baomulator names `3` and `4` the
@@ -193,13 +195,15 @@ phrase, the PIN twice, 12 words, each word typed a letter at a time until it can
 `OFFSET` shifts them all (in G). It ends at 10.0G + `OFFSET` on "Phrase restored". Asks wait
 until setup is over, so the centre first continues to the home screen. With `MAKI_DEMO_BTC`, the
 Bitcoin asks follow: the centre answers the account and the address, then goes through the
-transaction (Send, Change, Fee) and signs:
+transaction (Send, Change, Fee) and signs; then the same for the taproot account (its payment's
+address takes two screens, and the fixture's fee is called high):
 
 ```sh
 MAKI_DEMO=1 MAKI_DEMO_BTC=1 cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-apps
 bash -c 'mapfile -t P < <(OFFSET=0.6 scripts/presses-test-phrase.sh)
-  for t in 10.9 11.8 12.6 13.1 13.3 13.5 13.7; do P+=(--press 5@${t}G+2M); done
-  scripts/emu.sh 12.5G,13.0G,14.0G "${P[@]}"' | grep "demo btc"
+  for t in 10.9 11.8 12.6 13.1 13.3 13.5 13.7; do P+=(--press 5@${t}G+2M); done           # native SegWit
+  for t in 14.6 15.4 16.2 16.4 16.6 16.8 17.0; do P+=(--press 5@${t}G+2M); done           # taproot
+  scripts/emu.sh 12.5G,13.0G,14.0G,17.4G "${P[@]}"' | grep "demo btc"
 ```
 
 The times follow the work maki does after a restore (the passkeys' keys and store come first),
@@ -408,6 +412,18 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
   image with three extra idle processes boots. maki's own apps still share one process
   (`maki-apps`), which spares RAM. Worth sending upstream. (The swapper's `oom-doom` feature,
   which evicts ahead of time, doesn't compile in this version.)
+
+- **The swapper's own server at boot (fixed).** Some images stopped at boot: the log server
+  printed `PANIC in PID 2:` with no message after it (the swapper's report cut off), then the
+  kernel panicked in `map_page_to_swapper` (no swapper left to page anything in). The swapper
+  makes its server at boot, and the kernel gives a server a page with `map_zeroed_page`, which
+  chose the page's address before finding it a physical page. Finding one could run the
+  swapper, which maps memory of its own as it goes; when it was the swapper's own server, it
+  could take the very address chosen, and mapping it then failed (`MemoryInUse`). Whether a
+  boot ran out of memory at that moment depended on the image. The kernel now checks the
+  address again once it has the page, and takes another if it's gone. Traced with a panic hook
+  in the swapper that reported its panic's place through the kernel's console. Worth sending
+  upstream.
 
 - **Native apps and the kernel (fixed).** A native app is the first process started after
   boot, and ends while maki runs; three things went wrong once one ran:

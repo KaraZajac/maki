@@ -127,8 +127,8 @@ covers everything: passwords, codes, passkeys, the wallet.
 Made at setup: 24 BIP39 words from the TRNG, shown one word per screen to write down, then
 checked by asking for a few of them back. It's the root of everything that can't be made again:
 
-- **the Bitcoin wallet's keys**, derived the standard way (BIP32, BIP84), so the phrase also
-  works in other wallets;
+- **the Bitcoin wallet's keys**, derived the standard way (BIP32; BIP84 and BIP86), so the
+  phrase also works in other wallets;
 - **the key that encrypts maki's backup**;
 - **passkeys**: the FIDO authenticator's master keys come from the phrase (HKDF over the
   BIP39 seed, "fido v1"): the key that encrypts and the key that authenticates the credential
@@ -409,12 +409,15 @@ device:
 7. ~~Recovery phrase and backups~~ — done: made, shown and checked at setup, or typed in to
    restore; maki desktop keeps the encrypted backup (hourly, and after a login is saved) and
    sends it back on request, with the owner's yes on maki.
-8. ~~Bitcoin wallet~~ — done: the BIP84 account from the phrase (`libs/maki-btc`), handed to
-   wallet software as a descriptor with the owner's yes; addresses shown on maki to compare, and
-   as QR codes in the Bitcoin app; PSBTs checked (every input maki's, with the transaction it
-   spends), gone through page by page (each payment, change, fee) and signed, through maki
-   desktop. Signatures match rust-bitcoin's and pass Bitcoin Core's consensus code. Not yet:
-   taproot, multisig, and a run against Sparrow with real coins on a badge.
+8. ~~Bitcoin wallet~~ — done: the native SegWit (BIP84) and taproot (BIP86) accounts from the
+   phrase (`libs/maki-btc`), handed to wallet software as descriptors with the owner's yes;
+   addresses shown on maki to compare, and as QR codes in the Bitcoin app; PSBTs checked (every
+   input maki's; a SegWit one with the transaction it spends), gone through page by page (each
+   payment, change, fee) and signed, through maki desktop, every signature verified before it
+   goes out. Taproot is key spends only (BIP86 has no scripts), signed with BIP340 Schnorr and
+   fresh randomness from the TRNG. Signatures match rust-bitcoin's; SegWit's pass Bitcoin Core's
+   consensus code, taproot's rust-bitcoin's sighash and secp256k1. Not yet: multisig, and a run
+   against Sparrow with real coins on a badge.
 9. ~~Passkeys from the phrase, and a Passkeys screen~~ — done: the authenticator's keys from
    the phrase (above), passkeys in the backup, and a Passkeys app that lists them (site and
    user) and deletes one with the owner's yes, telling the vault to re-read its store. It shares
