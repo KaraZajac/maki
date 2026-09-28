@@ -138,8 +138,9 @@ covers everything: passwords, codes, passkeys, the wallet.
 Made at setup: 24 BIP39 words from the TRNG, shown one word per screen to write down, then
 checked by asking for a few of them back. It's the root of everything that can't be made again:
 
-- **the Bitcoin wallet's keys**, derived the standard way (BIP32; BIP84 and BIP86), so the
-  phrase also works in other wallets;
+- **wallets' keys**, derived the standard way (BIP32; BIP84 and BIP86 for Bitcoin, BIP44 for
+  Ethereum), so the phrase also works in other wallets, for the wallet apps its owner adds
+  ("Wallets are apps", below);
 - **the key that encrypts maki's backup**;
 - **passkeys**: the FIDO authenticator's master keys come from the phrase (HKDF over the
   BIP39 seed, "fido v1"): the key that encrypts and the key that authenticates the credential
@@ -277,9 +278,52 @@ each one could do:
   that see more than QR codes, could come later.)
 - **motion**: the accelerometer, which can pick up typing nearby.
 
-No permission gives an app: the recovery phrase; the vault's logins, codes and passkeys; the
-wallets' keys; the PIN; other apps' storage and keys; maki's settings; raw hardware; pressing
+- **wallet**: signing with the wallets' keys, on the derivation paths its manifest names and
+  no others, after the owner says yes to maki's review of what's being signed ("Wallets are
+  apps", below). The strongest warning after the keyboard's: it could spend what those accounts
+  hold.
+
+No permission gives an app: the recovery phrase; the vault's logins, codes and passkeys; keys
+off its wallet paths; the PIN; other apps' storage and keys; maki's settings; raw hardware; pressing
 buttons; drawing over maki's strip, or while it isn't in front.
+
+### Wallets are apps
+
+Bitcoin and Ethereum began in the firmware. They're moving into apps in the maki store, with
+Monero after them, so a maki holds no crypto code or accounts until its owner adds a wallet,
+as on a Ledger. Setup still makes the one recovery phrase; a wallet app added later gets the
+accounts that phrase has always had.
+
+- **The wallet permission** names the derivation paths an app may use, in its manifest
+  (`[wallet] paths = ["m/84'/0'", "m/86'/0'"]`): each at least a purpose and a coin type, both
+  hardened, so no app can claim the whole tree. maki refuses any other path, whatever the app
+  asks. The install screen names the coins from the paths themselves (SLIP-44: Bitcoin, the
+  test networks, Ethereum, Monero), not from the app's say-so, and its warning is the strongest
+  after the keyboard's: the app can spend what those accounts hold, once you say yes on maki.
+- **maki does the key work.** The seed never leaves maki-keys. An app asks for the master
+  key's fingerprint, a public key (or chain code, uncompressed key, taproot output key) at a
+  path, or a signature (ECDSA with its recovery id; BIP340, tweaked the BIP86 way for taproot)
+  over a digest it computed. The curve's arithmetic is done in maki, at native speed: an
+  interpreted app can't do it in time. Everything else (reading a PSBT or a transaction, the
+  sighash, addresses, the pages to show) is the app's, built from the same libraries as before
+  (`libs/maki-btc`, `libs/maki-eth`), which take their keys through a trait.
+- **No signature without a yes on maki's screen.** Signing needs a review first: the app hands
+  maki the pages to show (each payment, the change, the fee; the network, recipient, amount),
+  maki draws them on its own review screen, headed with the app's name, and on a yes lets the
+  app make as many signatures as it said it would, within two minutes. The pages are the app's
+  words, as they are on a Ledger, so which wallet apps to trust matters: the store's are built
+  from this tree, reproducibly; a sideloaded one says so on every screen.
+- **The apps talk to maki desktop over the link**, in pieces of up to 4 KB (a PSBT or a
+  transaction can be bigger), where BTC_* and ETH_* messages used to go to maki-keys. maki
+  desktop's Wallets page and the extension's Ethereum provider find the app, or offer to add it
+  from the store.
+- **What stays in the firmware:** the phrase, BIP32 and the two signatures (in maki-keys, for
+  any wallet app), and passkeys. What leaves: PSBTs, Ethereum transactions and typed data, the
+  token table, the Bitcoin app on the home screen, and the protocol's Bitcoin and Ethereum
+  messages.
+- **A known limit:** maki runs one app at a time, so a request for a wallet while another app
+  is open is turned away as busy, as the SSH agent's already is. Built in, the wallets never
+  were. Letting a woken app run behind the one in front is the fix, memory allowing.
 
 ### The strip and App info
 
@@ -520,6 +564,18 @@ device:
     in money if the owner picks a currency (CoinGecko, asked the same question for everyone).
     An end-to-end test drives the app itself through all of it against the fake maki and
     stand-in networks. Not yet: Ethereum's history, which needs an indexer.
+13. **Wallets become apps** (above, "Wallets are apps"): Bitcoin and Ethereum out of the firmware
+    and into the store, not on a maki until its owner adds them; then Monero.
+    1. The key work in maki-keys for any wallet app: BIP32 from the seed, ECDSA and BIP340
+       (`libs/maki-hd`); the libraries take their keys through its trait.
+    2. The wallet permission and its paths in the bundle format; host API 3's wallet functions
+       and maki's review screen for apps, with path locks and the signing allowance.
+    3. The SDK: `maki_app::wallet`, `[wallet]` in maki.toml, the simulator.
+    4. The Bitcoin and Ethereum apps, from `libs/maki-btc` and `libs/maki-eth`.
+    5. The firmware without them: maki-keys, maki-link, maki-apps, the protocol (version 3).
+    6. maki desktop, the extension and the fake maki, through the apps; the store.
+    7. Monero: an app, once the others are done: the address and a 25-word backup first, then
+       signing (CLSAG and range proofs), measured on the badge.
 
 ## Constraints to design around
 
