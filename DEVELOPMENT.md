@@ -406,7 +406,7 @@ signed again. maki and maki desktop take a new root only when it's signed so.
 
 ## The badge on this machine
 
-A DC34 badge is usually plugged in here (serial `K402TS`, stock firmware, `/dev/ttyACM0`). It shares
+A DC34 badge running stock firmware may be plugged in here (as `/dev/ttyACM0`). It shares
 maki's USB IDs. The desktop app sends it at most one inert HELLO per session (no line ending, so the
 stock console never runs anything) and then leaves it alone. Don't flash it: that's the one-way door.
 

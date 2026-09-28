@@ -164,18 +164,13 @@ hash, and derive what it displays from the same bytes it signs.
 
 ### 3.3 The hardware can't stop code already running on the badge
 
-`~/Projects/BAOSEC/research/dc34badge/docs/05-fetch-acl-bypass.md` documents a silicon bug:
-every access-control check in the RRAM controller is gated on `data_op`, which is always
-zero during an instruction fetch. Fetching from the key and data slots returns their real
-contents in any privilege mode, and it can't be fixed in firmware on this die.
+Treat the key and data slots as readable by any code running on the badge, in any privilege
+mode: on this die the hardware's access controls aren't a backstop against code that's already
+running, and firmware can't change that.
 
-So there's no hardware backstop, and any code-execution bug in maki is a full key
-compromise. Keep the exposed surface small: the USB parsers, the signing-request decoders
-and the app loader should be `#![forbid(unsafe_code)]` and fuzzed.
-
-> **Embargo.** That writeup is marked unpatched and privately disclosed, under the same
-> embargo as the rest of its repo. Before maki goes public, clear it with bunnie, or
-> describe the constraint without the mechanism.
+So any code-execution bug in maki is a full key compromise. Keep the exposed surface small:
+the USB parsers, the signing-request decoders and the app loader should be
+`#![forbid(unsafe_code)]` and fuzzed.
 
 ### 3.4 Optional passphrase
 
@@ -353,8 +348,7 @@ Badge B stays sealed throughout, as a reference.
   encrypted under. Move its TOTP codes to another authenticator (re-enrol from each site),
   and make sure every site using it as a passkey has another way in. Passkeys can't be
   exported, by design.
-- **`THE_FLAG_1`:** last chance for this unit. The sealed-mode extraction route is in
-  `~/Projects/BAOSEC/research/dc34badge`. Skip it if you don't care.
+- **`THE_FLAG_1`:** last chance for this unit, if you want it. Skip it if you don't care.
 - **Build from the known-good tree** (`~/Projects/BAOSEC/xous-core`), pin the commit, and
   flash all three of `loader.uf2`, `xous.uf2` and `swap.uf2` the first time.
 - **The flash:** hold a button while pressing reset to reach "Update mode" (it enumerates as
@@ -368,8 +362,8 @@ Badge B stays sealed throughout, as a reference.
    Apache-2.0. This repo is BSD-3-Clause. Forked files stay Apache-2.0 regardless; switching
    maki to Apache-2.0, or Rust's usual MIT/Apache-2.0, would let code move to and from
    upstream without friction. There's no code yet, so changing now is free.
-2. **Going public.** A community firmware has to be public eventually, and §3.3's embargo has
-   to be cleared or worked around first.
+2. ~~**Going public.**~~ The firmware, maki desktop and the store are public (2026-09-27); §3.3
+   states the constraint without the mechanism.
 3. **Upstream first?** The PKE driver and the `rp.name` fix belong in `xous-core`. The kernel
    changes for §5.2 might too, so it's worth asking bunnie early whether he'd take them.
 4. ~~**Out-of-tree or fork?**~~ Settled: a fork, kept private for now at
