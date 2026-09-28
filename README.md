@@ -28,6 +28,8 @@ for your keys.
 
 ![Pomodoro, a native app, on maki's firmware in the emulator: its icon on the home screen of a maki named umekyu, the time at the top right; ready, a full pie with the minutes to focus (25); the pie emptying clockwise like a clock's hand as the focus runs; paused, two bars in a dark disc at the centre; the last sliver of the focus; the screen flashing when it's over; and the pie filling back up as the break runs](docs/pomodoro.png)
 
+![Two of the store's apps on maki's firmware in the emulator: Status's install screen; its icon, a door hanger, on the home screen; its signs, Available, Busy and On a call, in big letters it draws itself; On a call again with the screen lit, to be noticed; Passphrase's install screen; and Passphrase, six words from the EFF's list, 77 bits](docs/examples.png)
+
 ![maki desktop's Apps page, linked to a maki named uni: maki's room for apps as a bar (220 KiB of 2 MiB, room for 28 more apps), a segment each for Pomodoro, Passphrase, Status and Snake; the four installed from the maki store, Pomodoro marked native; and the maki store's apps in a grid by category, fetched from KaraZajac/maki-apps](docs/desktop.png)
 
 ![maki desktop's Wallets page, with the BIP39 test phrase's accounts: Bitcoin on testnet4, its balance (0.00279565 tBTC), a fresh address as a QR code with Copy and "Check it on maki", and its activity, sent and received; and Ethereum, its account and what it holds on each network](docs/wallets.png)
@@ -64,7 +66,8 @@ Planned apps:
   and the maki store, reviewed and rebuilt from source, in maki desktop: Pomodoro (a focus timer,
   a pie that empties like a clock while you work and fills back up while you rest), Passphrase
   (diceware from maki's random number generator), Status (a sign for your desk, which your
-  computer can set), Snake, Dice, Tally, Sensors and SSH so far
+  computer can set), Nostr (your Nostr key for sites, through the extension's `window.nostr`,
+  each event shown on maki before it's signed), Snake, Dice, Tally, Sensors and SSH so far
 
 ## Who it's for
 

@@ -265,8 +265,10 @@ each one could do:
   request, and the app then runs without the screen, reaching the owner through ask.
 - **keys**: secrets of its own from the recovery phrase (HKDF over the BIP39 seed, with the
   app's ID and developer key in the info), the same on any maki restored from the phrase,
-  different for every app and useless for anything else: for SSH, signing, encryption. A
-  developer who loses their key can't update the app, and a new key means new app keys.
+  different for every app and useless for anything else: for SSH, signing, encryption. For
+  each, maki holds an Ed25519 key and (host API 2) a BIP340 Schnorr key, as Nostr and Taproot
+  use, from the same secret tagged apart, and signs with them for the app. A developer who
+  loses their key can't update the app, and a new key means new app keys.
 - **keyboard**: typing into the computer as a USB keyboard, only while the app is in front,
   with a mark in the strip while it types. The strongest warning: it could type commands.
 - **camera**: QR codes, through maki's own scanner, while the app is in front: the camera's
@@ -466,7 +468,12 @@ device:
        (and waking), keys, keyboard, camera (QR codes) and motion. On them, the SDK's SSH app: an
        SSH key from the phrase, and maki desktop as the SSH agent ssh and git talk to, which hands
        each request to the app; the app reads what's to be signed on maki and asks first
-       (checked with OpenSSH's own `ssh-add` and `ssh-keygen -Y sign`).
+       (checked with OpenSSH's own `ssh-add` and `ssh-keygen -Y sign`). And the SDK's Nostr
+       app: a Nostr key from the phrase, which maki holds (host API 2's Schnorr keys), for
+       sites through the extension's `window.nostr` (NIP-07); the app asks before a site first
+       sees it and before each event it signs, and hashes the event's id itself from what it
+       shows (checked in real Chromium and Firefox, and against every client's
+       `JSON.stringify`).
     3. The store: root and catalogue keys, stamps, revocations and the signed index are done,
        checked on maki (in the emulator) and in maki desktop (against the fake maki), which
        lists the store's apps, installs them and hands maki the store's newest root and
@@ -477,8 +484,8 @@ device:
        [KaraZajac/maki-apps](https://github.com/KaraZajac/maki-apps): each app's signed bundle and
        the commit it's built from, scripts that rebuild each from there and publish the store,
        and the store itself, which maki desktop fetches, lists in a grid and installs from
-       (Pomodoro, Passphrase, Snake, Status, Dice, Tally, Sensors and SSH so far). Not yet: the
-       CI that runs its check on each app submitted, now the SDK is public.
+       (Pomodoro, Nostr, Passphrase, Snake, Status, Dice, Tally, Sensors and SSH so far). Not
+       yet: the CI that runs its check on each app submitted, now the SDK is public.
     4. ~~Native apps~~ — done in the emulator (above, "Native apps: how they're confined"): the
        kernel confines a process and lets the one that started it end it or ask after it; the
        stub loads and confines each app; the host serves it the same functions a WebAssembly

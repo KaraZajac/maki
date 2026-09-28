@@ -149,6 +149,9 @@ compiled in unless set, so rebuild without them before flashing:
 - `MAKI_DEMO_NATIVE=1`: once maki has its PIN and phrase, maki-link installs the SDK's Hello
   Native (Hello built as a native app, from `libs/maki-native/tests/fixtures`). Opened, it runs
   in a process of its own, and the app host logs `running in PID N, confined`.
+- `MAKI_DEMO_EXAMPLES=1`: once maki has its PIN and phrase, maki-link installs the SDK's Status
+  and Passphrase (each asks, with two pages for its permission): a sign in big letters, and
+  diceware words, the second one starting at two pages of memory (below).
 - `MAKI_DEMO_BTC=1`: once maki has its PIN and phrase, maki-link does what the desktop's
   Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
   sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
@@ -322,6 +325,29 @@ bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--pres
   scripts/emu.sh 17.4G,17.8G,18.4G "${P[@]}" --console-final 400000' | grep "confined\|first frame\|exited\|stopped"
 ```
 
+`MAKI_DEMO_EXAMPLES=1` installs Status and Passphrase, seven presses each (a page for each's
+permission running on to a second); on the home screen, in name order, one to the left opens
+Status. Right goes to the next sign, the centre lights the screen; left and right together, then
+right twice and the centre, choose Exit from its menu; two to the left and the centre open
+Passphrase, and right adds a word:
+
+```sh
+MAKI_DEMO=1 MAKI_DEMO_EXAMPLES=1 MAKI_DEMO_CLOCK=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
+bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
+  for i in $(seq 0 6); do P+=(--press 5@$(echo "14.7 + 0.1*$i" | bc)G+2M); done     # install Status
+  for i in $(seq 0 6); do P+=(--press 5@$(echo "17.5 + 0.1*$i" | bc)G+2M); done     # install Passphrase
+  P+=(--press 3@19.0G+2M --press 5@19.2G+2M)                                       # open Status
+  P+=(--press 4@21.2G+2M --press 4@22.0G+2M --press 5@22.8G+2M)                    # Busy, On a call; light
+  P+=(--press 3@23.6G+2M --press 4@23.6G+2M --press 4@24.0G+2M --press 4@24.2G+2M --press 5@24.4G+2M)  # Exit
+  P+=(--press 3@25.5G+2M --press 3@25.7G+2M --press 5@25.9G+2M)                    # open Passphrase
+  P+=(--press 4@28.2G+2M)                                                          # a word more
+  scripts/emu.sh 21.0G,21.8G,22.6G,23.4G,25.2G,28.0G "${P[@]}" --console-final 400000' | grep "demo examples\|first frame"
+```
+
+Both install (`result 0`); Status's first frame is up after about 8 s, Passphrase's after about
+15 (its word list). The app host logs `heap up to 3072 KiB (from 512)` as it starts ("Known
+issues", below).
+
 With `MAKI_DEMO_ASKS` instead, the vault's four requests come after "continue"; space the
 answers 0.7G apart (the vault saves each login before it sends the next request), then left and
 right go round the home screen.
@@ -418,6 +444,16 @@ maki's USB IDs. The desktop app sends it at most one inert HELLO per session (no
 stock console never runs anything) and then leaves it alone. Don't flash it: that's the one-way door.
 
 ## Known issues (firmware)
+
+- **The app host's heap (fixed).** Xous starts a process with 512 KiB of heap at most, and a
+  WebAssembly app's memory is the app host's heap, beside its compiled code and the bundle being
+  checked. Passphrase, whose word list makes it start at two pages of memory, couldn't install
+  in the emulator (`can't start: failed to instantiate memory: tried to allocate more virtual
+  memory than available on the system`), though an app may have 1 MiB. The app host raises its
+  limit to 3 MiB as it starts (`heap up to 3072 KiB (from 512)` in the log), as the PDDB raises
+  its own; the swapper pages it like any other memory. The simulator and the tests don't have
+  the limit, so an app that asks for more than a page of memory to start is worth a run in the
+  emulator.
 
 - **Swapper handler stack.** With the launcher's boot image and clock in the image, the
   swapper overflowed its 8 KiB private handler stack during boot, faulting inside the panic
