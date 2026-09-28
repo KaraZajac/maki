@@ -23,6 +23,8 @@ for your keys.
 
 ![maki's app screens in the emulator: the install screen for Dice, a sideloaded example app (its name, version and ID); Dice running below maki's bar, which marks it as sideloaded; its menu, on App info; and App info's pages: the app, where it's from, its developer's key, whether its data is in the backup (with "leave it out"), and Remove](docs/apps.png)
 
+![Pomodoro, a native app, on maki's firmware in the emulator: before a focus, a triangle cut from the whole circle (focus 25 min); the circle shrinking as the focus runs (19 min, 9 min) down to a dot (57 s); the screen flashing when it's over (time for a break); the dot grown back into the circle as the break runs (break 1 min); paused, two bars cut from the circle; and its menu, Skip ahead](docs/pomodoro.png)
+
 ![maki desktop's Apps page: maki's room for apps as a bar (131 KiB of 2 MiB, room for 29 more apps), a segment each for Pomodoro, SSH and Dice; the three installed, from the maki store, Pomodoro marked native; and the maki store's apps in a grid by category, fetched from KaraZajac/maki-apps](docs/desktop.png)
 
 ## The idea

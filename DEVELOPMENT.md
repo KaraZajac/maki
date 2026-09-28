@@ -528,6 +528,10 @@ after editing. The loader is part of our build, so its logo could be replaced to
   Baochip firmwares!"* On hardware, `boot0` erases the collateral bank on every boot
   under a Baochip-signed `boot1`; the emulator never runs `boot0`. Harmless for now;
   modelling it means pre-filling slots 261–264 with the erase value.
+- **Time while idle.** "10 ns an instruction" holds while something runs. While every process
+  waits, maki's clock runs far faster than the instructions: Pomodoro's 25-minute focus ran out
+  in under 0.8G, a minute or more of maki's time going by in each 0.05G. For anything timed,
+  take screenshots close together, or go by the log.
 - **Licensing.** Baomulator has no license file, so all rights are reserved: use it
   locally, don't vendor or redistribute it. Our patch is ours and could be offered
   upstream.
