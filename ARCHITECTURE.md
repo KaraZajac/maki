@@ -289,10 +289,10 @@ buttons; drawing over maki's strip, or while it isn't in front.
 
 ### Wallets are apps
 
-Bitcoin and Ethereum began in the firmware. They're moving into apps in the maki store, with
-Monero after them, so a maki holds no crypto code or accounts until its owner adds a wallet,
-as on a Ledger. Setup still makes the one recovery phrase; a wallet app added later gets the
-accounts that phrase has always had.
+Bitcoin and Ethereum began in the firmware. They're apps in the maki store now, with Monero to
+follow, so a maki holds no crypto code or accounts until its owner adds a wallet, as on a
+Ledger. Setup still makes the one recovery phrase; a wallet app added later gets the accounts
+that phrase has always had.
 
 - **The wallet permission** names the derivation paths an app may use, in its manifest
   (`[wallet] paths = ["m/84'/0'", "m/86'/0'"]`): each at least a purpose and a coin type, both
@@ -314,16 +314,18 @@ accounts that phrase has always had.
   words, as they are on a Ledger, so which wallet apps to trust matters: the store's are built
   from this tree, reproducibly; a sideloaded one says so on every screen.
 - **The apps talk to maki desktop over the link**, in pieces of up to 4 KB (a PSBT or a
-  transaction can be bigger), where BTC_* and ETH_* messages used to go to maki-keys. maki
-  desktop's Wallets page and the extension's Ethereum provider find the app, or offer to add it
-  from the store.
+  transaction can be bigger), where BTC_* and ETH_* messages used to go to maki-keys
+  (PROTOCOL.md, "The wallets"). maki desktop's Wallets page offers the app from the store when
+  maki hasn't it, and a site asking the extension's Ethereum provider hears where to get it.
 - **What stays in the firmware:** the phrase, BIP32 and the two signatures (in maki-keys, for
   any wallet app), and passkeys. What leaves: PSBTs, Ethereum transactions and typed data, the
   token table, the Bitcoin app on the home screen, and the protocol's Bitcoin and Ethereum
   messages.
-- **A known limit:** maki runs one app at a time, so a request for a wallet while another app
-  is open is turned away as busy, as the SSH agent's already is. Built in, the wallets never
-  were. Letting a woken app run behind the one in front is the fix, memory allowing.
+- **A known limit:** maki runs one app at a time, so a request for a wallet while the owner has
+  another app open is turned away as busy, as the SSH agent's already is. Built in, the wallets
+  never were. (One started without the screen for another message gives way: it keeps maki for
+  a few seconds after each of its own, the rest of its exchange, then the waiting app runs.)
+  Letting a woken app run behind the one in front is the fix, memory allowing.
 
 ### The strip and App info
 
@@ -534,12 +536,15 @@ device:
        [KaraZajac/maki-apps](https://github.com/KaraZajac/maki-apps): each app's signed bundle and
        the commit it's built from, scripts that rebuild each from there and publish the store,
        and the store itself, which maki desktop fetches, lists in a grid and installs from
-       (Pomodoro, Age, Nostr, Wi-Fi, Passphrase, Snake, Status, Dice, Tally, Sensors and SSH so
-       far). Its CI (GitHub Actions) checks each pull request against the rules for a
-       submission and rebuilds each app it touches from its source, with the maki tool the store
-       pins, and every app weekly: a bundle has to be what its source builds, byte for byte, on
-       any machine (the tool maps the paths a build leaves in the code, the app's own, Rust's
-       standard library's and downloaded crates', to ones that are the same everywhere).
+       (Pomodoro, Age, Nostr, Wi-Fi, Passphrase, Snake, Status, Bitcoin, Ethereum, Dice, Tally,
+       Sensors and SSH so far). Its CI (GitHub Actions) checks each pull request against the
+       rules for a submission and rebuilds each app it touches from its source, with the maki
+       tool the store pins, every app when that tool changes, and every app weekly: a bundle has
+       to be what its source builds, byte for byte, on any machine (the tool maps the paths a
+       build leaves in the code, the app's own, Rust's standard library's and downloaded
+       crates', to ones that are the same everywhere; and builds an app with crates from outside
+       its workspace, which cargo tells apart by their whole path, through a wrapper that sees
+       them inside it, as it builds native apps).
     4. ~~Native apps~~ — done in the emulator (above, "Native apps: how they're confined"): the
        kernel confines a process and lets the one that started it end it or ask after it; the
        stub loads and confines each app; the host serves it the same functions a WebAssembly
@@ -566,14 +571,21 @@ device:
     stand-in networks. Not yet: Ethereum's history, which needs an indexer.
 13. **Wallets become apps** (above, "Wallets are apps"): Bitcoin and Ethereum out of the firmware
     and into the store, not on a maki until its owner adds them; then Monero.
-    1. The key work in maki-keys for any wallet app: BIP32 from the seed, ECDSA and BIP340
-       (`libs/maki-hd`); the libraries take their keys through its trait.
-    2. The wallet permission and its paths in the bundle format; host API 3's wallet functions
-       and maki's review screen for apps, with path locks and the signing allowance.
-    3. The SDK: `maki_app::wallet`, `[wallet]` in maki.toml, the simulator.
-    4. The Bitcoin and Ethereum apps, from `libs/maki-btc` and `libs/maki-eth`.
-    5. The firmware without them: maki-keys, maki-link, maki-apps, the protocol (version 3).
-    6. maki desktop, the extension and the fake maki, through the apps; the store.
+    1. ~~The key work in maki-keys~~ — done: BIP32 from the seed, ECDSA and BIP340
+       (`libs/maki-hd`), for any wallet app; maki-btc and maki-eth take their keys through its
+       trait.
+    2. ~~The wallet permission~~ — done: its paths in the bundle format, and the install screen
+       naming their coins and the paths; host API 3's wallet functions and maki's review screen
+       for apps, with path locks and the signing allowance.
+    3. ~~The SDK~~ — done: `maki_app::wallet`, `[wallet]` in maki.toml, reviews in the
+       simulator.
+    4. ~~The Bitcoin and Ethereum apps~~ — done, from `libs/maki-btc` and `libs/maki-eth`: in the
+       emulator (`MAKI_DEMO_WALLET`) both install, and share, show and sign what the built-in
+       wallets did, their signatures checked against the libraries' fixtures.
+    5. ~~The firmware without them~~ — done: maki-keys, maki-link, maki-apps, the protocol
+       (version 3).
+    6. ~~maki desktop, the extension and the fake maki, through the apps; the store~~ — done:
+       the Wallets page offers the app from the store when maki hasn't it. Not yet on a badge.
     7. Monero: an app, once the others are done: the address and a 25-word backup first, then
        signing (CLSAG and range proofs), measured on the badge.
 

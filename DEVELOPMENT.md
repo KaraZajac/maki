@@ -79,23 +79,24 @@ What's where in the fork:
 | `libs/maki-native` | native apps: the ELF check, the stub's load request, the app service's operations and the drawing a native app sends |
 | `libs/maki-app-host-api` | how maki-link asks the app host to install, list and remove apps |
 | `libs/maki-bundle` | the `.maki` format, host-tested and fuzzed: manifest, code, icon, Ed25519 signature; permissions and their warnings; who may update an app |
-| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer; API 2: BIP340 Schnorr and X25519 keys) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
-| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator, store records, reproduce), fourteen example apps (Hello, Dice, Tally; Signer, which asks, signs and types; Sensors; SSH, maki's SSH key for maki desktop's SSH agent; Nostr; Age, maki's age key for maki desktop's `age-plugin-maki`; Wi-Fi; Passphrase; Snake; Status; Hello Native and Pomodoro, built as native apps); see `sdk/README.md` |
-| `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: Bitcoin (receiving addresses and the account key as QR codes and text) and Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes) |
+| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer; API 2: BIP340 Schnorr and X25519 keys; API 3: the wallet permission's keys, locked to the manifest's paths, and reviews with pages, whose yes allows the signatures it names) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
+| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator, store records, reproduce), sixteen example apps (Hello, Dice, Tally; Signer, which asks, signs and types; Sensors; SSH, maki's SSH key for maki desktop's SSH agent; Nostr; Age, maki's age key for maki desktop's `age-plugin-maki`; Wi-Fi; Passphrase; Snake; Status; Bitcoin and Ethereum, maki's wallets; Hello Native and Pomodoro, built as native apps); see `sdk/README.md` |
+| `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: now just Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes). The wallets are store apps (`sdk/examples/bitcoin`, `sdk/examples/ethereum`) |
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
-| `libs/maki-eth` | the Ethereum account, host-tested: BIP44 keys, EIP-55, strict RLP, EIP-1559 and EIP-155 transactions and EIP-191 messages, reviewed and signed; tested against alloy |
+| `libs/maki-eth` | Ethereum, for the Ethereum app, host-tested: the BIP44 account (its keys through `maki-hd`), EIP-55, strict RLP, EIP-1559 and EIP-155 transactions, EIP-191 messages and EIP-712 typed data, reviewed and signed; tested against alloy |
 | `libs/maki-ui` | the keys and drawing every maki screen shares: status bar, action bar, arrows, icons, QR codes |
-| `libs/maki-btc` | the Bitcoin wallet, host-testable: BIP32 keys, the BIP84 (native SegWit) and BIP86 (taproot) accounts, addresses, descriptors, PSBT parsing (BIP174, BIP371), the checks before signing, signing (ECDSA, BIP340 Schnorr); tested against rust-bitcoin, miniscript and Bitcoin Core's consensus code |
+| `libs/maki-btc` | Bitcoin, for the Bitcoin app, host-testable: the BIP84 (native SegWit) and BIP86 (taproot) accounts (their keys through `maki-hd`), addresses, descriptors, PSBT parsing (BIP174, BIP371), the checks before signing, signing (ECDSA, BIP340 Schnorr); tested against rust-bitcoin, miniscript and Bitcoin Core's consensus code |
+| `libs/maki-hd` | the wallets' keys: BIP32 paths, and the `Keys` a wallet signs with (public keys, ECDSA with RFC 6979, BIP340 Schnorr with the BIP86 tweak); `seed` (a feature) derives them from the seed, which only maki-keys holds; apps reach it through the app host, on their manifest's paths alone; tested against rust-bitcoin |
 | `apps-baosec/vault2` | the upstream vault, registered with the launcher; `src/link.rs` answers the browser's requests for logins and codes |
 | `services/maki-link` | the serial end of the desktop link: time sync, link state, and handing requests to the vault |
 | `libs/maki-proto` | the protocol (framing, messages, device logic) and `PROTOCOL.md`; `examples/fake_maki.rs` |
 | `libs/maki-vault-api` | how maki-link asks the vault (one connection only, made at boot) |
-| `services/maki-keys` | the boot PIN: the secret basis's key, wrapped under the PIN's, the wrong-try count and the wipe; the recovery phrase, backups (passkeys included), the FIDO keys, and the Bitcoin account (`src/bitcoin.rs`) |
+| `services/maki-keys` | the boot PIN: the secret basis's key, wrapped under the PIN's, the wrong-try count and the wipe; the recovery phrase, backups (passkeys included), the FIDO keys, and the wallets' keys (`KeysOp::Wallet`, answered to the app host alone) |
 | `libs/maki-icons` | the home screen's icons, drawn by `icons.py` |
 | `apps-baosec/maki-launcher/assets/splash.py` | the boot image (a maki roll, and the name in the tall font); writes `src/splash.rs` |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
-Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-btc -p maki-fido -p maki-eth -p maki-bundle -p maki-wasm -p maki-native -p maki-store`.
+Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-hd -p maki-btc -p maki-fido -p maki-eth -p maki-bundle -p maki-wasm -p maki-native -p maki-store`.
 The kernel's own tests run hosted (`cd kernel && cargo test`), confinement and `TerminateChild`
 among them. The workspace builds against the fork's `xous-rs` (`[patch.crates-io.xous]` in
 `Cargo.toml`), since maki's syscalls aren't in the published crate; `cargo xtask`'s check that
@@ -152,13 +153,17 @@ compiled in unless set, so rebuild without them before flashing:
 - `MAKI_DEMO_EXAMPLES=1`: once maki has its PIN and phrase, maki-link installs the SDK's Status
   and Passphrase (each asks, with two pages for its permission): a sign in big letters, and
   diceware words, the second one starting at two pages of memory (below).
-- `MAKI_DEMO_BTC=1`: once maki has its PIN and phrase, maki-link does what the desktop's
-  Bitcoin section does: asks to share the account, shows receive address #0 to compare, and
-  sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to review and sign, then logs
-  `demo btc signed: N bytes, as expected: true` if the signature is the one maki-btc makes on a
-  computer; then the same for the taproot account, whose signatures take fresh randomness, so
-  it logs `as expected but for its signatures: true, fresh signatures: true`. The PSBTs belong
-  to the BIP39 test phrase, so restore that at setup (below).
+- `MAKI_DEMO_WALLET=1`: once maki has its PIN and phrase, maki-link installs the SDK's Bitcoin
+  and Ethereum apps (each asks, with a page for each permission and one naming the wallet's
+  accounts), then does what maki desktop does with them: shares the Bitcoin account, shows
+  receive address #0 to compare, and sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to
+  review and sign; the same for the taproot account; then connects a site, demo.maki, to the
+  Ethereum app, which signs a message, a transaction (0.05 ETH on Ethereum) and typed data (a
+  permit to spend 1 USDC), checked against `libs/maki-eth/tests/fixtures`. It logs `demo wallet
+  ...` lines, `as expected: true` where a signature is the one maki's wallet code makes on a
+  computer (taproot's take fresh randomness, so there it's `as expected: false, but for fresh
+  signatures: true`). The fixtures belong to the BIP39 test phrase: restore that at setup
+  (below).
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `3` is maki's left, `4` its
 right and `5` the centre; `3` and `4` together are the menu. (Baomulator names `3` and `4` the
@@ -171,6 +176,15 @@ STEP instructions (`samples.txt`: instructions, PID, privilege, waiting for an i
 `nm` on the ELFs in `target/` turns PCs into functions), and `--rpt AT` dumps the kernel's page
 ownership table at AT instructions (`rpt.txt`: page, PID, flags with wired as bit 0, virtual
 address, and the kernel's page clock), which shows who holds RAM, and what's wired.
+
+Our fourth patch has `shot` answer maki's asks itself. With `--answer [GAP]`, from when the
+launcher logs `showing the ask from ...` until it logs the ask answered, `shot` presses the
+centre every GAP instructions (100M if not given): through the ask's pages to its first answer
+(install, sign, share, the first login offered). Presses the launcher ignores, coming too soon
+after the ask appeared (it lets an ask settle first, so a press meant for what was there before
+can't answer it), or that a busy maki misses, just mean one more. `--answer-shots` takes a frame
+just before each of those presses, and one after the answer, so every page of every ask is on
+file. A demo with many asks needs no timings measured then, only setup's presses.
 
 First boot of a fresh image, as observed: the PDDB finds blank flash, formats and mounts
 **with no prompt**, swap encryption comes on, and maki's home screen is up by ~3G.
@@ -208,33 +222,27 @@ presses to match.
 ("abandon" eleven times, then "about") with PIN 000000 in a `MAKI_DEMO` build: restore from
 phrase, the PIN twice, 12 words, each word typed a letter at a time until it can be picked.
 `OFFSET` shifts them all (in G). It ends at 10.0G + `OFFSET` on "Phrase restored". Asks wait
-until setup is over, so the centre first continues to the home screen. With `MAKI_DEMO_BTC`, the
-Bitcoin asks follow: the centre answers the account and the address, then goes through the
-transaction (Send, Change, Fee) and signs; then the same for the taproot account (its payment's
-address takes two screens, and the fixture's fee is called high):
+until setup is over, so the centre first continues to the home screen. With `MAKI_DEMO_WALLET`,
+`--answer` does the rest, installing the two apps and saying yes to everything they ask:
 
 ```sh
-MAKI_DEMO=1 MAKI_DEMO_BTC=1 cargo xtask baosec-lite maki-launcher maki-keys vault2 maki-link maki-apps
-bash -c 'mapfile -t P < <(OFFSET=0.6 scripts/presses-test-phrase.sh)
-  for t in 10.9 11.8 12.6 13.1 13.3 13.5 13.7; do P+=(--press 5@${t}G+2M); done           # native SegWit
-  for t in 14.6 15.4 16.2 16.4 16.6 16.8 17.0; do P+=(--press 5@${t}G+2M); done           # taproot
-  scripts/emu.sh 12.5G,13.0G,14.0G,17.4G "${P[@]}"' | grep "demo btc"
+MAKI_DEMO=1 MAKI_DEMO_WALLET=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
+bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
+  scripts/emu.sh 44G "${P[@]}" --answer --answer-shots --console-final 600000' | grep "demo wallet"
 ```
 
-The times follow the work maki does after a restore (the passkeys' keys and store come first),
-measured by screenshots every 0.2G: the account ask is up by 11.75G, the address by 12.5G, the
-transaction's first page by 13.0G. A press before its screen is up lands on whatever is there
-(on the home screen, it opens Authenticator), so when something changes what maki does after
-setup, measure again.
+Setup is over by 12.3G. Bitcoin's install screen is up by 13.3G and Ethereum's by 15.8G; Bitcoin's
+reviews follow from 19.5G (the account, the address, the PSBT; taproot's from 25.8G), then, once
+the Bitcoin app has given way, Ethereum's from 33.5G (connect, the message, the transaction, the
+permit), all answered by about 41G. Among the `demo wallet` lines:
 
-`MAKI_DEMO_ETH=1` does the same for Ethereum, for a site called demo.maki: connect, sign a
-message, sign a transaction (0.05 ETH on Ethereum) and sign typed data (EIP-712: a permit to
-spend 1 USDC), checked against `libs/maki-eth/tests/fixtures` (`demo eth signed: 117 bytes, as
-expected: true`, `demo eth typed: result 0, as expected: true`). Deriving the account the first
-time is slow in the emulator, so space the presses: continue at 10.9G, then 12.3 (connect), 12.8
-and 13.1 (the message: next, sign), 13.6, 13.8 and 14.0 (the transaction's pages) and 14.2
-(sign), then 14.6 to 15.6 every 0.2G (the permit's pages: network, app, spender, amount, until,
-token) and 15.8 (sign), with `OFFSET=0.6` as above.
+```
+demo wallet btc signed: 1048 bytes, as expected: true, but for fresh signatures: true
+demo wallet btc taproot signed: 702 bytes, as expected: false, but for fresh signatures: true
+demo wallet eth message: status Some(0), as expected: true
+demo wallet eth signed: 117 bytes, as expected: true
+demo wallet eth typed: status Some(0), as expected: true
+```
 
 `MAKI_DEMO_APP=1` installs Dice and Tally and opens Dice. With the test phrase's presses
 (`OFFSET=2.0`, for the app host): continue to the home screen at 12.3G; five presses of the
@@ -544,6 +552,10 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
     and Dice's first frame comes 6.7 s after it's opened, in the emulator's time (10 ns an
     instruction). The badge runs at 700 MHz, so expect less there, but swap goes through the
     PSRAM, which the emulator doesn't time. To measure on a badge.
+  - The wallet apps (1 MiB of memory each) feel it most. In `MAKI_DEMO_WALLET`, from the Bitcoin
+    app's first ask (sharing the account) to its third (the transaction) takes about 3.5G
+    instructions; with four logins saved first (`MAKI_DEMO_ASKS` too), about 11.5G, the same
+    work paging against the vault's. To measure on a badge, with a real owner's logins and codes.
   - The preemption timer interrupts 100 times a second through bao1x-hal-service, even with
     nothing to run. A page or two of RAM, but most of what the CPU does while idle; on a
     battery it would matter.

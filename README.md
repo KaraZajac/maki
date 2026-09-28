@@ -5,10 +5,10 @@ and an app platform for the hacker community to build on. Flipper-style custom f
 for your keys.
 
 > **Status: early development.** maki builds and boots in an
-> emulator: a boot PIN, a recovery phrase, a home screen, the vault, a Bitcoin wallet and a serial
-> link. A desktop app in the tray ([maki-desktop](https://github.com/KaraZajac/maki-desktop)) keeps
+> emulator and on a DC34 badge: a boot PIN, a recovery phrase, a home screen, the vault and a
+> serial link. A desktop app in the tray ([maki-desktop](https://github.com/KaraZajac/maki-desktop)) keeps
 > it linked, its clock verified with Roughtime and its backups encrypted on the computer, and is a
-> wallet for maki's Bitcoin and Ethereum accounts (balances, receiving, sending, each payment shown
+> wallet with maki's Bitcoin and Ethereum apps (balances, receiving, sending, each payment shown
 > and signed on maki); a browser extension asks maki for logins and TOTP codes, which you approve
 > on maki's screen, and gives sites maki's Ethereum account; and Bitcoin wallet software (Sparrow,
 > Bitcoin Core) sends transactions through it for maki to show you and sign. Apps anyone can write (in Rust, for
@@ -18,11 +18,12 @@ for your keys.
 > own bar. The desktop side is tested against a stand-in for maki that runs maki's own code; the
 > screens below are maki's firmware in the emulator. Each maki names itself the first time it
 > starts, after a maki roll (natto, uni, umekyu…); its bar shows the time, and after a minute
-> untouched it rests as a clock the size of its screen. Nothing runs on a badge yet.
+> untouched it rests as a clock the size of its screen. On a badge so far: setup, and the link to
+> maki desktop over USB with its clock set through Roughtime; the rest is still to be tried there.
 > [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan, [RESEARCH.md](./RESEARCH.md) the background,
 > [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
 
-![maki's screens in the emulator: the home screen on Bitcoin; asks to keep a login for github.com, to pick which login to fill on gist.github.com, and to keep one for a long hostname cut at the start so its end still shows; a Bitcoin transaction's payment, fee and sign pages; and a receiving address as a QR code](docs/screens.png)
+![maki's screens in the emulator, on a maki named umekyu: asks to keep a login for github.com, to pick which login to fill on gist.github.com, and to keep one for a long hostname cut at the start so its end still shows; the Ethereum app's install screen naming the account it may sign for (Ethereum, m/44'/60'); and the Bitcoin app's pages under its own bar, marked sideloaded: a receiving address to compare with the computer's, a payment of 0.0007 BTC with its full address, the fee, and "Sign and spend"](docs/screens.png)
 
 ![maki's app screens in the emulator: the install screen for Dice, a sideloaded example app (its name, version and ID); Dice running below maki's bar, which marks it as sideloaded; its menu, on App info; and App info's pages: the app, where it's from, its developer's key, whether its data is in the backup (with "leave it out"), and Remove](docs/apps.png)
 
@@ -51,12 +52,13 @@ Planned apps:
   every sign-in (with the user, and the server's host key when ssh passes it on) and every git
   signature waits for your yes on maki. Not yet: the commit itself on maki's screen (git hands
   the agent only its hash)
-- **A small Bitcoin wallet** (working in the emulator): keys on maki behind the boot PIN, from a
-  recovery phrase you write down; every payment, the change and the fee shown on maki's screen
-  before a transaction is signed; receiving addresses as QR codes that never touch the computer
-- **An Ethereum account** (working in the emulator and in the browser): sites connect only when
-  you allow them on maki, and every message and transaction is shown on maki before it's signed,
-  token transfers and approvals spelled out
+- **Wallets** (apps in the maki store, working in the emulator and in the browser): Bitcoin and
+  Ethereum, for those who want them, and Monero next. maki keeps the keys, from the recovery
+  phrase you write down, behind the boot PIN, and lets each wallet app use only the accounts it
+  names. Every payment, the change and the fee shown on maki's screen before a transaction is
+  signed; receiving addresses as QR codes that never touch the computer; sites connect to the
+  Ethereum account only when you allow them on maki, and every message and transaction is shown
+  on maki before it's signed, token transfers and approvals spelled out
 - **Community apps** (working in the emulator): signed `.maki` bundles, installed through maki
   desktop after maki shows you the app, where it's from, its developer's key and what it asks
   to do, and run in a WebAssembly sandbox that reaches nothing it wasn't given. With your
@@ -69,8 +71,8 @@ Planned apps:
   computer can set), Nostr (your Nostr key for sites, through the extension's `window.nostr`,
   each event shown on maki before it's signed), Age (your age key: anyone encrypts files to it
   with age, and maki desktop's `age-plugin-maki` asks maki to open each one, which you approve on
-  its screen), Wi-Fi (networks as QR codes for guests to join), Snake, Dice, Tally, Sensors and
-  SSH so far
+  its screen), Wi-Fi (networks as QR codes for guests to join), Bitcoin and Ethereum (maki's
+  wallets), Snake, Dice, Tally, Sensors and SSH so far
 
 ## Who it's for
 

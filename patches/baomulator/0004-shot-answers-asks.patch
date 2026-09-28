@@ -1,0 +1,259 @@
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index 0a3862c..6d7d4a5 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -32,6 +32,14 @@
+ //!   --owc SLOT=VAL    preset a one-way counter before boot (repeatable)
+ //!   --dev-mode        shorthand for --owc 85=1: model a badge already in
+ //!                     developer mode, so devkey-signed builds boot
++//!   --answer [GAP]    say yes to every ask maki shows: from when its launcher
++//!                     logs `showing the ask from ...` until it logs the ask
++//!                     answered, press the centre every GAP instructions
++//!                     (default 100M): through the ask's pages to its first
++//!                     answer (install, sign, share, the first login...),
++//!                     whatever presses maki ignores or misses on the way
++//!   --answer-shots    and take a frame just before each of those presses,
++//!                     and one after the answer
+ //!   --quiet           only print the summary table
+ //!
+ //! Examples:
+@@ -41,6 +49,9 @@
+ //!
+ //! Exit status is 0 unless the firmware images could not be loaded.
+ 
++use std::cmp::Reverse;
++use std::collections::BinaryHeap;
++
+ use baomulator::Emulator;
+ 
+ const W: usize = 128;
+@@ -75,6 +86,9 @@ struct Args {
+     fw_dir: String,
+     owc: Vec<(u32, u32)>,
+     quiet: bool,
++    /// `--answer [GAP]`: answer maki's asks, GAP instructions between presses
++    answer: Option<u64>,
++    answer_shots: bool,
+ }
+ 
+ /// Parse "500M" / "2.5G" / "1500000000" / "250k" into an instruction count.
+@@ -133,6 +147,8 @@ fn parse_args() -> Args {
+         fw_dir: "web/fw".into(),
+         owc: Vec::new(),
+         quiet: false,
++        answer: None,
++        answer_shots: false,
+     };
+     let argv: Vec<String> = std::env::args().skip(1).collect();
+     let mut i = 0;
+@@ -161,6 +177,15 @@ fn parse_args() -> Args {
+                 }
+             }
+             "--dev-mode" => a.owc.push((85, 1)),
++            "--answer" => {
++                // the gap is optional: the next argument, if it's a count
++                let gap = argv.get(i + 1).filter(|g| !g.starts_with("--")).and_then(|g| parse_count(g));
++                if gap.is_some() {
++                    i += 1;
++                }
++                a.answer = Some(gap.unwrap_or(100_000_000));
++            }
++            "--answer-shots" => a.answer_shots = true,
+             "--no-ascii" => a.ascii = false,
+             "--no-pgm" => a.pgm = false,
+             "--gddram" => a.gddram = true,
+@@ -215,7 +240,8 @@ fn print_help() {
+     println!(
+         "shot [CHECKPOINTS] [--press N@T[+D]] [--out DIR] [--prefix NAME]\n\
+          \x20    [--no-ascii] [--no-pgm] [--gddram] [--console N] [--console-final N]\n\
+-         \x20    [--fw DIR] [--owc SLOT=VAL] [--dev-mode] [--quiet]\n\
++         \x20    [--fw DIR] [--owc SLOT=VAL] [--dev-mode] [--answer [GAP]] [--answer-shots]\n\
++         \x20    [--quiet]\n\
+          \n\
+          CHECKPOINTS: comma-separated instruction counts, k/M/G suffixes ok.\n\
+          \x20            default 500M,1G,2G,3G\n\
+@@ -339,6 +365,33 @@ fn gddram_map(e: *mut Emulator) -> String {
+     s
+ }
+ 
++/// Reads maki's console as it grows, a line at a time, for `--answer`.
++#[derive(Default)]
++struct ConsoleLines {
++    /// how many bytes ever written have been read
++    read: u64,
++    partial: Vec<u8>,
++}
++
++impl ConsoleLines {
++    /// The whole lines written since the last call.
++    fn new_lines(&mut self, e: *mut Emulator) -> Vec<String> {
++        let len = baomulator::emu_console_len(e);
++        let bytes = unsafe { std::slice::from_raw_parts(baomulator::emu_console_ptr(e), len) };
++        let dropped = baomulator::emu_console_dropped(e);
++        // what was trimmed before it was read is gone
++        let from = self.read.saturating_sub(dropped).min(len as u64) as usize;
++        self.read = dropped + len as u64;
++        self.partial.extend_from_slice(&bytes[from..]);
++        let mut lines = Vec::new();
++        while let Some(end) = self.partial.iter().position(|&b| b == b'\n') {
++            let line: Vec<u8> = self.partial.drain(..=end).collect();
++            lines.push(String::from_utf8_lossy(&line).trim_end().to_string());
++        }
++        lines
++    }
++}
++
+ fn console_tail(e: *mut Emulator, n: usize) -> String {
+     if n == 0 {
+         return String::new();
+@@ -370,18 +423,24 @@ fn main() {
+     enum Kind {
+         Press,
+         Release,
++        /// `--answer`: the centre, if the ask it's for (numbered in the third field) is still up
++        Answer,
+         Checkpoint,
+     }
+-    let mut events: Vec<(u64, Kind, u32)> = Vec::new();
++    // earliest first; at the same instruction count, press/release before capture. A heap, so
++    // `--answer` can add presses as asks appear.
++    let mut events: BinaryHeap<Reverse<(u64, Kind, u32)>> = BinaryHeap::new();
+     for p in &a.presses {
+-        events.push((p.at, Kind::Press, p.btn));
+-        events.push((p.release_at, Kind::Release, p.btn));
++        events.push(Reverse((p.at, Kind::Press, p.btn)));
++        events.push(Reverse((p.release_at, Kind::Release, p.btn)));
+     }
+     for &c in &a.checkpoints {
+-        events.push((c, Kind::Checkpoint, 0));
++        events.push(Reverse((c, Kind::Checkpoint, 0)));
+     }
+-    // at the same instruction count: press/release before capture
+-    events.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.cmp(&y.1)));
++    let mut console = ConsoleLines::default();
++    // `--answer`: the ask being answered, by number, and how many there have been
++    let mut asking: Option<u32> = None;
++    let mut asks = 0u32;
+ 
+     if !a.quiet {
+         println!("shot: firmware {}, {} checkpoint(s), {} press(es)", a.fw_dir, a.checkpoints.len(), a.presses.len());
+@@ -406,7 +465,8 @@ fn main() {
+     let mut rpt_next = rpts.next();
+     let mut rpt_at = rpt_next.map(|(at, _)| at).unwrap_or(u64::MAX);
+     let mut next_sample = a.sample.map(|(from, _, _)| from).unwrap_or(u64::MAX);
+-    for (at, kind, btn) in events {
++    while let Some(Reverse((at, kind, btn))) = events.pop() {
++        let mut sooner = false;
+         while total < at {
+             let chunk = SLICE
+                 .min(at - total)
+@@ -450,6 +510,35 @@ fn main() {
+                     next_sample = u64::MAX;
+                 }
+             }
++            if let Some(gap) = a.answer {
++                for line in console.new_lines(e) {
++                    if let Some(at) = line.find("showing the ask from ") {
++                        if !a.quiet {
++                            println!("[{total:>13}] answering: {}", &line[at..]);
++                        }
++                        asks += 1;
++                        asking = Some(asks);
++                        events.push(Reverse((total + gap, Kind::Answer, asks)));
++                        if a.answer_shots {
++                            events.push(Reverse((total + gap - 1, Kind::Checkpoint, 0)));
++                        }
++                    } else if line.contains("ask from ") && line.contains(" answered ") {
++                        asking = None;
++                        if a.answer_shots {
++                            events.push(Reverse((total + gap, Kind::Checkpoint, 0)));
++                        }
++                    }
++                }
++                sooner = events.peek().is_some_and(|Reverse((next, _, _))| *next < at);
++                if sooner {
++                    break;
++                }
++            }
++        }
++        if sooner {
++            // an answer comes first: this waits its turn
++            events.push(Reverse((at, kind, btn)));
++            continue;
+         }
+         match kind {
+             Kind::Press => {
+@@ -467,6 +556,23 @@ fn main() {
+                     println!("[{total:>13}] release button {btn}");
+                 }
+             }
++            // the ask still up: the centre, and again a gap later, each press moving through its
++            // pages to its first answer (or one maki ignored, too soon after the ask appeared, or
++            // missed)
++            Kind::Answer if asking == Some(btn) => {
++                let gap = a.answer.unwrap_or(100_000_000);
++                baomulator::emu_set_button(e, 5, true);
++                events.push(Reverse((total + 2_000_000, Kind::Release, 5)));
++                events.push(Reverse((total + gap, Kind::Answer, btn)));
++                if a.answer_shots {
++                    events.push(Reverse((total + gap - 1, Kind::Checkpoint, 0)));
++                }
++                if !a.quiet {
++                    println!("[{total:>13}] press button 5 (Center), answering");
++                }
++            }
++            // answered, or another ask since
++            Kind::Answer => {}
+             Kind::Checkpoint => {
+                 let f = capture(e, total);
+                 report(e, &a, &f);
+diff --git a/src/lib.rs b/src/lib.rs
+index e6d02d6..1ba6e55 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -26,6 +26,9 @@ pub struct Emulator {
+     pub mach: Machine,
+     /// console (UART) output mirror, drained by the host
+     pub console: Vec<u8>,
++    /// how many bytes have been trimmed off the front of `console`, so a host reading it as it
++    /// grows can tell where it left off
++    pub console_dropped: u64,
+     /// LCD framebuffer mirror (RGBA8888, 128x128)
+     pub fb: Vec<u8>,
+     pub fb_dirty: bool,
+@@ -61,6 +64,7 @@ impl Emulator {
+             cpu: Cpu::new(0x6006_0000),
+             mach,
+             console: Vec::new(),
++            console_dropped: 0,
+             fb: vec![0; sh1107::WIDTH * sh1107::HEIGHT * 4],
+             fb_dirty: true,
+             patches: vec![],
+@@ -98,6 +102,7 @@ impl Emulator {
+             let mut bytes = core::mem::take(&mut self.mach.soc.console);
+             self.console.append(&mut bytes);
+             if self.console.len() > 1 << 20 {
++                self.console_dropped += (self.console.len() - (1 << 19)) as u64;
+                 let keep = self.console.split_off(self.console.len() - (1 << 19));
+                 self.console = keep;
+             }
+@@ -800,9 +805,18 @@ pub extern "C" fn emu_console_len(e: *mut Emulator) -> usize {
+     unsafe { &*e }.console.len()
+ }
+ 
++/// How many bytes of console output have been trimmed off the front of the buffer: the byte at
++/// index `i` of `emu_console_ptr` is the `emu_console_dropped() + i`th ever written.
++#[no_mangle]
++pub extern "C" fn emu_console_dropped(e: *mut Emulator) -> u64 {
++    unsafe { &*e }.console_dropped
++}
++
+ #[no_mangle]
+ pub extern "C" fn emu_console_clear(e: *mut Emulator) {
+-    unsafe { &mut *e }.console.clear();
++    let e = unsafe { &mut *e };
++    e.console_dropped += e.console.len() as u64;
++    e.console.clear();
+ }
+ 
+ #[no_mangle]
