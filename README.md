@@ -8,10 +8,11 @@ for your keys.
 > emulator and on a DC34 badge: a boot PIN, a recovery phrase, a home screen, the vault and a
 > serial link. A desktop app in the tray ([maki-desktop](https://github.com/KaraZajac/maki-desktop)) keeps
 > it linked, its clock verified with Roughtime and its backups encrypted on the computer, and is a
-> wallet with maki's Bitcoin and Ethereum apps (balances, receiving, sending, each payment shown
-> and signed on maki); a browser extension asks maki for logins and TOTP codes, which you approve
-> on maki's screen, and gives sites maki's Ethereum account; and Bitcoin wallet software (Sparrow,
-> Bitcoin Core) sends transactions through it for maki to show you and sign. Apps anyone can write (in Rust, for
+> wallet with maki's Bitcoin, Ethereum, Monero and Solana apps (balances, receiving, sending, each
+> payment shown and signed on maki); a browser extension asks maki for logins and TOTP codes, which
+> you approve on maki's screen, and gives sites maki's Ethereum and Solana accounts; Bitcoin wallet
+> software (Sparrow, Bitcoin Core) sends transactions through it for maki to show you and sign,
+> and the Monero GUI keeps maki as its cold wallet. Apps anyone can write (in Rust, for
 > WebAssembly or as native code maki's kernel confines) install from a signed `.maki` file, or
 > from the maki store ([maki-apps](https://github.com/KaraZajac/maki-apps): reviewed, and rebuilt
 > from their source), after maki shows you what they are and who signed them, and run below maki's
@@ -50,19 +51,23 @@ Planned apps:
 - **SSH and git signing** (working in the emulator and against the stand-in): an SSH key from
   your recovery phrase, in maki's SSH app; maki desktop is the SSH agent ssh and git use, and
   every sign-in (with the user, and the server's host key when ssh passes it on) and every git
-  signature waits for your yes on maki. Not yet: the commit itself on maki's screen (git hands
-  the agent only its hash)
+  signature waits for your yes on maki, the commit itself on maki's screen (git signs through
+  maki desktop's `maki-ssh-keygen`, which hands maki the whole of it). A certificate authority
+  too, whose certificates sshd trusts; and an OpenPGP key for gpg and git, through `maki-gpg`
 - **Wallets** (apps in the maki store, working in the emulator and in the browser): Bitcoin,
-  Ethereum and Monero, for those who want them. maki keeps the keys, from the recovery phrase
-  you write down, behind the boot PIN, and lets each wallet app use only the accounts it names;
-  the Monero wallet is the one a Ledger makes from the same phrase, and maki shows you its
-  25-word backup itself. Every payment, the change and the fee shown on maki's screen before a
-  transaction is signed (a Monero transaction maki makes whole itself); receiving addresses as
-  QR codes that never touch the computer; sites connect to the Ethereum account only when you
-  allow them on maki, and every message and transaction is shown on maki before it's signed,
-  token transfers and approvals spelled out. maki desktop holds each account as a wallet, Monero
-  too (scanning the chain itself, with the view key maki shares when you let it); the Monero GUI
-  can keep a view-only wallet of it, with maki as its cold wallet
+  Ethereum, Monero and Solana, for those who want them. maki keeps the keys, from the recovery
+  phrase you write down, behind the boot PIN, and lets each wallet app use only the accounts it
+  names; the Monero wallet is the one a Ledger makes from the same phrase, and maki shows you its
+  25-word backup itself; the Solana account is Phantom's and Solflare's. Every payment, the
+  change and the fee shown on maki's screen before a transaction is signed (a Monero transaction
+  maki makes whole itself); receiving addresses as QR codes that never touch the computer; sites
+  connect to the Ethereum and Solana accounts only when you allow them on maki, and every message
+  and transaction is shown on maki before it's signed, token transfers and approvals spelled out
+  (a Solana token's recipient as their own address, when the transaction proves the token
+  account is theirs). Bitcoin and Ethereum sign
+  with no cable too, by QR codes: Sparrow's PSBTs, MetaMask's requests. maki desktop holds each
+  account as a wallet, Monero too (scanning the chain itself, with the view key maki shares when
+  you let it); the Monero GUI can keep a view-only wallet of it, with maki as its cold wallet
 - **Community apps** (working in the emulator): signed `.maki` bundles, installed through maki
   desktop after maki shows you the app, where it's from, its developer's key and what it asks
   to do, and run in a WebAssembly sandbox that reaches nothing it wasn't given. With your
@@ -75,8 +80,11 @@ Planned apps:
   computer can set), Nostr (your Nostr key for sites, through the extension's `window.nostr`,
   each event shown on maki before it's signed), Age (your age key: anyone encrypts files to it
   with age, and maki desktop's `age-plugin-maki` asks maki to open each one, which you approve on
-  its screen), Wi-Fi (networks as QR codes for guests to join), Bitcoin, Ethereum and Monero
-  (maki's wallets), Snake, Dice, Tally, Sensors and SSH so far
+  its screen), OpenPGP (a key for gpg and git), Minisign (signing files), Notes (secrets read on
+  maki and never on the computer again), Contacts (your card as a signed QR code, to swap at the
+  con), Scanner (a QR code read, shown and typed into the computer), Wi-Fi (networks as QR codes
+  for guests to join), Bitcoin, Ethereum, Monero and Solana (maki's wallets), Marble and Breakout
+  (steered by tilting maki), Snake, Dice, Tally, Sensors and SSH so far
 
 ## Who it's for
 

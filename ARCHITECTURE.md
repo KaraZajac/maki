@@ -289,17 +289,20 @@ buttons; drawing over maki's strip, or while it isn't in front.
 
 ### Wallets are apps
 
-Bitcoin and Ethereum began in the firmware. They're apps in the maki store now, and Monero
-joined them there, so a maki holds no crypto code or accounts until its owner adds a wallet, as
-on a Ledger. Setup still makes the one recovery phrase; a wallet app added later gets the
+Bitcoin and Ethereum began in the firmware. They're apps in the maki store now, and Monero and
+Solana joined them there, so a maki holds no crypto code or accounts until its owner adds a
+wallet, as on a Ledger. Setup still makes the one recovery phrase; a wallet app added later gets the
 accounts that phrase has always had.
 
 - **The wallet permission** names the derivation paths an app may use, in its manifest
   (`[wallet] paths = ["m/84'/0'", "m/86'/0'"]`): each at least a purpose and a coin type, both
   hardened, so no app can claim the whole tree. maki refuses any other path, whatever the app
   asks. The install screen names the coins from the paths themselves (SLIP-44: Bitcoin, the
-  test networks, Ethereum, Monero), not from the app's say-so, and its warning is the strongest
-  after the keyboard's: the app can spend what those accounts hold, once you say yes on maki.
+  test networks, Ethereum, Monero, Solana), not from the app's say-so, and its warning is the
+  strongest after the keyboard's: the app can spend what those accounts hold, once you say yes on
+  maki. The manifest names the curve too: BIP32 on secp256k1 (Bitcoin's, Ethereum's, and
+  Monero's, from it), or SLIP-10 on Ed25519 (`curve = "ed25519"`, Solana's); a wallet has its
+  curve's keys alone.
 - **maki does the key work.** The seed never leaves maki-keys. An app asks for the master
   key's fingerprint, a public key (or chain code, uncompressed key, taproot output key) at a
   path, or a signature (ECDSA with its recovery id; BIP340, tweaked the BIP86 way for taproot)
@@ -344,8 +347,22 @@ accounts that phrase has always had.
   the same account, with maki as its cold wallet: maki desktop reads and writes the files its
   "offline transaction signing" passes (wallet2's own, encrypted with a key made from the view
   key), and maki signs.
-- **What stays in the firmware:** the phrase, BIP32, the two signatures and Monero's keys and
-  transactions (in maki-keys, for any wallet app), and passkeys. What leaves: PSBTs, Ethereum
+- **Solana** is Ed25519, as Monero is, but Solana's wallets derive it by SLIP-10 from the same
+  seed (every step hardened), and so does maki: the key at `m/44'/501'/account'/0'` is the
+  account Phantom and Solflare make from the phrase (held to SLIP-10's own vectors, and to
+  Phantom's address for the test phrase). Ed25519 hashes what it signs itself, so an app hands
+  maki the whole message, a Solana transaction's (1232 bytes at most), and maki signs that
+  (host API 6's `wallet_sign_ed25519`), one signature of what the yes allowed. The app reads the
+  transaction as Solana's runtime does (`libs/maki-sol`: legacy and version 0, refused where the
+  runtime would refuse it): SOL and tokens sent, a token's recipient shown as their own address
+  when the transaction proves the token account is theirs (an associated token account is an
+  address made from its owner, its mint and its program), the most the fee can be, and any
+  program it can't read flagged, with whether the program is given the account's signature,
+  since that alone decides whether it can act as the account. maki desktop is a Solana wallet
+  (SOL and tokens), and the extension gives sites the account as a wallet the Wallet Standard's
+  way, which Solana's sites find.
+- **What stays in the firmware:** the phrase, BIP32 and SLIP-10, the signatures and Monero's keys
+  and transactions (in maki-keys, for any wallet app), and passkeys. What leaves: PSBTs, Ethereum
   transactions and typed data, the token table, the Bitcoin app on the home screen, and the
   protocol's Bitcoin and Ethereum messages.
 - **A known limit:** maki runs one app at a time, so a request for a wallet while the owner has
@@ -563,8 +580,9 @@ device:
        [KaraZajac/maki-apps](https://github.com/KaraZajac/maki-apps): each app's signed bundle and
        the commit it's built from, scripts that rebuild each from there and publish the store,
        and the store itself, which maki desktop fetches, lists in a grid and installs from
-       (Pomodoro, Age, Nostr, Wi-Fi, Passphrase, Snake, Status, Bitcoin, Ethereum, Dice, Tally,
-       Sensors and SSH so far). Its CI (GitHub Actions) checks each pull request against the
+       (Pomodoro, Age, Nostr, Wi-Fi, Passphrase, Snake, Status, Bitcoin, Ethereum, Monero, Solana,
+       OpenPGP, Minisign, Notes, Contacts, Scanner, Marble, Breakout, Dice, Tally, Sensors and SSH
+       so far). Its CI (GitHub Actions) checks each pull request against the
        rules for a submission and rebuilds each app it touches from its source, with the maki
        tool the store pins, every app when that tool changes, and every app weekly: a bundle has
        to be what its source builds, byte for byte, on any machine (the tool maps the paths a
@@ -622,9 +640,30 @@ device:
        mined by a regtest monerod; maki desktop's own Monero wallet (scanning, decoys, fees,
        paying), and maki as the Monero GUI's cold wallet through wallet2's files. In the
        emulator (`MAKI_DEMO_WALLET` makes one of the test phrase's) a transaction of two inputs
-       takes maki about 22 s (10 ns an instruction), the range proof two thirds of it. Not yet on a badge; the hash onto the curve could be faster
-       on dalek's own field arithmetic. A hardware wallet the GUI lists (it knows Ledger's and
-       Trezor's protocols alone) would need maki desktop to speak one of those.
+       takes maki about 22 s (10 ns an instruction), the range proof two thirds of it. Not yet
+       on a badge; the hash onto the curve could be faster on dalek's own field arithmetic. A
+       hardware wallet the GUI lists (it knows Ledger's and Trezor's protocols alone) would need
+       maki desktop to speak one of those.
+    8. ~~Solana, an app~~ — done: SLIP-10 Ed25519 keys in maki-keys and host API 6 (an Ed25519
+       wallet's key, and signatures over whole messages); `libs/maki-sol`, which reads a
+       transaction as Solana's runtime does and says what it does (held to transactions
+       @solana/web3.js and @solana/spl-token made, maki's signatures to web3.js's byte for byte,
+       and fuzzed); the SDK's Solana app; maki desktop's Solana wallet (SOL and tokens, sends
+       simulated first, then signed on maki), and the extension's wallet for sites, the Wallet
+       Standard's way. The desktop's sends are checked by LiteSVM, Solana's own runtime, which
+       verifies maki's signature and runs the programs; an end-to-end test drives the app itself
+       through a USDC payment, and the emulator signs one (`MAKI_DEMO_WALLET`). In the store; not
+       yet on a badge.
+14. **More apps**, built on the permissions and tested as the others are, in the emulator's host
+    and against the fake maki, and in the store: Scanner (a QR code read, shown and typed
+    in); Marble and Breakout (the accelerometer); Minisign (a key from the phrase, and maki
+    desktop's `maki-minisign`); SSH 1.2 (a certificate authority whose certificates sshd trusts,
+    and git's commits and tags read whole on maki's screen, through `maki-ssh-keygen`, git's SSH
+    signing program); Notes (secrets from maki desktop, read on maki alone after); Contacts
+    (your card as a signed QR code, a scanned one checked); Bitcoin 1.1 and Ethereum 1.1 (no
+    cable: Sparrow's PSBTs and MetaMask's requests by QR codes); OpenPGP (an Ed25519 and
+    Curve25519 key for gpg and git, through maki desktop's `maki-gpg`, checked against GnuPG
+    itself); and Solana (above).
 
 ## Constraints to design around
 

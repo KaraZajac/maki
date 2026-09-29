@@ -79,14 +79,15 @@ What's where in the fork:
 | `libs/maki-native` | native apps: the ELF check, the stub's load request, the app service's operations and the drawing a native app sends |
 | `libs/maki-app-host-api` | how maki-link asks the app host to install, list and remove apps |
 | `libs/maki-bundle` | the `.maki` format, host-tested and fuzzed: manifest, code, icon, Ed25519 signature; permissions and their warnings; who may update an app |
-| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer; API 2: BIP340 Schnorr and X25519 keys; API 3: the wallet permission's keys, locked to the manifest's paths, and reviews with pages, whose yes allows the signatures it names; API 4: Monero's keys and subaddresses, and backup words maki shows its owner itself; API 5: spending Monero, the view key after a yes, key images with their proofs, and whole transactions made and signed by maki) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
-| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator, store records, reproduce), seventeen example apps (Hello, Dice, Tally; Signer, which asks, signs and types; Sensors; SSH, maki's SSH key for maki desktop's SSH agent; Nostr; Age, maki's age key for maki desktop's `age-plugin-maki`; Wi-Fi; Passphrase; Snake; Status; Bitcoin, Ethereum and Monero, maki's wallets; Hello Native and Pomodoro, built as native apps); see `sdk/README.md` |
-| `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: now just Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes). The wallets are store apps (`sdk/examples/bitcoin`, `sdk/examples/ethereum`) |
+| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer; API 2: BIP340 Schnorr and X25519 keys; API 3: the wallet permission's keys, locked to the manifest's paths, and reviews with pages, whose yes allows the signatures it names; API 4: Monero's keys and subaddresses, and backup words maki shows its owner itself; API 5: spending Monero, the view key after a yes, key images with their proofs, and whole transactions made and signed by maki; API 6: Ed25519 wallets, Solana's, a key by SLIP-10 and signatures over whole messages, a wallet held to its manifest's curve) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
+| `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator, store records, reproduce), twenty-five example apps (Hello, Dice, Tally; Signer, which asks, signs and types; Sensors; SSH, maki's SSH key and certificate authority for maki desktop's SSH agent and `maki-ssh-keygen`; Nostr; Age, maki's age key for maki desktop's `age-plugin-maki`; OpenPGP, for `maki-gpg`; Minisign, for `maki-minisign`; Notes; Contacts; Scanner; Wi-Fi; Passphrase; Snake, Marble and Breakout; Status; Bitcoin, Ethereum, Monero and Solana, maki's wallets; Hello Native and Pomodoro, built as native apps); see `sdk/README.md` |
+| `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: now just Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes). The wallets are store apps (`sdk/examples/bitcoin`, `ethereum`, `monero`, `solana`) |
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
 | `libs/maki-eth` | Ethereum, for the Ethereum app, host-tested: the BIP44 account (its keys through `maki-hd`), EIP-55, strict RLP, EIP-1559 and EIP-155 transactions, EIP-191 messages and EIP-712 typed data, reviewed and signed; tested against alloy |
+| `libs/maki-sol` | Solana, for the Solana app, host-tested and fuzzed: base58 addresses; a transaction's message (legacy and version 0) read as Solana's runtime reads it and refused where it would refuse it; the pages its owner reads (SOL and tokens sent, a token's recipient as their own address when the transaction proves the token account is theirs, new accounts, approvals and handing over flagged, memos, durable nonces, the most the fee can be, any other program flagged with whether it's given the account's signature) and a message's (Sign In With Solana checked against the site); held to transactions @solana/web3.js and @solana/spl-token made (`tests/fixtures/make.mjs`), maki's signatures to theirs byte for byte |
 | `libs/maki-ui` | the keys and drawing every maki screen shares: status bar, action bar, arrows, icons, QR codes |
 | `libs/maki-btc` | Bitcoin, for the Bitcoin app, host-testable: the BIP84 (native SegWit) and BIP86 (taproot) accounts (their keys through `maki-hd`), addresses, descriptors, PSBT parsing (BIP174, BIP371), the checks before signing, signing (ECDSA, BIP340 Schnorr); tested against rust-bitcoin, miniscript and Bitcoin Core's consensus code |
-| `libs/maki-hd` | the wallets' keys: BIP32 paths, and the `Keys` a wallet signs with (public keys, ECDSA with RFC 6979, BIP340 Schnorr with the BIP86 tweak); `seed` (a feature) derives them from the seed, which only maki-keys holds, and Monero's from its coin type's key (through `maki-xmr`); apps reach it through the app host, on their manifest's paths alone; tested against rust-bitcoin |
+| `libs/maki-hd` | the wallets' keys: BIP32 paths, and the `Keys` a wallet signs with (public keys, ECDSA with RFC 6979, BIP340 Schnorr with the BIP86 tweak); `seed` (a feature) derives them from the seed, which only maki-keys holds, Monero's from its coin type's key (through `maki-xmr`), and Ed25519 keys by SLIP-10 (Solana's), signing whole messages; apps reach it through the app host, on their manifest's paths alone; tested against rust-bitcoin, and SLIP-10's own vectors |
 | `libs/maki-xmr` | Monero, for the Monero app, host-tested: Monero's base58 addresses and subaddresses (integrated ones too); `request`, what maki is asked to sign and the pages its owner reads; `tx`, a transaction's bytes and hashes, held to a mainnet transaction. With `keys`, the account Ledger's Monero app makes from the phrase (the key at `m/44'/128'/0'/0/0`, hashed), its subaddresses and its 25-word backup (English list, Monero's checksum), for maki-keys; tested against monero-rs, and against Ledger's and monero-python's vectors for the test phrase. `sign`: Monero's hash onto the curve, key derivations, view tags, outputs' one-time keys, amounts and commitments, key images and CLSAG, held to Monero's own test vectors (`tests/monero-crypto.txt`), monero-rs and monero-oxide's verifier; `bulletproof`, the range proof (Bulletproofs+); `spend`, the whole transaction from a request, as wallet2 makes one, held to monero-oxide (its hash, the message signed, every CLSAG and range proof, the balance) and monero-rs (each payment found by whoever it pays) |
 | `apps-baosec/vault2` | the upstream vault, registered with the launcher; `src/link.rs` answers the browser's requests for logins and codes |
 | `services/maki-link` | the serial end of the desktop link: time sync, link state, and handing requests to the vault |
@@ -97,7 +98,7 @@ What's where in the fork:
 | `apps-baosec/maki-launcher/assets/splash.py` | the boot image (a maki roll, and the name in the tall font); writes `src/splash.rs` |
 | `libs/roughtime` | draft-19 request builder and verifier, tested against live server answers |
 
-Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-hd -p maki-xmr -p maki-btc -p maki-fido -p maki-eth -p maki-bundle -p maki-wasm -p maki-native -p maki-store -p maki-app-host-api -p maki-launcher-api-tests`.
+Host-side tests need no badge: `cargo test -p roughtime -p maki-proto -p maki-seed -p maki-hd -p maki-xmr -p maki-btc -p maki-fido -p maki-eth -p maki-sol -p maki-bundle -p maki-wasm -p maki-native -p maki-store -p maki-app-host-api -p maki-launcher-api-tests`.
 The kernel's own tests run hosted (`cd kernel && cargo test`), confinement and `TerminateChild`
 among them. The workspace builds against the fork's `xous-rs` (`[patch.crates-io.xous]` in
 `Cargo.toml`), since maki's syscalls aren't in the published crate; `cargo xtask`'s check that
@@ -155,7 +156,7 @@ compiled in unless set, so rebuild without them before flashing:
   and Passphrase (each asks, with two pages for its permission): a sign in big letters, and
   diceware words, the second one starting at two pages of memory (below).
 - `MAKI_DEMO_WALLET=1`: once maki has its PIN and phrase, maki-link installs the SDK's Bitcoin,
-  Ethereum and Monero apps (each asks, with a page for each permission and one naming the
+  Ethereum, Monero and Solana apps (each asks, with a page for each permission and one naming the
   wallet's accounts), then does what maki desktop does with them: shares the Bitcoin account, shows
   receive address #0 to compare, and sends the fixture PSBT (`libs/maki-btc/tests/fixtures`) to
   review and sign; the same for the taproot account; then connects a site, demo.maki, to the
@@ -164,7 +165,10 @@ compiled in unless set, so rebuild without them before flashing:
   shows three addresses to compare, checked against Ledger's and monero-python's, and spends as
   maki desktop has it: it lets the computer watch the wallet (the view key, checked), makes an
   output's key image, and makes and signs a transaction of two of the test phrase's outputs,
-  1.5 XMR paid and the change back (`libs/maki-xmr/tests/fixtures`). It logs `demo wallet ...`
+  1.5 XMR paid and the change back (`libs/maki-xmr/tests/fixtures`); then connects demo.maki to
+  the Solana app (Phantom's account for the test phrase) and has it sign a USDC payment
+  @solana/web3.js made (`libs/maki-sol/tests/fixtures`), checked against web3.js's signature.
+  It logs `demo wallet ...`
   lines, `as expected: true` where a signature is the one maki's wallet code makes on a computer
   (taproot's take fresh randomness, so there it's `as expected: false, but for fresh signatures:
   true`; a Monero transaction's are all fresh). The fixtures belong to the BIP39 test phrase:
@@ -181,10 +185,16 @@ compiled in unless set, so rebuild without them before flashing:
   badge. The range proof is also what maki-keys' heap is sized for (`tests/memory.rs`): about
   280 KiB at its peak for two outputs, 1.7 MiB for sixteen, where Xous gives a process 512 KiB
   unless it asks for more; maki-keys asks for 2.5 MiB.
-- `MAKI_DEMO_MANY=1`: once maki has its PIN and phrase, maki-link installs all fifteen
+- `MAKI_DEMO_MANY=1`: once maki has its PIN and phrase, maki-link installs all twenty-three
   WebAssembly examples in `libs/maki-wasm/tests/fixtures` (each asks), more than one answer to a
   list holds, then lists them, and asks for the last as maki desktop's Apps page does. It logs
-  `demo many list: result 0, 15 of 15 apps, as expected: true`.
+  `demo many list: result 0, 23 of 23 apps, as expected: true`. It found a leak in swap: a page
+  unmapped while it was out in swap kept its swap page, a few dozen pages with every install, and
+  the fifteenth filled swap, which the swapper can't survive in a hard OOM. Now the kernel says
+  which pages those were (`SwapAbi::TakeFreed`) and the swapper frees them, and swap holds at
+  about 1,750 of its 2,040 pages with all twenty-three installed. The swapper can't print (its
+  UART is compiled out): its panics come out through the kernel, as `swapper: panicked at
+  xous-swapper/src/main.rs:LINE`.
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `3` is maki's left, `4` its
 right and `5` the centre; `3` and `4` together are the menu. (Baomulator names `3` and `4` the
@@ -244,16 +254,17 @@ presses to match.
 phrase, the PIN twice, 12 words, each word typed a letter at a time until it can be picked.
 `OFFSET` shifts them all (in G). It ends at 10.0G + `OFFSET` on "Phrase restored". Asks wait
 until setup is over, so the centre first continues to the home screen. With `MAKI_DEMO_WALLET`,
-`--answer` does the rest, installing the three apps and saying yes to everything they ask:
+`--answer` does the rest, installing the four apps and saying yes to everything they ask:
 
 ```sh
 MAKI_DEMO=1 MAKI_DEMO_WALLET=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
 bash -c 'mapfile -t P < <(OFFSET=2.0 scripts/presses-test-phrase.sh); P+=(--press 5@12.3G+2M)
-  scripts/emu.sh 60G "${P[@]}" --answer --answer-shots --console-final 900000' | grep "demo wallet"
+  scripts/emu.sh 80G "${P[@]}" --answer --answer-shots --console-final 900000' | grep "demo wallet"
 ```
 
 Setup is over by 12.3G. Bitcoin's install screen is up by 13.3G, Ethereum's by 15.8G and Monero's
-by 18.0G; Bitcoin's reviews follow from 21.8G (the account, the address, the PSBT; taproot's from
+by 18.0G (Solana's, fourth, puts what follows about 2.5G later than this says); Bitcoin's reviews
+follow from 21.8G (the account, the address, the PSBT; taproot's from
 28.7G), then, once the Bitcoin app has given way, Ethereum's from 36.4G (connect, the message, the
 transaction, the permit), then Monero's from about 47.1G (three addresses, logged as
 `network/index`: network 0 is Monero's own and 2 its stagenet; index 0 is the primary address and
@@ -261,7 +272,10 @@ transaction, the permit), then Monero's from about 47.1G (three addresses, logge
 transaction from 53.1G (Send 1.5 XMR and where to, the change back to you, the fee, then the total
 to sign and spend). From the yes at 53.6G maki is back at its home screen while it makes and signs
 the transaction, about 3.3G more (a third of it the range proof's generators, the first time): done
-by about 57G. Among the `demo wallet` lines:
+by about 57G. Then Solana's, from about 73G (the app takes a while to start: some 10 s of maki's
+time for its 95 KB of code): connect, then the USDC payment (who asked, the recipient's new token
+account for it, the payment and whose account it goes to, the most the fee can be, then sign and
+send), signed by about 77G. Among the `demo wallet` lines:
 
 ```
 demo wallet btc signed: 1048 bytes, as expected: true, but for fresh signatures: true
@@ -275,14 +289,16 @@ demo wallet xmr address 0/1: status Some(0), as expected: true
 demo wallet xmr watch: status Some(0), the view key as expected: true
 demo wallet xmr key image: status Some(0), 97 bytes
 demo wallet xmr signed: 2273 bytes, a transaction of two inputs: true
+demo wallet sol account: status Some(0), Phantom's: true
+demo wallet sol sign: status Some(0) [], as web3.js signs it: true
 ```
 
-For the Monero backup words as well, open the app once that's done, to the right three times and
-the centre (`--press 4@60G+2M --press 4@60.1G+2M --press 4@60.2G+2M --press 5@60.4G+2M`), then
-its menu, left and right together, and the centre for its first item, Backup words (`--press
-3@64G+2M --press 4@64G+2M --press 5@64.4G+2M`), and run to 68G. maki asks first (by 64.8G), then
-shows the words a page each (from 65.2G): the 25 Ledger's Monero app shows for the test phrase,
-`tavern judge beyond bifocals ... cunning doing jobs`.
+For the Monero backup words as well, open the app once the demo is done, to the right three times
+and the centre (`--press 4@80G+2M --press 4@80.1G+2M --press 4@80.2G+2M --press 5@80.4G+2M`),
+then its menu, left and right together, and the centre for its first item, Backup words (`--press
+3@84G+2M --press 4@84G+2M --press 5@84.4G+2M`), and run to 88G. maki asks first, then shows the
+words a page each: the 25 Ledger's Monero app shows for the test phrase, `tavern judge beyond
+bifocals ... cunning doing jobs`. (Before Solana joined the demo, these came 20G sooner.)
 
 `MAKI_DEMO_APP=1` installs Dice and Tally and opens Dice. With the test phrase's presses
 (`OFFSET=2.0`, for the app host): continue to the home screen at 12.3G; five presses of the
