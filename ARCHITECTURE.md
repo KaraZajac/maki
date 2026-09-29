@@ -289,10 +289,10 @@ buttons; drawing over maki's strip, or while it isn't in front.
 
 ### Wallets are apps
 
-Bitcoin and Ethereum began in the firmware. They're apps in the maki store now, with Monero to
-follow, so a maki holds no crypto code or accounts until its owner adds a wallet, as on a
-Ledger. Setup still makes the one recovery phrase; a wallet app added later gets the accounts
-that phrase has always had.
+Bitcoin and Ethereum began in the firmware. They're apps in the maki store now, and Monero
+joined them there, so a maki holds no crypto code or accounts until its owner adds a wallet, as
+on a Ledger. Setup still makes the one recovery phrase; a wallet app added later gets the
+accounts that phrase has always had.
 
 - **The wallet permission** names the derivation paths an app may use, in its manifest
   (`[wallet] paths = ["m/84'/0'", "m/86'/0'"]`): each at least a purpose and a coin type, both
@@ -317,9 +317,18 @@ that phrase has always had.
   transaction can be bigger), where BTC_* and ETH_* messages used to go to maki-keys
   (PROTOCOL.md, "The wallets"). maki desktop's Wallets page offers the app from the store when
   maki hasn't it, and a site asking the extension's Ethereum provider hears where to get it.
-- **What stays in the firmware:** the phrase, BIP32 and the two signatures (in maki-keys, for
-  any wallet app), and passkeys. What leaves: PSBTs, Ethereum transactions and typed data, the
-  token table, the Bitcoin app on the home screen, and the protocol's Bitcoin and Ethereum
+- **Monero** isn't BIP32 and secp256k1, but maki makes its keys the way Ledger's Monero app
+  does, so the one phrase still gives the same wallet everywhere: the BIP32 key at
+  `m/44'/128'/account'/0/0`, hashed (Keccak-256, reduced) to the spend key, and that to the view
+  key, as every Monero wallet makes a view key (`libs/maki-xmr`; held to Ledger's own test
+  vectors, monero-python and monero-rs). maki-keys does the ed25519 work on Monero's coin type
+  alone: the account's public keys and its subaddresses (made with the view key, which stays in
+  maki). A Monero wallet also has a backup of its own, the spend key as 25 words that restore it
+  in any Monero wallet; maki shows those itself, on its own screens, after asking, when the
+  Monero app asks it to (host API 4's `wallet_show_backup`): the words never reach the app.
+- **What stays in the firmware:** the phrase, BIP32, the two signatures and Monero's keys (in
+  maki-keys, for any wallet app), and passkeys. What leaves: PSBTs, Ethereum transactions and typed
+  data, the token table, the Bitcoin app on the home screen, and the protocol's Bitcoin and Ethereum
   messages.
 - **A known limit:** maki runs one app at a time, so a request for a wallet while the owner has
   another app open is turned away as busy, as the SSH agent's already is. Built in, the wallets
@@ -586,8 +595,13 @@ device:
        (version 3).
     6. ~~maki desktop, the extension and the fake maki, through the apps; the store~~ — done:
        the Wallets page offers the app from the store when maki hasn't it. Not yet on a badge.
-    7. Monero: an app, once the others are done: the address and a 25-word backup first, then
-       signing (CLSAG and range proofs), measured on the badge.
+    7. Monero, an app. ~~Its addresses and backup~~ — done: `libs/maki-xmr`, maki-keys' Monero
+       keys, host API 4 and the SDK's Monero app, in the store. In the emulator
+       (`MAKI_DEMO_WALLET`) it shows the addresses Ledger's app makes from the test phrase, and
+       maki shows its 25 words; maki desktop shows the address and subaddresses, checked on maki.
+       Next: sending. Its curve work is in `libs/maki-xmr` (`sign`: outputs, key images and
+       CLSAG, held to Monero's own test vectors and monero-oxide's verifier); then maki-keys'
+       part and the app's, and the range proofs (Bulletproofs+), measured on the badge.
 
 ## Constraints to design around
 

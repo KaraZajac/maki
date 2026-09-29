@@ -52,13 +52,15 @@ Planned apps:
   every sign-in (with the user, and the server's host key when ssh passes it on) and every git
   signature waits for your yes on maki. Not yet: the commit itself on maki's screen (git hands
   the agent only its hash)
-- **Wallets** (apps in the maki store, working in the emulator and in the browser): Bitcoin and
-  Ethereum, for those who want them, and Monero next. maki keeps the keys, from the recovery
-  phrase you write down, behind the boot PIN, and lets each wallet app use only the accounts it
-  names. Every payment, the change and the fee shown on maki's screen before a transaction is
-  signed; receiving addresses as QR codes that never touch the computer; sites connect to the
-  Ethereum account only when you allow them on maki, and every message and transaction is shown
-  on maki before it's signed, token transfers and approvals spelled out
+- **Wallets** (apps in the maki store, working in the emulator and in the browser): Bitcoin,
+  Ethereum and Monero, for those who want them. maki keeps the keys, from the recovery phrase
+  you write down, behind the boot PIN, and lets each wallet app use only the accounts it names;
+  the Monero wallet is the one a Ledger makes from the same phrase, and maki shows you its
+  25-word backup itself (sending Monero comes next). Every payment, the change and the fee shown
+  on maki's screen before a transaction is signed; receiving addresses as QR codes that never
+  touch the computer; sites connect to the Ethereum account only when you allow them on maki,
+  and every message and transaction is shown on maki before it's signed, token transfers and
+  approvals spelled out
 - **Community apps** (working in the emulator): signed `.maki` bundles, installed through maki
   desktop after maki shows you the app, where it's from, its developer's key and what it asks
   to do, and run in a WebAssembly sandbox that reaches nothing it wasn't given. With your
@@ -71,8 +73,8 @@ Planned apps:
   computer can set), Nostr (your Nostr key for sites, through the extension's `window.nostr`,
   each event shown on maki before it's signed), Age (your age key: anyone encrypts files to it
   with age, and maki desktop's `age-plugin-maki` asks maki to open each one, which you approve on
-  its screen), Wi-Fi (networks as QR codes for guests to join), Bitcoin and Ethereum (maki's
-  wallets), Snake, Dice, Tally, Sensors and SSH so far
+  its screen), Wi-Fi (networks as QR codes for guests to join), Bitcoin, Ethereum and Monero
+  (maki's wallets), Snake, Dice, Tally, Sensors and SSH so far
 
 ## Who it's for
 
