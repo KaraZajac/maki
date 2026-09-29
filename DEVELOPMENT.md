@@ -166,6 +166,12 @@ compiled in unless set, so rebuild without them before flashing:
   computer (taproot's take fresh randomness, so there it's `as expected: false, but for fresh
   signatures: true`). The fixtures belong to the BIP39 test phrase: restore that at setup
   (below).
+- `MAKI_DEMO_XMR_BENCH=1`: 20 s after it starts, maki-keys times the curve work spending Monero
+  takes (`maki_xmr::sign`), on made-up keys, and logs `xmr bench: ...` in maki's own time. No
+  setup needed: run to 16G. In the emulator (10 ns an instruction): the hash onto the curve
+  63.5 ms, a scalar multiplication 37.3 ms, a key image 108 ms, a CLSAG over a ring of 16 about
+  3.0 s. On a computer, for comparison (`cargo run --release -p maki-xmr --features keys
+  --example bench`): 0.14 ms, 0.05 ms and 5.9 ms. To measure on a badge.
 - `MAKI_DEMO_MANY=1`: once maki has its PIN and phrase, maki-link installs all fifteen
   WebAssembly examples in `libs/maki-wasm/tests/fixtures` (each asks), more than one answer to a
   list holds, then lists them, and asks for the last as maki desktop's Apps page does. It logs
