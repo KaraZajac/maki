@@ -326,10 +326,28 @@ accounts that phrase has always had.
   maki). A Monero wallet also has a backup of its own, the spend key as 25 words that restore it
   in any Monero wallet; maki shows those itself, on its own screens, after asking, when the
   Monero app asks it to (host API 4's `wallet_show_backup`): the words never reach the app.
-- **What stays in the firmware:** the phrase, BIP32, the two signatures and Monero's keys (in
-  maki-keys, for any wallet app), and passkeys. What leaves: PSBTs, Ethereum transactions and typed
-  data, the token table, the Bitcoin app on the home screen, and the protocol's Bitcoin and Ethereum
-  messages.
+- **Spending Monero, maki makes the whole transaction.** Monero can't be signed a digest at a
+  time: what the signatures sign covers the outputs' keys and the range proof, curve work an app
+  can't do in time. So a computer that watches the wallet (with the view key, which the Monero
+  app shares once its owner says yes: it finds the wallet's payments, and can't spend them) finds
+  the outputs to spend and picks their decoys, and asks for payments; the app shows each one, the
+  change and the fee on maki's review screen, and on a yes maki-keys makes the transaction as
+  Monero's own wallet (wallet2) makes one, so it looks like any other: the outputs, the change
+  back to the wallet or wallet2's output of nothing, the transaction's keys, the payment ID, one
+  Bulletproof+ over every amount, and a CLSAG for each input (host API 5's `wallet_monero_sign`,
+  a signature for each input of what the yes allowed). maki checks each input is the wallet's and
+  its amount is what its commitment on the chain hides, so the fee it shows is the fee. Key
+  images, which mark outputs spent, come with their proofs, for the computer to see what's spent.
+- **maki desktop, and the Monero GUI.** maki desktop is a Monero wallet itself: it scans the
+  chain with the view key (from a node its owner picks, which never sees the key), and pays,
+  picking decoys as wallet2 does. And the Monero GUI (or the CLI) can keep a view-only wallet of
+  the same account, with maki as its cold wallet: maki desktop reads and writes the files its
+  "offline transaction signing" passes (wallet2's own, encrypted with a key made from the view
+  key), and maki signs.
+- **What stays in the firmware:** the phrase, BIP32, the two signatures and Monero's keys and
+  transactions (in maki-keys, for any wallet app), and passkeys. What leaves: PSBTs, Ethereum
+  transactions and typed data, the token table, the Bitcoin app on the home screen, and the
+  protocol's Bitcoin and Ethereum messages.
 - **A known limit:** maki runs one app at a time, so a request for a wallet while the owner has
   another app open is turned away as busy, as the SSH agent's already is. Built in, the wallets
   never were. (One started without the screen for another message gives way: it keeps maki for
@@ -599,9 +617,14 @@ device:
        keys, host API 4 and the SDK's Monero app, in the store. In the emulator
        (`MAKI_DEMO_WALLET`) it shows the addresses Ledger's app makes from the test phrase, and
        maki shows its 25 words; maki desktop shows the address and subaddresses, checked on maki.
-       Next: sending. Its curve work is in `libs/maki-xmr` (`sign`: outputs, key images and
-       CLSAG, held to Monero's own test vectors and monero-oxide's verifier); then maki-keys'
-       part and the app's, and the range proofs (Bulletproofs+), measured on the badge.
+       ~~Sending~~ — done: maki makes and signs whole transactions (`maki_xmr::spend`, host API
+       5, the Monero app's `W`, `K` and `S`), held to monero-oxide and monero-rs and taken and
+       mined by a regtest monerod; maki desktop's own Monero wallet (scanning, decoys, fees,
+       paying), and maki as the Monero GUI's cold wallet through wallet2's files. In the
+       emulator (`MAKI_DEMO_WALLET` makes one of the test phrase's) a transaction of two inputs
+       takes maki about 22 s (10 ns an instruction), the range proof two thirds of it. Not yet on a badge; the hash onto the curve could be faster
+       on dalek's own field arithmetic. A hardware wallet the GUI lists (it knows Ledger's and
+       Trezor's protocols alone) would need maki desktop to speak one of those.
 
 ## Constraints to design around
 

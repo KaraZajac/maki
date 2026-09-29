@@ -56,11 +56,13 @@ Planned apps:
   Ethereum and Monero, for those who want them. maki keeps the keys, from the recovery phrase
   you write down, behind the boot PIN, and lets each wallet app use only the accounts it names;
   the Monero wallet is the one a Ledger makes from the same phrase, and maki shows you its
-  25-word backup itself (sending Monero comes next). Every payment, the change and the fee shown
-  on maki's screen before a transaction is signed; receiving addresses as QR codes that never
-  touch the computer; sites connect to the Ethereum account only when you allow them on maki,
-  and every message and transaction is shown on maki before it's signed, token transfers and
-  approvals spelled out
+  25-word backup itself. Every payment, the change and the fee shown on maki's screen before a
+  transaction is signed (a Monero transaction maki makes whole itself); receiving addresses as
+  QR codes that never touch the computer; sites connect to the Ethereum account only when you
+  allow them on maki, and every message and transaction is shown on maki before it's signed,
+  token transfers and approvals spelled out. maki desktop holds each account as a wallet, Monero
+  too (scanning the chain itself, with the view key maki shares when you let it); the Monero GUI
+  can keep a view-only wallet of it, with maki as its cold wallet
 - **Community apps** (working in the emulator): signed `.maki` bundles, installed through maki
   desktop after maki shows you the app, where it's from, its developer's key and what it asks
   to do, and run in a WebAssembly sandbox that reaches nothing it wasn't given. With your
