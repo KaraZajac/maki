@@ -54,6 +54,18 @@ Passkeys, yes: maki is a FIDO2 security key, and browsers talk to it directly. E
 It's never there. The phrase is shown on maki and entered on maki. maki desktop never sees it,
 nor any key made from it.
 
+## What's maki's license?
+
+maki's own code is under the MIT License: maki desktop and the extension, the maki store, maki's
+crates and SDK in the firmware, and these docs. The firmware is a fork of Xous, which is under the
+Apache License 2.0: its files stay under it, and the ones maki changed say so. Apps you write with
+the SDK are yours, under whatever license you choose.
+
+Each download carries the licenses and notices of the code of others in it, in
+`THIRD-PARTY-NOTICES.md`: beside the firmware's files, inside maki desktop (its window's
+**notices**) and in the extension. None of it is under a copyleft license. They're on the
+[download page](https://maki.netslum.io/download/#licenses) too.
+
 ## Where do I report a bug?
 
 In the repository it's about: [maki-firmware](https://github.com/KaraZajac/maki-firmware/issues)

@@ -6,7 +6,7 @@
   browser extension. They&rsquo;re built from public commits, and they go together: this firmware
   and this maki desktop both speak version {{protocol:firmware}} of maki&rsquo;s link protocol.</p>
   <div class="jump">
-    <a href="#firmware">Firmware</a><a href="#desktop">maki desktop</a><a href="#extension">Extension</a><a href="#apps">Apps</a><a href="#check">Checking the files</a><a href="#build">Building them yourself</a>
+    <a href="#firmware">Firmware</a><a href="#desktop">maki desktop</a><a href="#extension">Extension</a><a href="#apps">Apps</a><a href="#check">Checking the files</a><a href="#licenses">Licenses</a><a href="#build">Building them yourself</a>
   </div>
   <p class="status warn">
     <b>Read first</b>
@@ -79,10 +79,10 @@
     <h4>Chrome and the like</h4>
     <p>Unzip it, open <code>chrome://extensions</code>, turn on <b>Developer mode</b>, choose
     <b>Load unpacked</b> and pick the unzipped folder.</p>
-    <h4>Firefox</h4>
+    <h4>Firefox, Zen and the like</h4>
     <p>Open <code>about:debugging</code>, <b>This Firefox</b>, <b>Load Temporary Add-on</b>, and pick
-    the <code>.xpi</code>. It lasts until Firefox restarts; <a href="/docs/extension.html#firefox">keeping it</a>
-    needs Mozilla to sign it, or Firefox Developer Edition.</p>
+    the <code>.xpi</code>. It lasts until the browser restarts. Firefox Developer Edition and Nightly,
+    and Zen, can <a href="/docs/extension.html#firefox-zen-and-the-others-made-from-firefox">keep it for good</a>.</p>
     <h4>Then</h4>
     <p>In maki desktop, <b>Connections</b>, <b>Browsers</b>, choose <b>Set up</b>, so the extension can
     reach it.</p>
@@ -116,6 +116,18 @@
 <pre class="cmds"><span class="cmd">sha256sum</span> <span class="arg">-c SHA256SUMS</span>          <span class="cm"># each file: OK</span></pre>
   <p class="body">Each release is built from the commit it names, in public repositories, so you can
   build it yourself instead.</p>
+</section>
+
+<section id="licenses">
+  <h2>Licenses</h2>
+  <p class="lede">MIT, <span class="hl">and what it&rsquo;s built on.</span></p>
+  <p class="body">maki&rsquo;s own code is under the MIT License. Its firmware is a fork of
+  <a href="https://github.com/betrusted-io/xous-core">Xous</a>, under the Apache License 2.0: the
+  firmware&rsquo;s <a href="https://github.com/KaraZajac/maki-firmware/blob/maki/NOTICE.md">NOTICE</a>
+  says which is which. Each download carries the licenses and notices of the code of others in it,
+  and they&rsquo;re here too: <a href="{{notices:firmware}}">the firmware&rsquo;s</a>,
+  <a href="{{notices:desktop}}">maki desktop&rsquo;s</a> and
+  <a href="{{notices:extension}}">the extension&rsquo;s</a>. None of it is under a copyleft license.</p>
 </section>
 
 <section id="build">

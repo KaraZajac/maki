@@ -128,4 +128,8 @@ and the plan, with links to the public sources at its end.
 
 ## License
 
-BSD 3-Clause for now; under review, see [RESEARCH.md §8](./RESEARCH.md#8-open-questions).
+maki's own code is licensed under the MIT License: this repository ([LICENSE](LICENSE)), maki
+desktop and the extension, the maki store, and maki's crates and SDK in the firmware. The firmware
+is a fork of Xous, whose files stay under the Apache License 2.0, those maki changed included; its
+`NOTICE.md` says which is which. Each download carries the licenses and notices of the code of
+others in it (`THIRD-PARTY-NOTICES.md`).

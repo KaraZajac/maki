@@ -149,7 +149,7 @@ def page(*, path, title, description, body, nav, css_version, wide=False, extra_
   <div class="cols">
     <div>
       <div style="display:flex;align-items:center;gap:.6rem;color:var(--text);font-family:var(--mono);font-weight:700"><span style="width:1.6rem;height:1.6rem;display:inline-block">{MARK}</span>maki</div>
-      <p style="margin:.7rem 0 0;max-width:22rem">A security key that shows you what you&rsquo;re signing, for the DEF CON 34 badge. By <a href="https://netslum.io">.leviathan</a>, part of <a href="https://netslum.io">netslum.io</a>. BSD-3-Clause.</p>
+      <p style="margin:.7rem 0 0;max-width:22rem">A security key that shows you what you&rsquo;re signing, for the DEF CON 34 badge. By <a href="https://netslum.io">.leviathan</a>, part of <a href="https://netslum.io">netslum.io</a>. MIT License; the firmware builds on Xous (Apache 2.0): <a href="/download/#licenses">licenses</a>.</p>
     </div>
     <div><h4>maki</h4><ul>
       <li><a href="/apps/">Apps</a></li><li><a href="/docs/">Docs</a></li><li><a href="/download/">Download</a></li><li><a href="/docs/changelog.html">What&rsquo;s new</a></li>
@@ -533,6 +533,9 @@ def build_pages(out: Path, css_version, releases, apps):
         "date:firmware": lambda: esc(releases["firmware"]["date"]),
         "sums:firmware": lambda: esc(releases["firmware"]["sums"]),
         "sums:desktop": lambda: esc(releases["desktop"]["sums"]),
+        "notices:firmware": lambda: esc(releases["firmware"]["notices"]),
+        "notices:desktop": lambda: esc(releases["desktop"]["notices"]),
+        "notices:extension": lambda: esc(releases["extension"]["notices"]),
         "protocol:firmware": lambda: str(releases["firmware"]["protocol"]),
         "version:extension": lambda: esc(releases["extension"]["name"]),
         "size:desktop": lambda: esc(size(releases["desktop"]["files"][0]["bytes"])),

@@ -4,9 +4,10 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
-## Next
+## maki desktop 0.1.1, 2026-09-29
 
-In the source, not yet in a download.
+maki desktop and the extension 0.1.1, on the [download page](https://maki.netslum.io/download/),
+with the preview's firmware: they speak the same version of the link protocol.
 
 - **maki desktop manages the extension's browsers.** Connections lists every browser it knows on
   the computer (Chrome, Chromium, Brave, Edge, Vivaldi, Opera, Thorium, Firefox, Zen, Floorp,
@@ -14,7 +15,11 @@ In the source, not yet in a download.
 - **Browsers installed as Flatpaks connect too:** Zen, Firefox, Chrome, Brave and the others from
   Flathub. maki desktop shares one folder with the browser's sandbox, where it answers the
   extension and nothing else, and puts a small relay inside. [The extension](docs/extension.md).
-- **On a badge:** this preview's firmware boots, links, sets its clock through Roughtime, and
+- **Licenses:** maki's own code is under the MIT License now, in every repository: maki desktop,
+  the extension, the store, and maki's crates and SDK in the firmware. The files of Xous that maki
+  changed stay Apache-2.0 and say they were changed. Every download carries the licenses and
+  notices of the code of others in it (`THIRD-PARTY-NOTICES.md`), the preview's too.
+- **On a badge:** the preview's firmware boots, links, sets its clock through Roughtime, and
   installs a store app, over USB with a yes on maki.
 
 ## Preview, 2026-09-29

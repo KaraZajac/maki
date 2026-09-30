@@ -361,10 +361,11 @@ Badge B stays sealed throughout, as a reference.
 
 ## 8. Open questions
 
-1. **License.** `xous-core` is Apache-2.0, and `vault2`'s CTAP stack is Google's OpenSK, also
-   Apache-2.0. This repo is BSD-3-Clause. Forked files stay Apache-2.0 regardless; switching
-   maki to Apache-2.0, or Rust's usual MIT/Apache-2.0, would let code move to and from
-   upstream without friction. There's no code yet, so changing now is free.
+1. ~~**License.**~~ Settled (2026-09-29): maki's own code is MIT, in every repository, the
+   firmware's own crates and SDK included. `xous-core` is Apache-2.0, and `vault2`'s CTAP stack
+   is Google's OpenSK, also Apache-2.0: those files stay Apache-2.0, the ones maki changed
+   saying so (maki-firmware's `NOTICE.md`), and every download carries the notices of the code
+   of others in it.
 2. ~~**Going public.**~~ Everything is public: the firmware, maki desktop and the store
    (2026-09-27), and this repository (2026-09-28).
 3. **Upstream first?** The PKE driver and the `rp.name` fix belong in `xous-core`. The kernel
