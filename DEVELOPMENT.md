@@ -185,6 +185,15 @@ compiled in unless set, so rebuild without them before flashing:
   badge. The range proof is also what maki-keys' heap is sized for (`tests/memory.rs`): about
   280 KiB at its peak for two outputs, 1.7 MiB for sixteen, where Xous gives a process 512 KiB
   unless it asks for more; maki-keys asks for 2.5 MiB.
+- `MAKI_DEMO_SUDO=1`: once maki has its PIN and phrase, maki-link installs the Sudo and Bitcoin
+  apps, then does what maki desktop's sudo plugin and its Bitcoin page do: asks about a command
+  (`/usr/bin/systemctl restart nginx`, with an `LD_PRELOAD` set on its command line, which maki
+  shows on a page of its own), adds the fixture 2-of-3 multisig wallet (`libs/maki-btc/tests/fixtures`,
+  maki's key among its three: every key on a page, maki's marked) and has its PSBT signed, the
+  wallet named on the first page. It logs `demo sudo approve: status Some(0), signed: true`,
+  `demo sudo multisig add: status Some(0)` and `demo sudo multisig sign: status Some(0), as
+  expected: true` (the very PSBT maki-btc signs on a computer). With `--answer --answer-shots`,
+  every page of the three reviews is on file.
 - `MAKI_DEMO_MANY=1`: once maki has its PIN and phrase, maki-link installs all twenty-three
   WebAssembly examples in `libs/maki-wasm/tests/fixtures` (each asks), more than one answer to a
   list holds, then lists them, and asks for the last as maki desktop's Apps page does. It logs

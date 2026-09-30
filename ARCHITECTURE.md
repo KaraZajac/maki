@@ -527,8 +527,12 @@ device:
    payment, change, fee) and signed, through maki desktop, every signature verified before it
    goes out. Taproot is key spends only (BIP86 has no scripts), signed with BIP340 Schnorr and
    fresh randomness from the TRNG. Signatures match rust-bitcoin's; SegWit's pass Bitcoin Core's
-   consensus code, taproot's rust-bitcoin's sighash and secp256k1. Not yet: multisig, and a run
-   against Sparrow with real coins on a badge.
+   consensus code, taproot's rust-bitcoin's sighash and secp256k1. Multisig too (native SegWit,
+   BIP48): maki's key for a wallet, the wallet added once the owner has gone through every key on
+   maki, and what spends from it checked against the wallet as added (its scripts rebuilt from its
+   keys, change only where it's the wallet's); a 2-of-3 spend maki signs, another key signs and
+   miniscript finalizes passes Bitcoin Core's consensus code. Not yet: a run against Sparrow with
+   real coins on a badge.
 9. ~~Passkeys from the phrase, and a Passkeys screen~~ — done: the authenticator's keys from
    the phrase (above), passkeys in the backup, and a Passkeys app that lists them (site and
    user) and deletes one with the owner's yes, telling the vault to re-read its store. It shares
@@ -663,7 +667,13 @@ device:
     (your card as a signed QR code, a scanned one checked); Bitcoin 1.1 and Ethereum 1.1 (no
     cable: Sparrow's PSBTs and MetaMask's requests by QR codes); OpenPGP (an Ed25519 and
     Curve25519 key for gpg and git, through maki desktop's `maki-gpg`, checked against GnuPG
-    itself); and Solana (above).
+    itself); and Solana (above). Then: a Magic 8-Ball (shaken, the accelerometer); host API 7,
+    asks with pages (maki's review screen for any app with the ask permission, a yes allowing no
+    signatures), and on it Sudo, which maki desktop's sudo plugin (an approval plugin, in Rust)
+    asks about each command sudoers says yes to, shown whole on maki and signed with a key root
+    keeps (checked with the real sudo, as root in a container, setup to teardown); Bitcoin 1.2's
+    multisig (above); and Nostr apps signing through maki desktop as their bunker (NIP-46, over
+    relays, NIP-44 checked against its test vectors), each event shown on maki by the Nostr app.
 
 ## Constraints to design around
 

@@ -12,7 +12,8 @@ for your keys.
 > payment shown and signed on maki); a browser extension asks maki for logins and TOTP codes, which
 > you approve on maki's screen, and gives sites maki's Ethereum and Solana accounts; Bitcoin wallet
 > software (Sparrow, Bitcoin Core) sends transactions through it for maki to show you and sign,
-> and the Monero GUI keeps maki as its cold wallet. Apps anyone can write (in Rust, for
+> and the Monero GUI keeps maki as its cold wallet; sudo waits for a yes on maki, and Nostr apps
+> sign through maki desktop. Apps anyone can write (in Rust, for
 > WebAssembly or as native code maki's kernel confines) install from a signed `.maki` file, or
 > from the maki store ([maki-apps](https://github.com/KaraZajac/maki-apps): reviewed, and rebuilt
 > from their source), after maki shows you what they are and who signed them, and run below maki's
@@ -54,6 +55,12 @@ Planned apps:
   signature waits for your yes on maki, the commit itself on maki's screen (git signs through
   maki desktop's `maki-ssh-keygen`, which hands maki the whole of it). A certificate authority
   too, whose certificates sshd trusts; and an OpenPGP key for gpg and git, through `maki-gpg`
+- **sudo, with a yes on maki** (working in the emulator, and with the real sudo in a container):
+  maki desktop's sudo plugin asks maki's Sudo app about every command sudoers says yes to; maki
+  shows it whole, the command line, what it's given to run with (an `LD_PRELOAD` set on the
+  command line, say) and who asked where, and signs its yes, which the plugin checks against the
+  key root keeps. Malware with your password, or sudo's remembered one, can't run anything as
+  root through sudo without you
 - **Wallets** (apps in the maki store, working in the emulator and in the browser): Bitcoin,
   Ethereum, Monero and Solana, for those who want them. maki keeps the keys, from the recovery
   phrase you write down, behind the boot PIN, and lets each wallet app use only the accounts it
@@ -64,7 +71,9 @@ Planned apps:
   connect to the Ethereum and Solana accounts only when you allow them on maki, and every message
   and transaction is shown on maki before it's signed, token transfers and approvals spelled out
   (a Solana token's recipient as their own address, when the transaction proves the token
-  account is theirs). Bitcoin and Ethereum sign
+  account is theirs). maki is one of a Bitcoin multisig wallet's keys too (Sparrow's, or
+  Nunchuk's, Specter's, Bitcoin Core's): it signs for one once you've gone through its keys on
+  maki, and checks what spends from it against the wallet as you added it. Bitcoin and Ethereum sign
   with no cable too, by QR codes: Sparrow's PSBTs, MetaMask's requests. maki desktop holds each
   account as a wallet, Monero too (scanning the chain itself, with the view key maki shares when
   you let it); the Monero GUI can keep a view-only wallet of it, with maki as its cold wallet
@@ -78,13 +87,15 @@ Planned apps:
   a pie that empties like a clock while you work and fills back up while you rest), Passphrase
   (diceware from maki's random number generator), Status (a sign for your desk, which your
   computer can set), Nostr (your Nostr key for sites, through the extension's `window.nostr`,
-  each event shown on maki before it's signed), Age (your age key: anyone encrypts files to it
+  and for Nostr apps on your phone or the web, which sign through maki desktop as their bunker
+  (NIP-46), each event shown on maki before it's signed), Sudo (maki's yes for sudo), Age (your age key: anyone encrypts files to it
   with age, and maki desktop's `age-plugin-maki` asks maki to open each one, which you approve on
   its screen), OpenPGP (a key for gpg and git), Minisign (signing files), Notes (secrets read on
   maki and never on the computer again), Contacts (your card as a signed QR code, to swap at the
   con), Scanner (a QR code read, shown and typed into the computer), Wi-Fi (networks as QR codes
   for guests to join), Bitcoin, Ethereum, Monero and Solana (maki's wallets), Marble and Breakout
-  (steered by tilting maki), Snake, Dice, Tally, Sensors and SSH so far
+  (steered by tilting maki), a Magic 8-Ball (shake maki), Snake, Dice, Tally, Sensors and SSH so
+  far
 
 ## Who it's for
 
