@@ -15,11 +15,15 @@ one, maki was built a day at a time, and that's here too.
   builds on, and a sender that didn't wait for each packet. Fixed in both.
 - **The PIN's tries are counted in the chip,** on a counter that only goes up, before each PIN is
   checked. Putting back an old copy of maki's storage no longer gives the tries back.
-- **The jog dial on maki's side reaches apps** (host API 8): turning it up or down is an event
-  for apps that say they know it, and the SDK's simulator takes it as the arrow keys.
+- **The jog dial on maki's side works:** up and down step through the PIN's digits, the home
+  screen's apps and a menu's items, and reach apps that say they know it (host API 8, and native
+  apps built for `maki-native-2`; maki still runs those built for `maki-native-1`). The SDK's
+  simulator takes it as the arrow keys. [How you use it](docs/getting-started.md#how-you-use-it).
 - **Dice 2.0,** for tabletop games: dice as players say them (3d6, 1d20), the die picked with
   the jog dial, how many with left and right, the total big and each roll beneath. It needs this
   firmware.
+- **Tally 2.0** counts on the dial, one up or one down, and **Pomodoro 3.0** sets a focus's
+  minutes on it one at a time (left and right still go in fives). Both need this firmware.
 
 ## maki desktop 0.1.1, 2026-09-29
 

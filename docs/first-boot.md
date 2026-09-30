@@ -13,7 +13,8 @@ wallet: maki's wallets make the same accounts from it). Either way, you choose a
 
 A PIN is 6 to 12 digits, entered one at a time. Each position starts on a random digit, so how
 many presses it took says nothing about the PIN. Left and right step through 0 to 9, then delete
-and done; the centre takes the digit under the cursor. You enter it twice.
+and done, and so does the jog dial on maki's side; the centre takes the digit under the cursor.
+You enter it twice.
 
 You'll enter it each time maki is plugged in. **Five wrong in a row wipe maki**: the keys that
 unlock its storage are destroyed, and it starts over at setup. The count is kept in the chip, on a

@@ -461,7 +461,8 @@ Done in the emulator; not yet on a badge.
 
 The SDK builds either kind from the same source: `kind = "native"` in `maki.toml`, and `maki
 build` compiles it for maki's processor with Xous's Rust toolchain. The manifest names the
-firmware it was built for (`maki-native-1`), and other firmware refuses it.
+app service it was built for (`maki-native-2`, which added the jog dial), and firmware without
+that service refuses it; maki still runs apps built for `maki-native-1`, without the dial.
 
 Not yet: running on a badge, and granting a native app hardware.
 

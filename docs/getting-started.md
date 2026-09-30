@@ -44,9 +44,11 @@ Everything to download is on the [download page](https://maki.netslum.io/downloa
 
 ## How you use it
 
-maki has three buttons: left, centre and right. The centre confirms whatever the bottom line of
-the screen names (open, allow, sign, the digit under the cursor); left and right move, to the next
-app, the next page of a transaction, from allow to deny. Both together open the menu. Going back,
+maki has three buttons, left, centre and right, and a jog dial on its side. The centre confirms
+whatever the bottom line of the screen names (open, allow, sign, the digit under the cursor); left
+and right move, to the next app, the next page of a transaction, from allow to deny. Both together
+open the menu. The dial moves too, up and down: through the PIN's digits, the apps on the home
+screen and a menu's items, and in apps that use it (Dice's die, Pomodoro's minutes). Going back,
 cancelling and refusing are always something the screen offers and the centre confirms, so a press
 never does something the screen didn't say.
 
