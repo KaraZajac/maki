@@ -15,6 +15,11 @@ one, maki was built a day at a time, and that's here too.
   builds on, and a sender that didn't wait for each packet. Fixed in both.
 - **The PIN's tries are counted in the chip,** on a counter that only goes up, before each PIN is
   checked. Putting back an old copy of maki's storage no longer gives the tries back.
+- **The jog dial on maki's side reaches apps** (host API 8): turning it up or down is an event
+  for apps that say they know it, and the SDK's simulator takes it as the arrow keys.
+- **Dice 2.0,** for tabletop games: dice as players say them (3d6, 1d20), the die picked with
+  the jog dial, how many with left and right, the total big and each roll beneath. It needs this
+  firmware.
 
 ## maki desktop 0.1.1, 2026-09-29
 
