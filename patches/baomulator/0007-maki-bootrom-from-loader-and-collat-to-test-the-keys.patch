@@ -1,0 +1,100 @@
+From a9d1e5893ea3fbb51cafe515d019930fa56e4be1 Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Wed, 30 Sep 2026 01:08:53 -0400
+Subject: [PATCH 7/8] maki: bootrom --from-loader and --collat, to test the
+ keystore binding
+
+--from-loader starts at the Xous loader (0x6006_0000) and skips the boot stages, for exercising
+userspace (the keystore) with a maki image without the full boot0/boot1 chain. --collat HEX presets
+the collateral secret slots (261..263 at 0x603E_20A0) before boot, standing in for what maki's boot1
+provisions, so the keystore's `collateral-keys` path can be driven both ways: with it, the keystore
+logs COLLATERAL.BOUND; without it, COLLATERAL.ABSENT and it fails closed.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/bootrom.rs | 48 +++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 43 insertions(+), 5 deletions(-)
+
+diff --git a/src/bin/bootrom.rs b/src/bin/bootrom.rs
+index f10045d..a4a5786 100644
+--- a/src/bin/bootrom.rs
++++ b/src/bin/bootrom.rs
+@@ -98,14 +98,42 @@ fn run(e: *mut baomulator::Emulator, max: u64, label: &str) {
+         baomulator::emu_dbg_prv(e), baomulator::emu_dbg_wfi(e), baomulator::emu_dbg_csr(e, 0x180));
+ }
+ 
++// Collateral secret slots (261..263): DATA_SLOT_START (0x603E_0000) + 261 * 32, three 32-byte
++// slots. The keystore reads these; the public evidence slot 264 follows at +0x60 and is left alone.
++const COLLATERAL_SECRET_ADDR: u32 = 0x603E_0000 + 261 * 32;
++const COLLATERAL_SECRET_LEN: usize = 3 * 32;
++
+ fn main() {
+     let mut max: u64 = 200_000_000;
+     let mut reboots: u32 = 0;
++    let mut from_loader = false;
++    let mut collat: Option<Vec<u8>> = None;
+     let mut owc: Vec<(u32, u32)> = Vec::new();
+     let mut args = std::env::args().skip(1);
+     while let Some(a) = args.next() {
+         match a.as_str() {
+             "--reboot" => reboots += 1,
++            // Start at the Xous loader (0x6006_0000) instead of boot0, skipping the boot stages.
++            // For testing userspace (e.g. the keystore) with a maki image without the full chain.
++            "--from-loader" => from_loader = true,
++            // Preset the collateral secret slots before boot, so the keystore sees collateral as
++            // present (as it would be under maki's boot1). Takes a hex byte pattern, cycled to fill
++            // the 96 bytes, e.g. `--collat a5`. Without it the slots stay zero (collateral absent).
++            "--collat" => {
++                let spec = args.next().unwrap_or_default();
++                let bytes: Vec<u8> = (0..spec.len() / 2)
++                    .map(|i| u8::from_str_radix(&spec[i * 2..i * 2 + 2], 16))
++                    .collect::<Result<_, _>>()
++                    .unwrap_or_else(|_| {
++                        eprintln!("bootrom: bad --collat {spec:?} (want hex, e.g. a5)");
++                        std::process::exit(2);
++                    });
++                if bytes.is_empty() {
++                    eprintln!("bootrom: --collat needs at least one hex byte");
++                    std::process::exit(2);
++                }
++                collat = Some((0..COLLATERAL_SECRET_LEN).map(|i| bytes[i % bytes.len()]).collect());
++            }
+             "--owc" => {
+                 if let Some(spec) = args.next() {
+                     if let Some((s, v)) = spec.split_once('=') {
+@@ -165,16 +193,26 @@ fn main() {
+     }
+ 
+     // 3. The signed boot stages, boot1 last so it wins over the loader's stand-in sigblock.
+-    load(e, 0x6000_0000, &read(&boot_dir.join("bao1x-boot0.img")), "boot0");
+-    load(e, 0x6002_0000, &read(&boot_dir.join("bao1x-boot1.img")), "boot1");
++    //    Skipped with --from-loader (testing userspace without the boot0/boot1 chain).
++    if !from_loader {
++        load(e, 0x6000_0000, &read(&boot_dir.join("bao1x-boot0.img")), "boot0");
++        load(e, 0x6002_0000, &read(&boot_dir.join("bao1x-boot1.img")), "boot1");
++    }
++
++    // Preset the collateral secret slots, standing in for what maki's boot1 provisions.
++    if let Some(bytes) = &collat {
++        load(e, COLLATERAL_SECRET_ADDR, bytes, "collateral secret (261..263)");
++    }
+ 
+     for &(s, v) in &owc {
+         baomulator::emu_set_owc(e, s, v);
+     }
+ 
+-    // 4. Start at boot0's entry (the sig header's first word is a jump over the header).
+-    baomulator::emu_set_pc(e, 0x6000_0000);
+-    run(e, max, "boot 1 (cold)");
++    // 4. Start at boot0 (0x6000_0000), or the loader (0x6006_0000) with --from-loader. The sig
++    //    header's first word is a jump over the header in both cases.
++    let (entry, label) = if from_loader { (0x6006_0000u32, "loader") } else { (0x6000_0000, "boot 1 (cold)") };
++    baomulator::emu_set_pc(e, entry);
++    run(e, max, label);
+ 
+     // 5. Optional warm reboots: RRAM, one-way counters, IFR and flash persist, so boot0's second
+     //    pass sees the receipt slots it wrote on the first — the "receipts match" path.
+-- 
+2.55.0
+

@@ -1,0 +1,91 @@
+From 3c98f1d64aba46bba98e9a3d2db011775d30f774 Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Wed, 30 Sep 2026 07:37:55 -0400
+Subject: [PATCH 8/8] maki: bootrom --diag and --fast, for diagnosing a boot
+ stall
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+--diag enables per-process last-pc/last-syscall tracking for a short window after the main run and
+dumps the most-recently-active user contexts (asid, pc, sp, syscall) — to see which process is
+spinning at a stall. --fast widens the emulator's IRQ sampling window (changes scheduling timing),
+a knob to tell a timing-sensitive outcome from a logic one.
+
+Used to chase a boot "stall" that turned out to be a build-command error (app cratespecs dropped
+when --lkey was placed before them), not a firmware or scheduling issue.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/bootrom.rs | 34 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+
+diff --git a/src/bin/bootrom.rs b/src/bin/bootrom.rs
+index a4a5786..64b7c49 100644
+--- a/src/bin/bootrom.rs
++++ b/src/bin/bootrom.rs
+@@ -107,12 +107,21 @@ fn main() {
+     let mut max: u64 = 200_000_000;
+     let mut reboots: u32 = 0;
+     let mut from_loader = false;
++    let mut diag = false;
++    let mut fast = false;
+     let mut collat: Option<Vec<u8>> = None;
+     let mut owc: Vec<(u32, u32)> = Vec::new();
+     let mut args = std::env::args().skip(1);
+     while let Some(a) = args.next() {
+         match a.as_str() {
+             "--reboot" => reboots += 1,
++            // Widen the emulator's IRQ sampling window (changes interrupt/scheduling timing). A
++            // diagnostic knob: if a timing-sensitive outcome flips under it, the cause is scheduling
++            // timing rather than logic.
++            "--fast" => fast = true,
++            // After the main run, enable per-process last-pc tracking for a short window and dump
++            // which processes are active and what syscall they're parked in — for diagnosing a stall.
++            "--diag" => diag = true,
+             // Start at the Xous loader (0x6006_0000) instead of boot0, skipping the boot stages.
+             // For testing userspace (e.g. the keystore) with a maki image without the full chain.
+             "--from-loader" => from_loader = true,
+@@ -161,6 +170,9 @@ fn main() {
+     let fw_dir = PathBuf::from(std::env::var("FW").unwrap_or_else(|_| "web/fw".into()));
+ 
+     let e = baomulator::emu_new();
++    if fast {
++        baomulator::emu_set_fast(e, true);
++    }
+ 
+     // 1. Factory fuse and reference-key blobs (so the reference-key check and partition config see
+     //    real values instead of zeros). Optional: without them boot0 will erase secrets on the
+@@ -214,6 +226,28 @@ fn main() {
+     baomulator::emu_set_pc(e, entry);
+     run(e, max, label);
+ 
++    if diag {
++        // Sample the steady state: enable last-pc tracking and run a short window, so the slots
++        // reflect who is executing *now* (at the stall), then dump the most-recently-active ones.
++        println!("\n=== diag: sampling active processes (last-pc tracking, +300M insns) ===");
++        baomulator::emu_lastpc_enable(e, true);
++        run(e, 300_000_000, "diag-sample");
++        let mut rows: Vec<(u64, u32, u32, u32)> = Vec::new(); // (ctr, asid, pc, sp)
++        for idx in 0..(512 * 64) as u32 {
++            let (pc, sp, ctr) = baomulator::emu_lastpc_get(e, idx);
++            if pc != 0 && ctr != 0 {
++                rows.push((ctr, idx / 64, pc, sp));
++            }
++        }
++        rows.sort_by(|a, b| b.0.cmp(&a.0)); // most-recently-active first
++        println!("  most-recently-active user contexts at the stall (asid, pc, sp, last syscall a0..a3):");
++        for &(ctr, asid, pc, sp) in rows.iter().take(20) {
++            let idx = asid * 64 + ((sp >> 12) & 63);
++            let (a0, a1, a2, a3) = baomulator::emu_lastcall_get(e, idx);
++            println!("    asid={asid:3} pc={pc:#010x} sp={sp:#010x} ctr={ctr:>12} syscall a0={a0} a1={a1:#x} a2={a2:#x} a3={a3:#x}");
++        }
++    }
++
+     // 5. Optional warm reboots: RRAM, one-way counters, IFR and flash persist, so boot0's second
+     //    pass sees the receipt slots it wrote on the first — the "receipts match" path.
+     for i in 0..reboots {
+-- 
+2.55.0
+
