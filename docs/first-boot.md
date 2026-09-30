@@ -16,8 +16,9 @@ many presses it took says nothing about the PIN. Left and right step through 0 t
 and done; the centre takes the digit under the cursor. You enter it twice.
 
 You'll enter it each time maki is plugged in. **Five wrong in a row wipe maki**: the keys that
-unlock its storage are destroyed, and it starts over at setup. The count survives pulling the
-plug. Your recovery phrase brings everything back.
+unlock its storage are destroyed, and it starts over at setup. The count is kept in the chip, on a
+counter that only goes up: pulling the plug doesn't reset it, and neither does putting back an old
+copy of maki's storage. Your recovery phrase brings everything back.
 
 ## The recovery phrase
 

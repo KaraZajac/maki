@@ -63,6 +63,13 @@ Passkeys need no extension and no maki software: maki is a FIDO2 security key ov
 browser talks to it directly, phones included. Their keys come from the recovery phrase, so a
 restored maki still opens every site it signed you up for.
 
+maki verifies you itself, with its own PIN: the one you enter to unlock it. There's no second PIN
+to set up and nothing to type on the computer. When a site makes or uses a passkey, maki asks, and
+one press approves it. Sites that insist on verification, as GitHub and most passkey sites do,
+take that, in every browser (Firefox and Zen included, which can't set up a security key's PIN
+midway). A press counts for the one request it answered, and while maki is locked it answers
+nothing. Unplugging it locks it.
+
 ## Ethereum, Solana and Nostr for sites
 
 With the matching app from the store on maki, the extension puts maki's accounts in pages:

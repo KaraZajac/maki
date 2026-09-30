@@ -4,6 +4,18 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
+## Coming in the next preview
+
+- **Passkeys for every site.** maki verifies you with its own PIN, the one you unlock it with, and
+  one press on maki approves each passkey: no security key PIN to set up, nothing typed on the
+  computer. GitHub, which wants verification for a passkey, turned maki down before, as Firefox
+  and Zen can't set up a security key's PIN midway. [Passkeys](docs/extension.md#passkeys).
+- **Long passkey replies arrive whole.** Over USB, maki sent a reply longer than one packet with a
+  packet lost and the next doubled, a third of the time: a bug in the USB driver the firmware
+  builds on, and a sender that didn't wait for each packet. Fixed in both.
+- **The PIN's tries are counted in the chip,** on a counter that only goes up, before each PIN is
+  checked. Putting back an old copy of maki's storage no longer gives the tries back.
+
 ## maki desktop 0.1.1, 2026-09-29
 
 maki desktop and the extension 0.1.1, on the [download page](https://maki.netslum.io/download/),

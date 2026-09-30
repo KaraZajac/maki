@@ -20,8 +20,8 @@ read what's on it in time, so move the wallets' coins, and change what matters.
 
 ## I forgot my PIN.
 
-Five wrong in a row wipe maki. Then set it up again with **restore from phrase**, and restore the
-backup from maki desktop.
+Five wrong in a row wipe maki (the count is kept in the chip, so nothing resets it). Then set it up
+again with **restore from phrase**, and restore the backup from maki desktop.
 
 ## maki desktop doesn't see maki.
 
@@ -43,6 +43,11 @@ Check the browser is connected (maki desktop, **Connections**, **Browsers**; a F
 once restarted after that), that the page is https, and that maki is linked. The extension's
 button says whether it can reach maki desktop. maki offers the logins it keeps for the site the
 browser reports: a login kept for one site isn't offered on another.
+
+## Does a passkey need a PIN of its own?
+
+No. maki's PIN, the one you unlock it with, is what verifies you, and each passkey takes one press
+on maki. If a browser asks for a security key PIN, that's older firmware: update maki.
 
 ## Can I use maki without maki desktop?
 

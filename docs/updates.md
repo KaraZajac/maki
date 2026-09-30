@@ -42,8 +42,8 @@ that stored data in a newer maki may want that version or later.
 - **The first flash into developer mode.** The very first developer-signed image erases the
   factory secrets and the stock vault. That's the one-way door in [Flashing maki](flashing.md),
   and it happens once, before maki is ever set up.
-- **Five wrong PINs.** maki wipes its storage after five wrong PINs in a row. The count survives
-  pulling the plug.
+- **Five wrong PINs.** maki wipes its storage after five wrong PINs in a row. The count is kept in
+  the chip, so pulling the plug doesn't reset it, and neither does an update.
 
 In both cases your **recovery phrase** rebuilds your wallet, SSH, signing and app keys, and a
 **backup** (below) brings back the rest.
