@@ -1,0 +1,249 @@
+<!--{"path": "/", "title": "maki", "nav": "home", "description": "maki: a security key that shows you what you're signing. Open-source firmware for the DEF CON 34 badge: logins, passkeys, SSH and git, sudo, wallets and apps, each approved on the badge's own screen."}-->
+<header class="hero-head">
+  <div class="brand">
+    <svg viewBox="0 0 64 64" role="img" aria-label="maki's mark: a maki roll seen face on">
+      <circle cx="32" cy="32" r="30" fill="#1d3a2a" stroke="#4d8a66" stroke-width="1.2"/>
+      <circle cx="32" cy="32" r="25" fill="#f3efe6"/>
+      <circle cx="32" cy="32" r="11" fill="#ff7a59"/>
+    </svg>
+    <h1>maki</h1>
+  </div>
+  <p class="tagline">
+    A security key that <b>shows you what you&rsquo;re signing</b>. Open-source firmware for the
+    <b>DEF CON 34 badge</b>: logins and passkeys, SSH and git, sudo, wallets for Bitcoin, Ethereum,
+    Monero and Solana, and apps anyone can write &mdash; every one of them approved on the
+    badge&rsquo;s own screen, with a button.
+  </p>
+  <div class="btns">
+    <a class="btn" href="/download/">Download</a>
+    <a class="btn ghost" href="/docs/getting-started.html">Get started</a>
+    <a class="btn ghost" href="/apps/">Browse {{apps:count}} apps</a>
+    <a class="btn ghost" href="https://github.com/KaraZajac/maki">Source on GitHub</a>
+  </div>
+  <p class="platforms">
+    <b>Rust</b> &middot; Xous &middot; WebAssembly and native apps &middot; <b>DEF CON 34 badge</b> &middot; Linux &middot; BSD-3-Clause
+  </p>
+  <p class="status">
+    <b>Early development</b>
+    <span>maki runs on a DEF CON 34 badge: setup, and the link to maki desktop with its clock
+    verified. The rest runs in the emulator, and against a stand-in that runs maki&rsquo;s own
+    code, and is being tried on a badge now. Nobody has audited it.</span>
+  </p>
+
+  <figure class="hero">
+    <a class="zoom" href="/img/screens.png"><img class="shot" src="/img/screens.png" width="1084" height="548" fetchpriority="high"
+      alt="maki's screens in the emulator, on a maki named umekyu: asks to keep a login for github.com, to pick which login to fill on gist.github.com, and to keep one for a long hostname cut at the start so its end still shows; the Ethereum app's install screen naming the account it may use; and the Bitcoin app's pages under its own bar: a receiving address, a payment of 0.0007 BTC with its full address, the fee, and Sign and spend."></a>
+    <figcaption>In the emulator: three logins asked about, the Ethereum app&rsquo;s account named at install, and a Bitcoin payment paged through to Sign.</figcaption>
+  </figure>
+</header>
+
+<section>
+  <h2>The idea</h2>
+  <p class="lede">A touch proves you were there. <span class="hl">Not what you said yes to.</span></p>
+  <p class="body">
+    Tap a YubiKey and whatever your computer asked for gets signed. The key can&rsquo;t tell you
+    what that was, so neither can you. The DEF CON 34 badge&rsquo;s core module is a security key
+    with a 128&times;128 screen and three buttons, so maki puts the request on the screen and waits
+    for you to press. Malware on your computer can ask. It can&rsquo;t press.
+  </p>
+  <ul class="feats">
+    <li><span class="t">THE SITE</span><span class="d">The hostname the browser reports for the page that&rsquo;s asking &mdash; never something the page says about itself.</span></li>
+    <li><span class="t">THE SERVER AND THE COMMIT</span><span class="d">For SSH, the user you&rsquo;re signing in as, and the server&rsquo;s host key when ssh passes it on. For git, the commit itself: its subject and author, read from the bytes maki signs.</span></li>
+    <li><span class="t">THE COMMAND</span><span class="d">For sudo, the command whole, quoted so nothing can hide in it, what it&rsquo;s given to run with, and who asked, where.</span></li>
+    <li><span class="t">THE MONEY</span><span class="d">Every payment, the change and the fee, a page each, before a transaction is signed. Token transfers and approvals spelled out.</span></li>
+    <li><span class="t">THE APP</span><span class="d">Before anything installs: what it is, who signed it, and each permission it wants, in its developer&rsquo;s own words.</span></li>
+    <li><span class="t">NOTHING UNSEEN</span><span class="d">No answer is a no, and an ask can&rsquo;t be answered unseen: a press made before it appeared, or while something covered it, redraws it rather than answering it.</span></li>
+  </ul>
+</section>
+
+<section id="does">
+  <h2>What it does</h2>
+  <p class="lede">Everything that holds a secret, <span class="hl">on maki.</span></p>
+  <ul class="feats">
+    <li><span class="t">LOGINS AND ONE-TIME CODES</span><span class="d">Click into a login field and the browser extension asks maki: it shows the site, you press, the login fills. Codes wait for a verified clock, so a computer that lies about the time can&rsquo;t collect them for later.</span><a class="go" href="/docs/extension.html">The extension</a></li>
+    <li><span class="t">PASSKEYS</span><span class="d">Straight to the browser over FIDO2, no maki software needed. Their keys come from the recovery phrase, so a restored maki still opens every site it signed you up for.</span><a class="go" href="/docs/extension.html#passkeys">Passkeys</a></li>
+    <li><span class="t">SSH AND GIT</span><span class="d">An SSH key from your phrase, with maki desktop as the agent ssh and git talk to. A certificate authority too; and OpenPGP, minisign and age keys that sign and open files only when you say.</span><a class="go" href="/docs/signing.html">SSH, git and files</a></li>
+    <li><span class="t">SUDO, WITH A YES ON MAKI</span><span class="d">Every command sudo would run waits for maki, shown whole. maki&rsquo;s yes is a signature the plugin checks against a key only root can change, so malware with your password still can&rsquo;t say it.</span><a class="go" href="/docs/sudo.html">sudo</a></li>
+    <li><span class="t">WALLETS</span><span class="d">Bitcoin (multisig too), Ethereum, Monero and Solana, in maki desktop, in the wallet software you use, and for sites. Addresses as QR codes that never touch the computer; Bitcoin and Ethereum by QR code, with no cable at all.</span><a class="go" href="/docs/wallets.html">Wallets</a></li>
+    <li><span class="t">NOSTR</span><span class="d">A Nostr key maki holds, for sites through the extension and for Nostr apps through maki desktop as their bunker. Every event shown before it&rsquo;s signed, hashed by maki from what it showed you.</span><a class="go" href="/docs/nostr.html">Nostr</a></li>
+    <li><span class="t">A CLOCK IT CAN TRUST</span><span class="d">The badge has no battery. maki builds Roughtime requests, maki desktop carries them to three public servers, and maki checks the signed answers itself: it needs two that agree.</span><a class="go" href="/docs/desktop.html#the-time">The time</a></li>
+    <li><span class="t">BACKUPS THE COMPUTER CAN&rsquo;T READ</span><span class="d">maki desktop keeps your logins, codes and passkeys, encrypted with a key from the recovery phrase. Never the PIN: a backup file is exactly what someone would try PINs against.</span><a class="go" href="/docs/desktop.html#backups">Backups</a></li>
+  </ul>
+  <p class="muted" style="margin-top:1.5rem">
+    Signatures are checked against the reference implementations: Bitcoin&rsquo;s against rust-bitcoin
+    and Bitcoin Core&rsquo;s own consensus code, Ethereum&rsquo;s against alloy, Solana&rsquo;s
+    against its own runtime, OpenPGP&rsquo;s against GnuPG; a regtest Monero node takes maki&rsquo;s
+    transactions and mines them.
+    The extension is tested in real Chromium and Firefox, and sudo&rsquo;s plugin with the real sudo.
+  </p>
+</section>
+
+<section>
+  <h2>On the badge</h2>
+  <p class="lede">Three buttons. <span class="hl">No back button.</span></p>
+  <div class="cards">
+    <div class="card">
+      <h3>One press, one meaning</h3>
+      <p>The centre confirms whatever the bottom line of the screen names: open, allow, sign, the digit under the cursor. Left and right move &mdash; to the next app, the next page of a transaction, from allow to deny. Both together open the menu.</p>
+      <p>Going back, cancelling and refusing are always something the screen offers and the centre confirms, so a press never does something the screen didn&rsquo;t say.</p>
+    </div>
+    <div class="card">
+      <h3>A PIN that gives nothing away</h3>
+      <p>Asked at every boot, a digit at a time. Each position starts on a random digit, so the number of presses says nothing about the PIN. Five wrong in a row wipe everything it protects, and the count survives pulling the plug.</p>
+    </div>
+    <div class="card">
+      <h3>One recovery phrase</h3>
+      <p>Twenty-four words from the hardware random number generator, shown on maki and checked back. They&rsquo;re the root of everything that can&rsquo;t be made again &mdash; the wallets, the backup key, the passkeys &mdash; and to restore, they go back in on maki itself, never typed into a computer.</p>
+    </div>
+    <div class="card">
+      <h3>A name of its own</h3>
+      <p>The first time it starts, a maki picks a name, a maki roll &mdash; natto, uni, umekyu, tamago, one of thirty-two &mdash; and keeps it. Its home screen says it, and so does maki desktop.</p>
+    </div>
+    <div class="card">
+      <h3>A clock when it rests</h3>
+      <p>maki&rsquo;s bar shows the time. After a minute with nothing pressed, maki&rsquo;s own screens give way to a clock the size of the screen, which moves a few pixels each minute so the OLED doesn&rsquo;t burn in. Any button brings back what was there, and does nothing else.</p>
+    </div>
+  </div>
+  <p class="more"><a href="/docs/first-boot.html">First boot, step by step</a></p>
+</section>
+
+<section id="desktop">
+  <h2>maki desktop</h2>
+  <p class="lede">A tray app that <span class="hl">holds no keys.</span></p>
+  <p class="body">
+    maki desktop is the only thing that talks to maki. It keeps the link and the time, keeps the
+    encrypted backups, installs apps from the store or from a file, and is a wallet for
+    maki&rsquo;s accounts, the SSH agent, sudo&rsquo;s plugin and the bridge for the extension and
+    for Nostr apps. Whatever it asks for, maki shows you first.
+  </p>
+  <div class="duo">
+    <figure>
+      <a class="zoom" href="/img/desktop.png"><img class="shot crop" src="/img/desktop.png" width="1080" height="1310" loading="lazy" decoding="async"
+        alt="maki desktop's Apps page, linked to a maki named uni: maki's storage for apps as a bar (220 KiB of 2 MiB, room for 28 more), a segment each for Pomodoro, Passphrase, Status and Snake; the four installed from the maki store, Pomodoro marked native; and the store's apps by category."></a>
+      <figcaption>Apps: maki&rsquo;s room for them, what&rsquo;s installed, and the store.</figcaption>
+    </figure>
+    <figure>
+      <a class="zoom" href="/img/wallets.png"><img class="shot crop" src="/img/wallets.png" width="1080" height="1720" loading="lazy" decoding="async"
+        alt="maki desktop's Wallets page, with the BIP39 test phrase's Bitcoin account on testnet4: its balance (0.00279565 tBTC), a fresh address as a QR code with Copy and Check it on maki, and its activity, sent and received."></a>
+      <figcaption>Wallets: Bitcoin on testnet4, and an address to check on maki.</figcaption>
+    </figure>
+  </div>
+  <div class="btns"><a class="btn ghost small" href="/docs/desktop.html">maki desktop, in the docs</a><a class="btn ghost small" href="/download/#desktop">Download it</a></div>
+</section>
+
+<section id="apps">
+  <h2>Apps</h2>
+  <p class="lede">{{apps:count}} apps in the store, <span class="hl">each rebuilt from its source.</span></p>
+  <p class="body">
+    Anyone can write an app for maki, in Rust, and sideload it without flashing firmware, or send
+    it to the maki store. Before one installs, maki goes through it on its own screen, the way it
+    goes through a transaction: the name and version, where it&rsquo;s from, the developer&rsquo;s
+    key, and each permission it wants, with the developer&rsquo;s reason.
+  </p>
+  <div class="strip">{{apps:strip}}</div>
+  <div class="cards three">
+    <div class="card">
+      <h3>A bar no app can draw</h3>
+      <p>While an app is open, the top line is maki&rsquo;s: the app&rsquo;s name, a mark on a sideloaded app, &ldquo;typing&rdquo; while it types, and the clock. No app can pass for maki&rsquo;s own screens, and maki never asks for the PIN while one is open.</p>
+    </div>
+    <div class="card">
+      <h3>Signed twice</h3>
+      <p>A store app carries its developer&rsquo;s signature and the store&rsquo;s, whose keys follow The Update Framework&rsquo;s pattern, so no single stolen key can push an update. The store&rsquo;s CI rebuilds each one from its public source, byte for byte.</p>
+    </div>
+    <div class="card">
+      <h3>Sandboxed, or confined</h3>
+      <p>WebAssembly apps run in an interpreter, with a cap on memory and fuel, reaching only what the host hands them. Native apps run in a process maki&rsquo;s kernel confines before any of their code runs.</p>
+    </div>
+  </div>
+  <figure class="hero">
+    <a class="zoom" href="/img/pomodoro.png"><img class="shot" src="/img/pomodoro.png" width="1084" height="548" loading="lazy" decoding="async"
+      alt="Pomodoro, a native app, on maki's firmware in the emulator: its icon on the home screen of a maki named umekyu; ready, a full pie with the minutes to focus; the pie emptying clockwise as the focus runs; paused; the last sliver; the screen flashing when it's over; and the pie filling back up as the break runs."></a>
+    <figcaption>Pomodoro, a native app: the pie empties like a clock while you work, flashes, and fills back up while you rest.</figcaption>
+  </figure>
+  <div class="btns"><a class="btn" href="/apps/">Browse the apps</a><a class="btn ghost" href="/developers/">Write one</a></div>
+</section>
+
+<section>
+  <h2>The hardware</h2>
+  <p class="lede">The DEF CON 34 badge&rsquo;s <span class="hl">core module.</span></p>
+  <p class="body">
+    The badge is two boards. maki runs on the removable core module, which works on its own over
+    USB-C: a RISC-V chip with an MMU, a screen, three buttons and a camera, already running Xous,
+    the Rust microkernel maki is built on.
+  </p>
+  <div class="caps">
+    <div><span class="k">Chip</span><span class="v">Baochip-1x &middot; VexRiscv RV32-IMAC at 350 MHz, with an MMU &middot; four PicoRV32 I/O cores</span></div>
+    <div><span class="k">Screen and input</span><span class="v">128&times;128 mono OLED &middot; three buttons, plus reset</span></div>
+    <div><span class="k">Camera</span><span class="v">GC2145 &middot; QR codes</span></div>
+    <div><span class="k">USB</span><span class="v">2.0 high speed &middot; FIDO, serial and a keyboard at once</span></div>
+    <div><span class="k">Storage</span><span class="v">4 MiB on-chip RRAM &middot; 4 MiB encrypted database &middot; 8 MiB encrypted swap</span></div>
+    <div><span class="k">Security blocks</span><span class="v">AES in the CPU &middot; a hardware RNG &middot; key slots &middot; one-way counters</span></div>
+  </div>
+</section>
+
+<section id="flash">
+  <h2>Before you flash</h2>
+  <p class="lede">Read this <span class="hl">first.</span></p>
+  <div class="cards">
+    <div class="card">
+      <h3>A one-way door</h3>
+      <p>maki runs in the badge&rsquo;s developer mode, and turning that on permanently erases the badge&rsquo;s factory secrets and everything the stock vault was holding: TOTP codes, passwords, passkeys. Move those somewhere else first.</p>
+    </div>
+    <div class="card">
+      <h3>Not a vault</h3>
+      <p>maki protects your keys from malware on your computer: nothing is signed without a press, with the details on screen. It doesn&rsquo;t protect them from someone who has your badge: in developer mode anyone can flash their own firmware and read what&rsquo;s stored. Treat it like a Flipper, and keep the wallets to pocket money.</p>
+    </div>
+    <div class="card">
+      <h3>Passwords are the weak case</h3>
+      <p>A passkey or a signature never leaves maki. A password or a code does: once you press, it&rsquo;s on the computer. What maki stops is quiet extraction, since nothing leaves without a press for that site. Where a site offers passkeys, use them.</p>
+    </div>
+    <div class="card">
+      <h3>DEF CON 34 badges only</h3>
+      <p>Developer mode is the way in, and retail baosec units ship with it switched off for good. The audience is the badges already out there.</p>
+    </div>
+    <div class="card">
+      <h3>Unaudited</h3>
+      <p>This is hobby firmware, in early development. Nobody has audited it. The <a href="/docs/security.html">security model</a> says what it protects you from, and what it doesn&rsquo;t.</p>
+    </div>
+  </div>
+</section>
+
+<section id="status">
+  <h2>Where it&rsquo;s at</h2>
+  <p class="lede">Built in the emulator. <span class="hl">Now on a badge.</span></p>
+  <div class="tbl">
+  <table>
+    <tr><th>Piece</th><th>State</th></tr>
+    <tr><td>The link to maki desktop, and verified time</td><td><span class="st badge">on a badge</span></td></tr>
+    <tr><td>The three-button interface and home screen</td><td><span class="st badge">on a badge</span></td></tr>
+    <tr><td>Boot PIN, first-boot setup, the recovery phrase</td><td><span class="st badge">on a badge</span></td></tr>
+    <tr><td>Asks on maki&rsquo;s screen, and the browser extension</td><td><span class="st built">built</span></td></tr>
+    <tr><td>Encrypted backups, and passkeys from the phrase</td><td><span class="st built">built</span></td></tr>
+    <tr><td>Apps, WebAssembly and native, with permissions and the SDK</td><td><span class="st built">built</span></td></tr>
+    <tr><td>The store: signed, reviewed, rebuilt from source by CI</td><td><span class="st built">built</span></td></tr>
+    <tr><td>Wallets: Bitcoin (multisig too), Ethereum, Monero, Solana</td><td><span class="st built">built</span></td></tr>
+    <tr><td>SSH, git, gpg, minisign and age</td><td><span class="st built">built</span></td></tr>
+    <tr><td>sudo with a yes on maki; Nostr apps through a bunker</td><td><span class="st built">built</span></td></tr>
+    <tr><td>Names, the clock in the bar, and the resting clock</td><td><span class="st built">built</span></td></tr>
+    <tr><td>All of it, tried on a badge</td><td><span class="st next">under way</span></td></tr>
+    <tr><td>The store&rsquo;s real keys, made offline</td><td><span class="st next">next</span></td></tr>
+  </table>
+  </div>
+  <div class="legend">
+    <span><span class="st badge">on a badge</span> run on a DEF CON 34 badge</span>
+    <span><span class="st built">built</span> works in the emulator and against the stand-in</span>
+  </div>
+  <p class="muted" style="margin-top:1rem">
+    What changed when: <a href="/docs/changelog.html">What&rsquo;s new</a>. Step by step, with what each
+    piece still lacks: the order of work in
+    <a href="https://github.com/KaraZajac/maki/blob/main/ARCHITECTURE.md#order-of-work">ARCHITECTURE.md</a>.
+  </p>
+</section>
+
+<div class="cta">
+  <div>
+    <h2>Try it</h2>
+    <p>The firmware, maki desktop and the extension, with checksums, and the order to put them in.</p>
+  </div>
+  <div class="btns"><a class="btn" href="/download/">Download</a><a class="btn ghost" href="/docs/getting-started.html">Get started</a></div>
+</div>

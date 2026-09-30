@@ -1,0 +1,158 @@
+<!--{"path": "/developers/", "title": "Developers", "nav": "developers", "description": "Write apps for maki in Rust: WebAssembly or native, tried in a simulator, sideloaded, or sent to the maki store, which rebuilds each from its source."}-->
+<div class="pagehead">
+  <div class="kicker">Developers</div>
+  <h1>Build for maki</h1>
+  <p class="blurb">An app for maki is Rust, built for WebAssembly or as native code maki&rsquo;s
+  kernel confines. Write one, try it in the simulator, sideload it onto your own maki, and send it
+  to the store. Or work on maki itself: all four repositories are public.</p>
+  <div class="jump">
+    <a href="#app">An app</a><a href="#tool">The maki tool</a><a href="#gets">What an app gets</a><a href="#store">Into the store</a><a href="#pieces">The pieces</a><a href="#maki">Working on maki</a>
+  </div>
+</div>
+
+<section class="first" id="app">
+  <h2>An app</h2>
+  <p class="lede">It draws, <span class="hl">then waits.</span></p>
+  <p class="body">A <code>cdylib</code> crate with a <code>maki.toml</code> beside its
+  <code>Cargo.toml</code>. The app draws on the screen below maki&rsquo;s bar, waits for the next
+  event, and returns from <code>main</code> when told to exit. With <code>kind = "native"</code> in
+  its manifest, the same source builds as a native app.</p>
+  <div class="cards code">
+    <div class="card">
+      <h3>maki.toml</h3>
+<pre><span class="k">id</span> = <span class="s">"org.example.dice"</span>  <span class="cm"># yours for good</span>
+<span class="k">name</span> = <span class="s">"Dice"</span>
+<span class="k">version</span> = 1              <span class="cm"># only goes up</span>
+<span class="k">label</span> = <span class="s">"1.0"</span>
+<span class="k">storage</span> = 1              <span class="cm"># KiB</span>
+<span class="k">memory</span> = 64              <span class="cm"># KiB</span>
+<span class="k">backup</span> = true
+<span class="k">description</span> = <span class="s">"Rolls dice."</span>
+<span class="k">icon</span> = <span class="s">"icon.png"</span>        <span class="cm"># 64x64, light on dark</span>
+
+[permissions]            <span class="cm"># the owner reads why</span>
+<span class="k">keys</span> = <span class="s">"For a signing key of its own."</span></pre>
+    </div>
+    <div class="card">
+      <h3>src/lib.rs</h3>
+<pre><span class="cm">#![no_std]</span>
+
+<span class="cmd">use</span> maki_app::*;
+
+<span class="cmd">fn</span> main() {
+    <span class="cmd">let</span> _ = menu(&amp;[<span class="s">"Reset"</span>]);
+    <span class="cmd">loop</span> {
+        screen::clear(Color::Dark);
+        screen::text_centred(40, <span class="s">"Hello, maki!"</span>,
+            Style::Bold, Color::Light);
+        screen::present();
+        <span class="cmd">match</span> wait(None) {
+            Event::Centre =&gt; log(<span class="s">"pressed"</span>),
+            Event::Menu(0) =&gt; log(<span class="s">"reset"</span>),
+            Event::Exit =&gt; <span class="cmd">return</span>,
+            _ =&gt; {}
+        }
+    }
+}
+
+maki_app::main!(main);</pre>
+    </div>
+  </div>
+</section>
+
+<section id="tool">
+  <h2>The maki tool</h2>
+  <p class="lede">Build, sign, simulate, <span class="hl">install.</span></p>
+  <p class="body">The SDK is the <code>maki-app</code> crate, twenty-seven example apps (the
+  store&rsquo;s among them) and the <code>maki</code> tool, which builds, packs, signs, checks and
+  simulates apps, and rebuilds a bundle from its source to check it, as the store does.</p>
+<pre class="cmds"><span class="cmd">rustup</span> <span class="arg">target add wasm32-unknown-unknown</span>
+<span class="cmd">cargo</span> <span class="arg">install --path maki</span>                         <span class="cm"># in maki-firmware's sdk/</span>
+<span class="cmd">maki</span> <span class="arg">keygen</span>                                     <span class="cm"># your developer key, once: keep it safe</span>
+<span class="cmd">maki</span> <span class="arg">new dice --id org.example.dice</span>             <span class="cm"># a manifest and a first screen</span>
+<span class="cmd">maki</span> <span class="arg">build dice</span>                                 <span class="cm"># build, pack and sign</span>
+<span class="cmd">maki</span> <span class="arg">run target/maki/org.example.dice.maki</span>      <span class="cm"># in a terminal: arrows, enter, m for the menu</span>
+<span class="cmd">maki</span> <span class="arg">install target/maki/org.example.dice.maki</span>  <span class="cm"># through maki desktop; maki asks on its screen</span></pre>
+  <p class="body" style="margin-top:1rem">The simulator runs the same <code>.wasm</code> maki does,
+  against a pretend screen and buttons: scripted presses, answers to asks, messages from the
+  computer, QR codes for the camera and tilts for the accelerometer, and a screenshot of the last
+  frame. An app&rsquo;s keys there come from the BIP39 test phrase, never anything real.</p>
+  <div class="btns"><a class="btn" href="/docs/sdk.html">The SDK, in full</a><a class="btn ghost" href="https://github.com/KaraZajac/maki-firmware/tree/maki/sdk/examples">The example apps</a></div>
+</section>
+
+<section id="gets">
+  <h2>What an app gets</h2>
+  <p class="lede">The basics, and <span class="hl">what it asks for.</span></p>
+  <ul class="feats">
+    <li><span class="t">THE SCREEN</span><span class="d">128 by 110 pixels below maki&rsquo;s bar, one bit each: lines, rectangles, maki&rsquo;s fonts, bitmaps and QR codes.</span></li>
+    <li><span class="t">THE BUTTONS</span><span class="d">Left, right and centre as events, and up to six items of its own in maki&rsquo;s menu, which left and right together open.</span></li>
+    <li><span class="t">STORAGE</span><span class="d">Its own, up to what its manifest asks for, and in maki&rsquo;s backups if the manifest says so and the owner doesn&rsquo;t say otherwise.</span></li>
+    <li><span class="t">TIME AND RANDOMNESS</span><span class="d">The time, and whether it was checked against Roughtime; random numbers from maki&rsquo;s TRNG.</span></li>
+  </ul>
+  <p class="body" style="margin-top:1.5rem">And, with a permission, each asked for with a line saying
+  why, which maki shows the owner before it installs:</p>
+  {{perms:table}}
+  <p class="muted" style="margin-top:1rem">No permission gives an app the recovery phrase, the
+  vault&rsquo;s logins, codes or passkeys, another app&rsquo;s keys or storage, the PIN, raw
+  hardware, or a way to press maki&rsquo;s buttons.</p>
+</section>
+
+<section id="store">
+  <h2>Into the store</h2>
+  <p class="lede">Public source, <span class="hl">rebuilt byte for byte.</span></p>
+  <p class="body">The maki store is a Git repository, as Flipper&rsquo;s catalogue is: each
+  app&rsquo;s signed bundle and the commit it&rsquo;s built from. maki desktop reads it, and maki
+  checks the store&rsquo;s stamp on each app itself.</p>
+  <ol class="steps">
+    <li>Build and sign your app with the SDK, from a commit you&rsquo;ve pushed, and check that it
+    reproduces: <code>maki reproduce APP.maki DIR</code>.</li>
+    <li>Open a pull request to <a href="https://github.com/KaraZajac/maki-apps#adding-an-app">maki-apps</a>
+    adding the bundle and an <code>app.toml</code> naming its category, repository and commit.</li>
+    <li>CI checks it by the rules and rebuilds it from that commit, on the pull request itself.</li>
+    <li>The store reads the source, checks that what the app asks to do matches what it does, then
+    stamps it and publishes it.</li>
+  </ol>
+  <p class="body" style="margin-top:1rem">An update is a bundle with a higher version, signed with
+  the same developer key: the store&rsquo;s stamp alone can&rsquo;t push one, and neither can
+  yours. Lose your developer key and you can&rsquo;t update your app, so back it up.</p>
+</section>
+
+<section id="pieces">
+  <h2>The pieces</h2>
+  <p class="lede">Four repositories, and <span class="hl">one screen the computer can&rsquo;t fake.</span></p>
+  <div class="term" aria-label="How the pieces connect">
+    <div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="n">browser</span> <span class="c">─── FIDO2 over USB ───────────────────────┐</span>   <span class="c">passkeys need no</span>
+   <span class="c">│</span>                                              <span class="c">│</span>   <span class="c">maki software</span>
+<span class="n">extension</span>   <span class="c">Chrome, Firefox</span>                       <span class="c">│</span>
+   <span class="c">│</span>  <span class="c">native messaging</span>                            <span class="c">▼</span>
+<span class="p">maki desktop</span> <span class="c">── USB serial, maki&rsquo;s protocol ────▶</span> <span class="p">maki</span>
+   <span class="c">│</span>  <span class="c">▲</span>                                           <span class="c">├─ </span><span class="n">launcher</span>   <span class="c">home screen, asks</span>
+   <span class="c">│</span>  <span class="c">└─ </span><span class="n">ssh, git, gpg, age, minisign, sudo,</span>      <span class="c">├─ </span><span class="n">vault</span>      <span class="c">logins, codes, passkeys</span>
+   <span class="c">│</span>     <span class="n">wallet software, Nostr apps</span>              <span class="c">├─ </span><span class="n">maki-keys</span>  <span class="c">PIN, phrase, wallets&rsquo; keys</span>
+<span class="n">Roughtime</span>  <span class="c">UDP, three servers</span>                     <span class="c">├─ </span><span class="n">maki-link</span>  <span class="c">the serial end</span>
+                                                  <span class="c">└─ </span><span class="n">app host</span>   <span class="g">.maki apps</span></pre>
+  </div>
+  <ul class="feats">
+    <li><span class="t">MAKI</span><span class="d">The firmware. Everything that holds or uses a secret runs here, on Xous, the Rust microkernel the badge already runs, forked. Its screen and buttons are the one interface in the system the computer can&rsquo;t fake.</span><a class="repo" href="https://github.com/KaraZajac/maki-firmware">KaraZajac/maki-firmware</a></li>
+    <li><span class="t">MAKI DESKTOP</span><span class="d">The tray app, and the only thing that talks to maki over serial. It keeps the link, carries the time, keeps the backups, installs apps, and is the go-between for everything else. It holds no keys.</span><a class="repo" href="https://github.com/KaraZajac/maki-desktop">KaraZajac/maki-desktop</a></li>
+    <li><span class="t">THE EXTENSION</span><span class="d">One source for Chrome and Firefox, beside maki desktop. It finds login and code fields, and puts maki&rsquo;s Ethereum, Solana and Nostr accounts in pages. It sees the page; maki decides.</span><a class="repo" href="https://github.com/KaraZajac/maki-desktop/tree/main/extension">maki-desktop/extension</a></li>
+    <li><span class="t">THE SDK</span><span class="d">The <code>maki-app</code> crate, the <code>maki</code> tool and its simulator, and the example apps, beside the firmware.</span><a class="repo" href="https://github.com/KaraZajac/maki-firmware/tree/maki/sdk">maki-firmware/sdk</a></li>
+    <li><span class="t">THE STORE</span><span class="d">Each app&rsquo;s signed bundle and the commit it&rsquo;s built from, the scripts and CI that rebuild them, and the published store maki desktop reads.</span><a class="repo" href="https://github.com/KaraZajac/maki-apps">KaraZajac/maki-apps</a></li>
+    <li><span class="t">THE PLAN</span><span class="d">The design and the order of work, the research behind them, the user guide this site is made from, and how to build everything and run it in the emulator.</span><a class="repo" href="https://github.com/KaraZajac/maki">KaraZajac/maki</a></li>
+  </ul>
+</section>
+
+<section id="maki">
+  <h2>Working on maki</h2>
+  <p class="lede">An emulator, <span class="hl">and a stand-in.</span></p>
+  <p class="body">maki&rsquo;s firmware runs in an emulator of the badge, screen and buttons
+  included, with builds that stage a scene to look at (a wallet&rsquo;s payment, an app&rsquo;s
+  install, the store) and answer maki&rsquo;s asks themselves. maki desktop is tested against a
+  stand-in for maki that runs maki&rsquo;s own code, and end to end in the real app.</p>
+  <div class="cards three">
+    <a class="card" href="https://github.com/KaraZajac/maki/blob/main/DEVELOPMENT.md"><h3>DEVELOPMENT.md</h3><p>The build loop: the firmware, the emulator and its demos, maki desktop, the tests.</p></a>
+    <a class="card" href="https://github.com/KaraZajac/maki/blob/main/ARCHITECTURE.md"><h3>ARCHITECTURE.md</h3><p>The design: the services, the protocol, apps, the store, and the order of work.</p></a>
+    <a class="card" href="/docs/protocol.html"><h3>The link protocol</h3><p>What maki desktop and maki say to each other over USB, message by message.</p></a>
+  </div>
+</section>

@@ -25,6 +25,12 @@ for your keys.
 > [ARCHITECTURE.md](./ARCHITECTURE.md) is the plan, [RESEARCH.md](./RESEARCH.md) the background,
 > [DEVELOPMENT.md](./DEVELOPMENT.md) the build loop.
 
+The user guide (flashing, first boot, maki desktop, the extension, the wallets, signing, sudo,
+Nostr, the security model) starts at [docs/getting-started.md](docs/getting-started.md), and it's
+on [maki.netslum.io](https://maki.netslum.io) with the downloads and the store's apps. What
+changed when: [CHANGELOG.md](CHANGELOG.md). The site is built from these repositories by
+[site/build.py](site/build.py).
+
 ![maki's screens in the emulator, on a maki named umekyu: asks to keep a login for github.com, to pick which login to fill on gist.github.com, and to keep one for a long hostname cut at the start so its end still shows; the Ethereum app's install screen naming the account it may sign for (Ethereum, m/44'/60'); and the Bitcoin app's pages under its own bar, marked sideloaded: a receiving address to compare with the computer's, a payment of 0.0007 BTC with its full address, the fee, and "Sign and spend"](docs/screens.png)
 
 ![maki's app screens in the emulator: the install screen for Dice, a sideloaded example app (its name, version and ID); Dice running below maki's bar, which marks it as sideloaded; its menu, on App info; and App info's pages: the app, where it's from, its developer's key, whether its data is in the backup (with "leave it out"), and Remove](docs/apps.png)
