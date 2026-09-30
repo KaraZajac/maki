@@ -1,0 +1,169 @@
+From d8060c3d44419d0f2a057a88bf2387109576f9e8 Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Tue, 29 Sep 2026 23:33:30 -0400
+Subject: [PATCH] maki: warm reset (keep RRAM, counters, flash), and bootrom
+ --reboot
+
+emu_warm_reset restarts the CPU at boot0 and rebuilds the volatile device fabric and RAM, but
+keeps what a real chip keeps across a power cycle: the RRAM array, the one-way counters, the IFR
+fuse block, and the external SPI flash (swap + PDDB). bootrom --reboot uses it to boot again.
+
+This exercises the two-boot part of the trust chain: boot0 writes the boot1 key manifest into
+the receipt slots on the first boot and compares against them on the next. Verified with the
+factory stages: "Boot1 receipts OK" on both the cold and the warm boot, "Collateral erased"
+both times (the factory boot1 manifest carries Baochip keys).
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/bootrom.rs | 78 +++++++++++++++++++++++++---------------------
+ src/lib.rs         | 31 ++++++++++++++++++
+ 2 files changed, 74 insertions(+), 35 deletions(-)
+
+diff --git a/src/bin/bootrom.rs b/src/bin/bootrom.rs
+index 934c2f5..f10045d 100644
+--- a/src/bin/bootrom.rs
++++ b/src/bin/bootrom.rs
+@@ -63,12 +63,49 @@ fn read(path: &Path) -> Vec<u8> {
+     })
+ }
+ 
++/// Run the CPU for `max` instructions, streaming console output; stop early if it parks with no
++/// console progress. Returns nothing — the caller reads final state via the debug exports.
++fn run(e: *mut baomulator::Emulator, max: u64, label: &str) {
++    println!("=== {label}: running up to {max} insns ===");
++    let mut total = 0u64;
++    let mut last_console = baomulator::emu_console_len(e);
++    let mut last_pc = 0u32;
++    let mut stall = 0u32;
++    while total < max {
++        let slice = 2_000_000u64.min(max - total) as u32;
++        baomulator::emu_run(e, slice, 10);
++        total += slice as u64;
++        let clen = baomulator::emu_console_len(e);
++        if clen > last_console {
++            let bytes = unsafe { std::slice::from_raw_parts(baomulator::emu_console_ptr(e), clen) };
++            print!("{}", String::from_utf8_lossy(&bytes[last_console..]));
++            use std::io::Write;
++            std::io::stdout().flush().ok();
++            last_console = clen;
++            stall = 0;
++        } else {
++            let pc = baomulator::emu_dbg_pc(e);
++            stall = if pc == last_pc { stall + 1 } else { 0 };
++            last_pc = pc;
++            if stall >= 25 {
++                println!("\n=== quiet: pc parked at {pc:#010x} for {} insns, stopping ===", stall as u64 * slice as u64);
++                break;
++            }
++        }
++    }
++    let pc = baomulator::emu_dbg_pc(e);
++    println!("\n=== {label} done after {total} insns: pc={pc:#010x} prv={} wfi={} satp={:#x} ===",
++        baomulator::emu_dbg_prv(e), baomulator::emu_dbg_wfi(e), baomulator::emu_dbg_csr(e, 0x180));
++}
++
+ fn main() {
+     let mut max: u64 = 200_000_000;
++    let mut reboots: u32 = 0;
+     let mut owc: Vec<(u32, u32)> = Vec::new();
+     let mut args = std::env::args().skip(1);
+     while let Some(a) = args.next() {
+         match a.as_str() {
++            "--reboot" => reboots += 1,
+             "--owc" => {
+                 if let Some(spec) = args.next() {
+                     if let Some((s, v)) = spec.split_once('=') {
+@@ -137,41 +174,12 @@ fn main() {
+ 
+     // 4. Start at boot0's entry (the sig header's first word is a jump over the header).
+     baomulator::emu_set_pc(e, 0x6000_0000);
+-    println!("=== starting at boot0 (0x6000_0000), max {max} insns ===");
++    run(e, max, "boot 1 (cold)");
+ 
+-    let mut total = 0u64;
+-    let mut last_console = 0usize;
+-    let mut last_pc = 0u32;
+-    let mut stall = 0u32;
+-    while total < max {
+-        let slice = 2_000_000u64.min(max - total) as u32;
+-        baomulator::emu_run(e, slice, 10);
+-        total += slice as u64;
+-
+-        let clen = baomulator::emu_console_len(e);
+-        if clen > last_console {
+-            let bytes = unsafe { std::slice::from_raw_parts(baomulator::emu_console_ptr(e), clen) };
+-            print!("{}", String::from_utf8_lossy(&bytes[last_console..]));
+-            use std::io::Write;
+-            std::io::stdout().flush().ok();
+-            last_console = clen;
+-            stall = 0;
+-        } else {
+-            // no console progress this slice: watch the pc to tell a spin from real work
+-            let pc = baomulator::emu_dbg_pc(e);
+-            stall = if pc == last_pc { stall + 1 } else { 0 };
+-            last_pc = pc;
+-            if stall >= 25 {
+-                println!("\n=== quiet: pc parked at {pc:#010x} for {} insns, stopping ===", stall as u64 * slice as u64);
+-                break;
+-            }
+-        }
++    // 5. Optional warm reboots: RRAM, one-way counters, IFR and flash persist, so boot0's second
++    //    pass sees the receipt slots it wrote on the first — the "receipts match" path.
++    for i in 0..reboots {
++        baomulator::emu_warm_reset(e);
++        run(e, max, &format!("boot {} (warm)", i + 2));
+     }
+-
+-    let pc = baomulator::emu_dbg_pc(e);
+-    println!("\n=== after {total} insns: pc={pc:#010x} prv={} wfi={} satp={:#x} ===",
+-        baomulator::emu_dbg_prv(e), baomulator::emu_dbg_wfi(e), baomulator::emu_dbg_csr(e, 0x180));
+-    println!("scause={:#x} sepc={:#x} stval={:#x} mcause={:#x} mepc={:#x}",
+-        baomulator::emu_dbg_csr(e, 0x142), baomulator::emu_dbg_csr(e, 0x141), baomulator::emu_dbg_csr(e, 0x143),
+-        baomulator::emu_dbg_csr(e, 0x342), baomulator::emu_dbg_csr(e, 0x341));
+ }
+diff --git a/src/lib.rs b/src/lib.rs
+index 1ba6e55..032b9c5 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -178,6 +178,37 @@ pub extern "C" fn emu_set_pc(e: *mut Emulator, pc: u32) {
+     unsafe { &mut *e }.cpu.pc = pc;
+ }
+ 
++/// Warm reset, the way pulling and re-plugging the badge would: the CPU restarts at boot0
++/// (0x6000_0000), volatile RAM (SRAM, IFRAM, AORAM) is cleared and the device fabric is rebuilt,
++/// but the non-volatile state a real chip keeps is preserved — the RRAM array (0x6000_0000, which
++/// holds the boot stages, the loader and the key/data slots), the one-way counters, the IFR fuse
++/// block, and the external SPI flash (swap and the PDDB, at 0x7000_0000). Volatile device state
++/// (timers, UDMA, the OLED controller) is rebuilt.
++///
++/// This is what lets the two-boot parts of the trust chain be tested: boot0 records the boot1 key
++/// manifest into the receipt slots on a first boot and compares against them on the next, so the
++/// "receipts match" path only appears across a reset.
++#[no_mangle]
++pub extern "C" fn emu_warm_reset(e: *mut Emulator) {
++    let e = unsafe { &mut *e };
++    let owc = e.mach.soc.owc; // one-way counters are non-volatile
++    let flash = core::mem::replace(&mut e.mach.soc.flash, bus::devices::spi_flash::SpiFlash::new());
++    e.mach.soc = bus::Soc::new();
++    e.mach.soc.owc = owc;
++    e.mach.soc.flash = flash; // external SPI flash is non-volatile too (holds swap + the PDDB)
++    // clear volatile RAM; keep RRAM (0x6000_0000) and the IFR fuse block (0x6040_0000)
++    for r in &mut e.mach.regions {
++        if r.base != 0x6000_0000 && r.base != 0x6040_0000 {
++            r.data.iter_mut().for_each(|b| *b = 0);
++        }
++    }
++    e.mach.cur_pc = 0;
++    e.mach.satp = 0;
++    e.mach.invalidate_code();
++    e.cpu = Cpu::new(0x6000_0000);
++    e.kick1_dumped = false;
++}
++
+ /// Press/release a badge button (index 0..5: Down, Select, Up, Right, Left,
+ /// Center).
+ #[no_mangle]
+-- 
+2.55.0
+
