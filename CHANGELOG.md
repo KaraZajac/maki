@@ -22,8 +22,13 @@ one, maki was built a day at a time, and that's here too.
 - **Dice 2.0,** for tabletop games: dice as players say them (3d6, 1d20), the die picked with
   the jog dial, how many with left and right, the total big and each roll beneath. It needs this
   firmware.
-- **Tally 2.0** counts on the dial, one up or one down, and **Pomodoro 3.0** sets a focus's
-  minutes on it one at a time (left and right still go in fives). Both need this firmware.
+- **Tally 2.0** counts on the dial, one up or one down; **Pomodoro 3.0** sets a focus's minutes
+  on it one at a time (left and right still go in fives); and **Snake 2.0** is steered the way
+  it's to go, the dial for up and down, left and right with the buttons. All need this firmware.
+- **Initiative,** new, for the table beside Dice: a fight's turn order and hit points. The centre
+  passes the turn, counting the rounds, and the dial takes damage off whoever's picked or heals
+  them; the menu adds a player or a monster, rolls initiative, and starts a new fight. It needs
+  this firmware.
 
 ## maki desktop 0.1.1, 2026-09-29
 
