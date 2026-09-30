@@ -10,25 +10,38 @@ The extension isn't in Chrome's or Firefox's store yet, so it's loaded by hand. 
 the [download page](https://maki.netslum.io/download/) (or build it: `npm run build:extension` in
 maki-desktop).
 
-### Chrome, Chromium, Brave, Edge, Vivaldi
+### Chrome, Chromium, Brave, Edge, Vivaldi, Opera
 
 Unzip it, open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked** and pick
 the unzipped folder. Its ID is pinned by the key in its manifest, so it's the one maki desktop's
 registration allows, wherever you unzip it.
 
-### Firefox
+### Firefox, Zen and the others made from Firefox
 
 Open `about:debugging`, **This Firefox**, **Load Temporary Add-on**, and pick the `.xpi` (or the
-`manifest.json` inside it). It lasts until Firefox restarts: keeping it for good needs Mozilla to
-sign it, or Firefox Developer Edition or Nightly with `xpinstall.signatures.required` turned off in
-`about:config`.
+`manifest.json` inside it). It lasts until the browser restarts. To keep it for good, the browser
+has to let you install one Mozilla hasn't signed: Firefox Developer Edition and Nightly do, and so
+does Zen. Turn `xpinstall.signatures.required` off in `about:config`, then in `about:addons` choose
+**Install Add-on From File** and pick the `.xpi`.
 
 ### Connect it to maki desktop
 
-In maki desktop, **Connections**, **Browsers**: **Set up** registers maki desktop with each
-browser you have, so the extension can reach it. A Firefox that keeps its profile in
-`~/.config/mozilla` (new installs since Firefox 147) reads the registration only from a system
-folder, so for that one maki desktop asks for your admin password once.
+In maki desktop, **Connections**, **Browsers** lists the browsers on this computer: Chrome,
+Chromium, Brave, Edge, Vivaldi, Opera, Thorium, Firefox, Zen, Floorp and LibreWolf, installed the
+usual way or as a Flatpak. **Connect** each one you use the extension in, so it can reach maki
+desktop; **Disconnect** takes that away again.
+
+- **A Firefox that keeps its profile in `~/.config/mozilla`** (new installs since Firefox 147)
+  reads the registration only from a system folder, so for that one maki desktop asks for your
+  admin password once. Zen and Floorp read Firefox's registration, so they connect with it.
+- **A browser installed as a Flatpak** (Zen from Flathub, say) runs in a sandbox that can't reach
+  maki desktop by itself. Connecting it shares one folder with that sandbox, where maki desktop
+  answers the extension and nothing else, and puts a small relay inside it. Restart the browser
+  once: maki desktop says when it's waiting for that. maki desktop has to be running for a Flatpak
+  browser's extension to reach maki: from in its sandbox, it can't start maki desktop.
+- **A browser that isn't listed:** choose **Another browser…**, give its name, say whether it takes
+  Chrome's extension or Firefox's, and pick its folder (such as `~/.config/thorium`), or the one it
+  looks for browser helpers in.
 
 ## Logins
 

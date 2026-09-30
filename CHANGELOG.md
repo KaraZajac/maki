@@ -4,6 +4,19 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
+## Next
+
+In the source, not yet in a download.
+
+- **maki desktop manages the extension's browsers.** Connections lists every browser it knows on
+  the computer (Chrome, Chromium, Brave, Edge, Vivaldi, Opera, Thorium, Firefox, Zen, Floorp,
+  LibreWolf), each connected and disconnected on its own, and adds any other by its folder.
+- **Browsers installed as Flatpaks connect too:** Zen, Firefox, Chrome, Brave and the others from
+  Flathub. maki desktop shares one folder with the browser's sandbox, where it answers the
+  extension and nothing else, and puts a small relay inside. [The extension](docs/extension.md).
+- **On a badge:** this preview's firmware boots, links, sets its clock through Roughtime, and
+  installs a store app, over USB with a yes on maki.
+
 ## Preview, 2026-09-29
 
 The first downloads: maki's firmware (maki-firmware `a998b9a9e`), maki desktop 0.1.0 for Linux and

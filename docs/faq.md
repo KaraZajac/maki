@@ -39,8 +39,9 @@ choose **Sync time now** from the tray.
 
 ## A site's login doesn't fill.
 
-Check the extension is connected (maki desktop, **Connections**, **Browsers**, **Set up**), that
-the page is https, and that maki is linked. maki offers the logins it keeps for the site the
+Check the browser is connected (maki desktop, **Connections**, **Browsers**; a Flatpak browser
+once restarted after that), that the page is https, and that maki is linked. The extension's
+button says whether it can reach maki desktop. maki offers the logins it keeps for the site the
 browser reports: a login kept for one site isn't offered on another.
 
 ## Can I use maki without maki desktop?
