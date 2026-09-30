@@ -523,6 +523,14 @@ again. maki and maki desktop take a new root only when it's signed so.
     With the v0.10.0 factory stages it reaches PDDB-mounted and logs `Collateral erased`
     (the boot1 manifest carries Baochip keys). maki's own countersigned boot1 (no Baochip
     keys) is what would preserve collateral instead — the point of the collateral work.
+  - **The flash between runs** (patch 0009): `shot --flash-out FILE` keeps the external flash
+    (the swap and the PDDB) at the end of a run, and `--flash-in FILE` starts from it
+    (`FILE@0x400000` takes only the PDDB, keeping this build's swap: the whole flash would bring
+    back the other build's swap-resident services too);
+    `--owc SLOT=VAL` presets a one-way counter and `--show-owc SLOT` prints one at the end.
+    Together they play someone putting an old copy of the flash back while the chip keeps its
+    counters: that's how the PIN's on-chip try counter was tested (a `MAKI_DEMO` build, set up
+    with `scripts/presses-test-phrase.sh`, PINs typed as presses).
 - **Hosted mode** (`cargo xtask baosec-emu`) runs each service as a native x86 process
   with the OLED in a desktop window. Much faster to iterate on UI, but it isn't the
   real binary.

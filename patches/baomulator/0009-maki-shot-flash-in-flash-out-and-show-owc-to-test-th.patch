@@ -1,0 +1,140 @@
+From 8d4fb767f6def830c36bf14848fd0827db3507e8 Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Wed, 30 Sep 2026 11:06:03 -0400
+Subject: [PATCH] maki: shot --flash-in, --flash-out and --show-owc, to test
+ the PIN's try counter against a restored flash
+
+---
+ src/bin/shot.rs | 55 +++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lib.rs      | 14 +++++++++++++
+ 2 files changed, 69 insertions(+)
+
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index 6d7d4a5..5451513 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -27,6 +27,10 @@
+ //!                     checkpoint (default 0 = off; final checkpoint always
+ //!                     prints `--console-final` bytes)
+ //!   --console-final N last N console bytes at the end (default 800)
++//!   --flash-in FILE[@OFF]  start from this external flash (swap and PDDB), e.g. one --flash-out
++//!                     kept; from OFF on only (0x400000: the PDDB, keeping this firmware's swap)
++//!   --flash-out FILE  keep the external flash at the end, for a later run
++//!   --show-owc SLOT   print a one-way counter's value at the end (repeatable)
+ //!   --gddram          also dump the raw GDDRAM page/column occupancy map
+ //!   --fw DIR          firmware directory (default web/fw)
+ //!   --owc SLOT=VAL    preset a one-way counter before boot (repeatable)
+@@ -89,6 +93,11 @@ struct Args {
+     /// `--answer [GAP]`: answer maki's asks, GAP instructions between presses
+     answer: Option<u64>,
+     answer_shots: bool,
++    /// maki: `--flash-in` / `--flash-out`, the external flash kept between runs
++    flash_in: Option<String>,
++    flash_out: Option<String>,
++    /// maki: `--show-owc SLOT`, counters to print at the end
++    show_owc: Vec<u32>,
+ }
+ 
+ /// Parse "500M" / "2.5G" / "1500000000" / "250k" into an instruction count.
+@@ -149,6 +158,9 @@ fn parse_args() -> Args {
+         quiet: false,
+         answer: None,
+         answer_shots: false,
++        flash_in: None,
++        flash_out: None,
++        show_owc: Vec::new(),
+     };
+     let argv: Vec<String> = std::env::args().skip(1).collect();
+     let mut i = 0;
+@@ -169,6 +181,12 @@ fn parse_args() -> Args {
+             "--out" => a.out_dir = next(&mut i),
+             "--prefix" => a.prefix = next(&mut i),
+             "--fw" => a.fw_dir = next(&mut i),
++            "--flash-in" => a.flash_in = Some(next(&mut i)),
++            "--flash-out" => a.flash_out = Some(next(&mut i)),
++            "--show-owc" => match next(&mut i).parse() {
++                Ok(slot) => a.show_owc.push(slot),
++                Err(_) => eprintln!("shot: bad --show-owc slot"),
++            },
+             "--owc" => {
+                 let v = next(&mut i);
+                 match v.split_once('=').and_then(|(s, n)| Some((s.parse().ok()?, n.parse().ok()?))) {
+@@ -412,6 +430,32 @@ fn main() {
+     for &(slot, value) in &a.owc {
+         baomulator::emu_set_owc(e, slot, value);
+     }
++    if let Some(spec) = &a.flash_in {
++        // FILE, or FILE@OFFSET to take only the flash from OFFSET on: 0x400000 is the PDDB, so
++        // the swap (the code of the services it holds) stays this firmware's
++        let (path, off) = match spec.rsplit_once('@') {
++            Some((p, o)) => {
++                let o = o.strip_prefix("0x").map_or_else(|| o.parse().ok(), |h| usize::from_str_radix(h, 16).ok());
++                (p, o.unwrap_or_else(|| {
++                    eprintln!("shot: bad --flash-in offset in {spec:?}");
++                    std::process::exit(1)
++                }))
++            }
++            None => (spec.as_str(), 0),
++        };
++        let data = std::fs::read(path).unwrap_or_else(|err| {
++            eprintln!("shot: {path}: {err}");
++            std::process::exit(1)
++        });
++        let len = baomulator::emu_flash_len(e);
++        if data.len() != len || off >= len {
++            eprintln!("shot: {path}: {} bytes, the flash is {len} (offset {off:#x})", data.len());
++            std::process::exit(1);
++        }
++        unsafe {
++            std::ptr::copy_nonoverlapping(data[off..].as_ptr(), baomulator::emu_flash_ptr(e).add(off), len - off)
++        };
++    }
+     if a.pgm {
+         if let Err(err) = std::fs::create_dir_all(&a.out_dir) {
+             eprintln!("shot: cannot create {}: {err} (disabling --pgm)", a.out_dir);
+@@ -606,6 +650,17 @@ fn main() {
+     if a.console_final > 0 {
+         println!("\nconsole tail:\n{}", console_tail(e, a.console_final));
+     }
++    for &slot in &a.show_owc {
++        println!("owc {slot} = {}", baomulator::emu_get_owc(e, slot));
++    }
++    if let Some(path) = &a.flash_out {
++        let len = baomulator::emu_flash_len(e);
++        let data = unsafe { std::slice::from_raw_parts(baomulator::emu_flash_ptr(e), len) };
++        match std::fs::write(path, data) {
++            Ok(()) => println!("flash kept in {path}"),
++            Err(err) => eprintln!("shot: {path}: {err}"),
++        }
++    }
+ }
+ 
+ fn oled_state(e: *mut Emulator) -> String {
+diff --git a/src/lib.rs b/src/lib.rs
+index 032b9c5..19b991c 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -274,6 +274,20 @@ pub extern "C" fn emu_get_owc(e: *mut Emulator, slot: u32) -> u32 {
+     e.mach.soc.owc.get(slot as usize).copied().unwrap_or(0)
+ }
+ 
++/// maki: the external flash (the swap and the PDDB) as bytes, so a host can keep it between
++/// runs, or put an older copy back the way someone holding the badge could.
++#[no_mangle]
++pub extern "C" fn emu_flash_len(e: *mut Emulator) -> usize {
++    let e = unsafe { &*e };
++    e.mach.soc.flash.data.len()
++}
++
++#[no_mangle]
++pub extern "C" fn emu_flash_ptr(e: *mut Emulator) -> *mut u8 {
++    let e = unsafe { &mut *e };
++    e.mach.soc.flash.data.as_mut_ptr()
++}
++
+ /// Read back the resolved level of an IOX pin (output drive, external input
+ /// and the port F button matrix all applied) — the same value the firmware
+ /// would see reading GPIOIN. Returns false for out-of-range ports.
+-- 
+2.55.0
+
