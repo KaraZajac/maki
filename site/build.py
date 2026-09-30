@@ -48,6 +48,7 @@ DOCS = [
         ("getting-started", "Getting started", "What maki is, what you need, and the order of things.", ("maki", "docs/getting-started.md")),
         ("flashing", "Flashing maki", "Developer mode, update mode, and the three files that make a badge a maki.", ("maki", "docs/flashing.md")),
         ("first-boot", "First boot", "The PIN, the recovery phrase and a name, then the home screen.", ("maki", "docs/first-boot.md")),
+        ("updates", "Updating maki", "What an update keeps: firmware, storage, apps and backups, and how they stay separate.", ("maki", "docs/updates.md")),
     ]),
     ("Using maki", [
         ("desktop", "maki desktop", "The tray app that links maki to your computer: the link, the time, backups and apps.", ("maki", "docs/desktop.md")),

@@ -55,8 +55,8 @@ boot](first-boot.md) goes on from there.
 ## Updating later
 
 Flash a newer maki the same way. Your PIN, recovery phrase, name and apps stay: they're in maki's
-encrypted storage, which flashing doesn't touch. maki desktop and maki speak a versioned protocol,
-so update maki desktop to the release that goes with the firmware (the download page pairs them).
+encrypted storage, which flashing doesn't touch. [Updating maki](updates.md) explains what an
+update keeps and what a restore brings back, and reminds you to pair maki desktop with the firmware.
 
 ## Building the files yourself
 
