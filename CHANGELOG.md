@@ -29,6 +29,23 @@ one, maki was built a day at a time, and that's here too.
   passes the turn, counting the rounds, and the dial takes damage off whoever's picked or heals
   them; the menu adds a player or a monster, rolls initiative, and starts a new fight. It needs
   this firmware.
+- **Six more new apps,** each needing this firmware:
+  - **Presenter:** a slide clicker. The dial or right and left change slides (Page Down and Page
+    Up, which every presentation app takes), the centre blanks the screen, and the time left
+    shows big enough to read from a stage, flashing at 5 and 2 minutes to go.
+  - **Life:** a life counter for Magic and other games, 2 to 6 players, the far player's total
+    upside down to read from their side, with poison and commander damage.
+  - **Chess Clock:** a game clock for two, each player pressing their side's button: increments,
+    delays, stages, Go's byo-yomi and Scrabble's time over, each time turned to face its player.
+  - **Instruments:** a g-meter for the car or a ride, a pilot's horizon and slip ball, and a
+    spirit level to a tenth of a degree.
+  - **Morse:** the dial as a paddle, up a dot, down a dash; typed into the computer if you like,
+    learned from the screen flashing like a signal lamp.
+  - **Tamper Log:** left on your closed laptop with its screen dark, it logs every time maki's
+    moved and every press, until your code shows you what happened.
+- **For apps** (host API 8): keys beyond text (Page Down, the arrows, F5; never Ctrl, Alt or
+  Command), the accelerometer's range up to 16 g, a dark screen, and the SDK's big seven-segment
+  digits, turned to read from any side.
 
 ## maki desktop 0.1.1, 2026-09-29
 
