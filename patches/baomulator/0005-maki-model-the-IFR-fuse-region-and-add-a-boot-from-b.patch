@@ -1,0 +1,233 @@
+From 77d7fb57dd88640f50965208022ab5a90de75abd Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Tue, 29 Sep 2026 23:28:41 -0400
+Subject: [PATCH] maki: model the IFR fuse region and add a boot-from-boot0
+ harness
+
+The emulator started the CPU at the Xous loader (0x6006_0000), so it never ran the factory
+boot stages and couldn't exercise the trust chain (reference-key check, developer-mode
+detection, the collateral-key policy). Reads of the IFR fuse block (0x6040_0000) returned 0,
+which is why boot0 couldn't run.
+
+- bus.rs: add the IFR region (0x6040_0000, 1 KiB), CPU-read-only, populated via the loader path.
+  Byte-for-byte transparent to the loader-start boot (same 3e9-insn console md5 with and without).
+- src/bin/bootrom.rs: load the published factory fuse/key blobs (bao1x-boot/blobs) and the signed
+  boot0/boot1 images, start at boot0, and stream the console.
+
+With the factory v0.10.0 boot0 + boot1 it runs the whole chain: boot0 up, ACLs fixed, boot1 up
+and audit printed, "Collateral erased" (the boot1 manifest carries Baochip keys), receipts and
+anti-rollback OK, then loader -> kernel -> services -> PDDB mounted, and the keystore logs
+COLLATERAL.ERASED (the correct state, vs COLLATERAL.FAIL when starting at the loader).
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/bootrom.rs | 177 +++++++++++++++++++++++++++++++++++++++++++++
+ src/bus.rs         |   7 ++
+ 2 files changed, 184 insertions(+)
+ create mode 100644 src/bin/bootrom.rs
+
+diff --git a/src/bin/bootrom.rs b/src/bin/bootrom.rs
+new file mode 100644
+index 0000000..934c2f5
+--- /dev/null
++++ b/src/bin/bootrom.rs
+@@ -0,0 +1,177 @@
++//! Boot-from-boot0 harness. The default `boot_test` starts the CPU at the Xous loader
++//! (0x6006_0000) — it never runs the factory boot stages, so it can't exercise the trust chain
++//! (reference-key check, developer-mode detection, the collateral-key policy). This harness starts
++//! at boot0 (0x6000_0000) with the published factory fuse blobs and reference-key blocks in place,
++//! the real signed boot0/boot1 images, and a set of loader/xous/swap on top, then streams the
++//! console and reports where the CPU ends up.
++//!
++//! It runs unmodified, correctly signed images; it is a fidelity harness for maki's secure-boot
++//! integration, not a modification of the boot flow.
++//!
++//! Usage:
++//!   bootrom [max_insns]
++//! Env:
++//!   BAO_BOOT   dir with bao1x-boot0.img and bao1x-boot1.img (the factory or maki-built stages)
++//!   BAO_BLOBS  dir with the factory fuse/key blobs (bao1x-boot/blobs); filenames encode the
++//!              target offset, e.g. ifr_0x280.bin -> 0x6040_0280, pubkey-block-0x3e0080.bin ->
++//!              0x603e_0080. *owc*.bin are skipped (one-way counters are set with --owc).
++//!   FW         dir with loader.0.bin, xous.0.bin, swap.0.bin (default web/fw)
++//!   --owc S=V  preset one-way counter S to V before boot (repeatable)
++
++use std::path::{Path, PathBuf};
++
++fn u32_from_name(name: &str) -> Option<u32> {
++    // prefer an explicit 0x-prefixed run, else the last bare hex run of >= 4 digits
++    if let Some(i) = name.find("0x") {
++        let hex: String = name[i + 2..].chars().take_while(|c| c.is_ascii_hexdigit()).collect();
++        return u32::from_str_radix(&hex, 16).ok();
++    }
++    let mut best: Option<u32> = None;
++    for tok in name.split(|c: char| !c.is_ascii_hexdigit()) {
++        if tok.len() >= 4 {
++            if let Ok(v) = u32::from_str_radix(tok, 16) {
++                best = Some(v);
++            }
++        }
++    }
++    best
++}
++
++/// Absolute load address for a blob, from the offset in its filename: small offsets are IFR-region
++/// relative (0x6040_0000), larger ones are main-array relative (0x6000_0000). Mirrors the
++/// bao1x-boot/blobs README ("IFR region blocks" vs "Data blocks ... offset in the main array").
++fn blob_addr(off: u32) -> u32 {
++    if off < 0x1000 { 0x6040_0000 + off } else { 0x6000_0000 + off }
++}
++
++fn load(e: *mut baomulator::Emulator, addr: u32, data: &[u8], what: &str) {
++    let ptr = baomulator::emu_alloc(data.len());
++    unsafe { std::ptr::copy_nonoverlapping(data.as_ptr(), ptr, data.len()) };
++    let ok = baomulator::emu_load(e, addr, ptr, data.len());
++    baomulator::emu_free(ptr, data.len());
++    if !ok {
++        eprintln!("bootrom: emu_load rejected {} bytes at {addr:#x} ({what})", data.len());
++        std::process::exit(1);
++    }
++    println!("loaded {what} @ {addr:#x} ({} bytes)", data.len());
++}
++
++fn read(path: &Path) -> Vec<u8> {
++    std::fs::read(path).unwrap_or_else(|err| {
++        eprintln!("bootrom: {}: {err}", path.display());
++        std::process::exit(1);
++    })
++}
++
++fn main() {
++    let mut max: u64 = 200_000_000;
++    let mut owc: Vec<(u32, u32)> = Vec::new();
++    let mut args = std::env::args().skip(1);
++    while let Some(a) = args.next() {
++        match a.as_str() {
++            "--owc" => {
++                if let Some(spec) = args.next() {
++                    if let Some((s, v)) = spec.split_once('=') {
++                        if let (Ok(s), Ok(v)) = (s.parse(), v.parse()) {
++                            owc.push((s, v));
++                            continue;
++                        }
++                    }
++                    eprintln!("bootrom: bad --owc {spec:?} (want SLOT=VAL)");
++                    std::process::exit(2);
++                }
++            }
++            s => match s.parse() {
++                Ok(v) => max = v,
++                Err(e) => {
++                    eprintln!("bootrom: bad instruction count {s:?}: {e}");
++                    std::process::exit(2);
++                }
++            },
++        }
++    }
++
++    let boot_dir = PathBuf::from(std::env::var("BAO_BOOT").unwrap_or_else(|_| ".".into()));
++    let blobs_dir = std::env::var("BAO_BLOBS").ok().map(PathBuf::from);
++    let fw_dir = PathBuf::from(std::env::var("FW").unwrap_or_else(|_| "web/fw".into()));
++
++    let e = baomulator::emu_new();
++
++    // 1. Factory fuse and reference-key blobs (so the reference-key check and partition config see
++    //    real values instead of zeros). Optional: without them boot0 will erase secrets on the
++    //    reference mismatch, which is itself worth observing.
++    if let Some(dir) = &blobs_dir {
++        let mut entries: Vec<_> = std::fs::read_dir(dir)
++            .unwrap_or_else(|err| {
++                eprintln!("bootrom: {}: {err}", dir.display());
++                std::process::exit(1);
++            })
++            .filter_map(|r| r.ok().map(|d| d.path()))
++            .collect();
++        entries.sort();
++        for path in entries {
++            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
++            if !name.ends_with(".bin") || name.contains("owc") {
++                continue;
++            }
++            match u32_from_name(name) {
++                Some(off) => load(e, blob_addr(off), &read(&path), name),
++                None => println!("skip {name}: no offset in name"),
++            }
++        }
++    }
++
++    // 2. loader/xous/swap first (loading the loader mirrors its sigblock into BOOT1_START; the real
++    //    boot1 below overwrites that stand-in).
++    for (addr, name) in [(0x6006_0000u32, "loader.0.bin"), (0x6009_fd00, "xous.0.bin"), (0x7000_0000, "swap.0.bin")] {
++        load(e, addr, &read(&fw_dir.join(name)), name);
++    }
++
++    // 3. The signed boot stages, boot1 last so it wins over the loader's stand-in sigblock.
++    load(e, 0x6000_0000, &read(&boot_dir.join("bao1x-boot0.img")), "boot0");
++    load(e, 0x6002_0000, &read(&boot_dir.join("bao1x-boot1.img")), "boot1");
++
++    for &(s, v) in &owc {
++        baomulator::emu_set_owc(e, s, v);
++    }
++
++    // 4. Start at boot0's entry (the sig header's first word is a jump over the header).
++    baomulator::emu_set_pc(e, 0x6000_0000);
++    println!("=== starting at boot0 (0x6000_0000), max {max} insns ===");
++
++    let mut total = 0u64;
++    let mut last_console = 0usize;
++    let mut last_pc = 0u32;
++    let mut stall = 0u32;
++    while total < max {
++        let slice = 2_000_000u64.min(max - total) as u32;
++        baomulator::emu_run(e, slice, 10);
++        total += slice as u64;
++
++        let clen = baomulator::emu_console_len(e);
++        if clen > last_console {
++            let bytes = unsafe { std::slice::from_raw_parts(baomulator::emu_console_ptr(e), clen) };
++            print!("{}", String::from_utf8_lossy(&bytes[last_console..]));
++            use std::io::Write;
++            std::io::stdout().flush().ok();
++            last_console = clen;
++            stall = 0;
++        } else {
++            // no console progress this slice: watch the pc to tell a spin from real work
++            let pc = baomulator::emu_dbg_pc(e);
++            stall = if pc == last_pc { stall + 1 } else { 0 };
++            last_pc = pc;
++            if stall >= 25 {
++                println!("\n=== quiet: pc parked at {pc:#010x} for {} insns, stopping ===", stall as u64 * slice as u64);
++                break;
++            }
++        }
++    }
++
++    let pc = baomulator::emu_dbg_pc(e);
++    println!("\n=== after {total} insns: pc={pc:#010x} prv={} wfi={} satp={:#x} ===",
++        baomulator::emu_dbg_prv(e), baomulator::emu_dbg_wfi(e), baomulator::emu_dbg_csr(e, 0x180));
++    println!("scause={:#x} sepc={:#x} stval={:#x} mcause={:#x} mepc={:#x}",
++        baomulator::emu_dbg_csr(e, 0x142), baomulator::emu_dbg_csr(e, 0x141), baomulator::emu_dbg_csr(e, 0x143),
++        baomulator::emu_dbg_csr(e, 0x342), baomulator::emu_dbg_csr(e, 0x341));
++}
+diff --git a/src/bus.rs b/src/bus.rs
+index 823d6c7..8e5ca86 100644
+--- a/src/bus.rs
++++ b/src/bus.rs
+@@ -76,6 +76,13 @@ impl Machine {
+         mach.add_region(0x5030_0000, 0x4000, true); // AORAM (16 KiB)
+         mach.add_region(0x6000_0000, 0x400000, true); // RERAM (4 MiB, firmware lives here)
+         mach.add_region(0x6100_0000, 0x200000, true); // SRAM (2 MiB, system RAM)
++        // IFR (0x6040_0000, 1 KiB): the factory fuse block. Written only by the probe station,
++        // read by the boot stages for the reference public keys and the partition/lock config.
++        // The emulator starts at the loader today, which never reads it, so it was left out and
++        // reads returned 0. Modelled read-only (the CPU cannot write it); a boot-from-boot0
++        // harness fills it from the published factory blobs (bao1x-boot/blobs) via the loader
++        // path, which populates region bytes regardless of the writable flag.
++        mach.add_region(0x6040_0000, 0x400, false); // IFR (fuse block, CPU-read-only)
+         mach
+     }
+ 
+-- 
+2.55.0
+

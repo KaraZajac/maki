@@ -512,6 +512,17 @@ again. maki and maki desktop take a new root only when it's signed so.
 - **Baomulator** (`scripts/emu.sh`) runs the real RISC-V images, loader onward:
   signatures, MMU, swap encryption, PDDB, OLED, buttons, camera. Use it to test
   exactly what would be flashed.
+  - **From boot0** (`bootrom`, patch 0005): with the IFR fuse region modelled, the emulator
+    also runs the factory boot stages, so it can exercise the trust chain (reference-key check,
+    developer mode, the collateral-key policy) without a badge. Give it the published boot
+    images and factory blobs (`ci.betrusted.io/releases/latest/baochip/{bootloader,blobs}`):
+    ```sh
+    BAO_BOOT=/path/to/bootloader BAO_BLOBS=xous-core/bao1x-boot/blobs FW=.emu/fw \
+      .emu/target/release/bootrom 1500000000
+    ```
+    With the v0.10.0 factory stages it reaches PDDB-mounted and logs `Collateral erased`
+    (the boot1 manifest carries Baochip keys). maki's own countersigned boot1 (no Baochip
+    keys) is what would preserve collateral instead — the point of the collateral work.
 - **Hosted mode** (`cargo xtask baosec-emu`) runs each service as a native x86 process
   with the OLED in a desktop window. Much faster to iterate on UI, but it isn't the
   real binary.
