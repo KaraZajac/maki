@@ -4,7 +4,17 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
-## Coming in the next preview
+## Preview, 2026-10-01
+
+maki's firmware (maki-firmware `4375d3b32`), maki desktop 0.1.2 for Linux and the extension 0.1.2
+(maki-desktop `10d5a2b`), on the [download page](https://maki.netslum.io/download/). They speak
+version 3 of the link protocol, as the preview before them did. The maki store has 31 apps, ten of
+them updated, and signs these releases into its index: from this preview on, maki desktop updates
+maki's firmware, itself and the apps. Flash this firmware by hand the first time.
+
+The USB fixes, passkeys by maki's PIN, the PIN's tries on the chip and the jog dial have run on a
+badge; the rest of this preview has run in the emulator, where maki desktop's own code and a
+FIDO2 client reach the emulated maki over its USB.
 
 - **Apps open faster:** an app opened again shows its first screen in about half the time, and
   a big one (Bitcoin) no longer reads its whole bundle from storage first. An app stuck in a
