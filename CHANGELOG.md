@@ -6,6 +6,36 @@ one, maki was built a day at a time, and that's here too.
 
 ## Coming in the next preview
 
+- **Apps open faster:** an app opened again shows its first screen in about half the time, and
+  a big one (Bitcoin) no longer reads its whole bundle from storage first. An app stuck in a
+  loop is stopped as not responding within seconds, and Exit reaches it, where drawing or QR
+  codes in a loop could keep maki busy for hours.
+- **A power cut can't cost you maki.** Unplugged at the moment maki recorded a right PIN, maki
+  could take the next PIN, even the right one, for a copy of its storage put back, and wipe
+  itself. And after five wrong PINs, maki offers to restore from your recovery phrase.
+- **Passkeys:** a sign-in the browser cancels takes maki's question off its screen, rather than
+  leave it up for a yes that would make a passkey the site never gets. "Sign in?" says how many
+  accounts it covers when a site has more than one. maki no longer takes U2F, the older
+  protocol, whose approvals any key could give.
+- **Quick presses keep their order:** left then the centre, fast, picks what left moved to.
+- **maki desktop's updates can't leave maki half-written:** one update at a time, no restart or
+  quit while maki's firmware is copied, **Try again** if putting it on fails, and the firmware
+  goes only to the maki that restarted for it, not another badge in update mode. After maki
+  desktop updates itself, the browsers and maki's commands (git's signing, age, minisign) start
+  the new one; they named the old one, and failed.
+- **maki desktop holds up:** a page that breaks says so in its place, and the browser, ssh and
+  gpg go on working (a wallet's Send panel could take the whole window down with them).
+  Disconnect keeps maki unlinked until it's plugged in again. Two apps added at once both
+  install. Backups and wallets are written whole, so a crash can't leave them broken.
+- **The extension** asks maki for a login only when you put the cursor in the field yourself:
+  a page that focuses one by itself (or a hidden one) gets a **Fill from maki** button. A
+  change-password form offers maki the new password, not the old.
+- **Ten app updates** (in the maki store once it's published): Tamper Log 1.1 counts every try
+  of its code, paused or not; Chess Clock 1.1 keeps a turn's time when it's reopened, and a game
+  through a power cut; SSH 1.3 always shows how long a certificate is good for and its key;
+  Wi-Fi 1.1 shows a long password whole; Pomodoro 3.1 counts a focus that ended while it was
+  closed; and fixes in Nostr, Minisign, Instruments, Notes and Life.
+
 - **Updates through maki desktop.** Its Overview says when there's newer firmware for maki, a
   newer maki desktop, or newer apps, all from the maki store's signed index. **Update maki**
   fetches the firmware and checks it against what the store signed for. maki asks you on its
