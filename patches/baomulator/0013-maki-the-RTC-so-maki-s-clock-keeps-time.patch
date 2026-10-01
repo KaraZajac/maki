@@ -1,0 +1,243 @@
+From 4dfdb3dc29eff536c27df7cd845f0503b8de72b1 Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Thu, 1 Oct 2026 09:35:29 -0400
+Subject: [PATCH] maki: the RTC, so maki's clock keeps time
+
+The PL031 at 0x4006_1000 was unmapped: its count read 0, so the time maki was given stood still
+(the bar's clock, TOTP codes, how long since the last backup). Its DR now counts 1/1024 s in
+virtual time from reset; LR loads it, CR runs it, MR's match sets RIS. No interrupt line, so
+Soc's irq_cache still only watches TICKTIMER and TIMER0, and nothing has to tick it: the count
+is worked out from the virtual time when it's read.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bus/devices/mod.rs |   3 +
+ src/bus/devices/rtc.rs | 149 +++++++++++++++++++++++++++++++++++++++++
+ src/bus/soc.rs         |   8 +++
+ 3 files changed, 160 insertions(+)
+ create mode 100644 src/bus/devices/rtc.rs
+
+diff --git a/src/bus/devices/mod.rs b/src/bus/devices/mod.rs
+index 225120f..56fa661 100644
+--- a/src/bus/devices/mod.rs
++++ b/src/bus/devices/mod.rs
+@@ -28,6 +28,8 @@ pub mod udma_i2c;
+ pub mod trng;
+ pub mod udma_ctrl;
+ pub mod udma_uart;
++// maki
++pub mod rtc;
+ 
+ /// Common interface for address-mapped devices. Currently used by the
+ /// generic `Stub`; the SoC fabric calls concrete device types directly.
+@@ -65,3 +67,4 @@ pub use udma_i2c::UdmaI2c;
+ pub use trng::Trng;
+ pub use udma_ctrl::UdmaCtrl;
+ pub use udma_uart::UdmaUart;
++pub use rtc::Rtc;
+diff --git a/src/bus/devices/rtc.rs b/src/bus/devices/rtc.rs
+new file mode 100644
+index 0000000..e9ca82d
+--- /dev/null
++++ b/src/bus/devices/rtc.rs
+@@ -0,0 +1,149 @@
++//! maki: the RTC @ 0x4006_1000, an ARM PL031 (bao1x-hal's rtc.rs says how Xous uses it). DR
++//! counts 1/1024 s in virtual time from reset; LR loads it, CR bit 0 runs it, and DR reaching
++//! MR sets RIS. There's no interrupt line: Soc's `irq_cache` counts on only TICKTIMER and
++//! TIMER0 moving a line with time, and nothing emulated sleeps on the RTC's alarm. Left
++//! unmapped, the block read 0 and maki's clock stood still at the time it was last set.
++//!
++//! The count is worked out from the virtual time when it's read (MMIO settles first), so the
++//! RTC has nothing to do as time passes.
++
++const TICKS_PER_S: u128 = 1024;
++
++pub struct Rtc {
++    /// the count at `at_ns`, from which it runs while `running`
++    base: u32,
++    at_ns: u64,
++    running: bool,
++    /// the last value written to LR, which reads back
++    lr: u32,
++    mr: u32,
++    /// the count when MR was written or the match cleared: the match is DR reaching MR from there
++    armed_from: u32,
++    ris: bool,
++    imsc: u32,
++}
++
++impl Rtc {
++    pub fn new() -> Rtc {
++        Rtc {
++            base: 0,
++            at_ns: 0,
++            running: true,
++            lr: 0,
++            mr: 0,
++            armed_from: 0,
++            ris: false,
++            imsc: 0,
++        }
++    }
++
++    fn count(&self, now_ns: u64) -> u32 {
++        if !self.running {
++            return self.base;
++        }
++        let ticks = now_ns.saturating_sub(self.at_ns) as u128 * TICKS_PER_S / 1_000_000_000;
++        // the counter wraps at 32 bits, as the hardware's does
++        self.base.wrapping_add(ticks as u32)
++    }
++
++    fn matched(&mut self, now_ns: u64) -> bool {
++        if !self.ris {
++            // MR equal to the count it was armed at is a whole wrap away
++            let need = match self.mr.wrapping_sub(self.armed_from) {
++                0 => 1u64 << 32,
++                n => n as u64,
++            };
++            self.ris = self.count(now_ns).wrapping_sub(self.armed_from) as u64 >= need;
++        }
++        self.ris
++    }
++
++    pub fn read(&mut self, off: u32, now_ns: u64) -> u32 {
++        match off {
++            0x00 => self.count(now_ns),  // DR
++            0x04 => self.mr,             // MR
++            0x08 => self.lr,             // LR
++            0x0c => self.running as u32, // CR
++            0x10 => self.imsc,           // IMSC
++            0x14 => self.matched(now_ns) as u32,
++            0x18 => (self.matched(now_ns) && self.imsc & 1 != 0) as u32,
++            // PrimeCell IDs: a PL031
++            0xfe0 => 0x31,
++            0xfe4 => 0x10,
++            0xfe8 => 0x04,
++            0xfec => 0x00,
++            0xff0 => 0x0d,
++            0xff4 => 0xf0,
++            0xff8 => 0x05,
++            0xffc => 0xb1,
++            _ => 0,
++        }
++    }
++
++    pub fn write(&mut self, off: u32, val: u32, now_ns: u64) {
++        match off {
++            0x04 => {
++                self.mr = val;
++                self.armed_from = self.count(now_ns);
++            }
++            0x08 => {
++                self.lr = val;
++                self.base = val;
++                self.at_ns = now_ns;
++            }
++            0x0c => {
++                let run = val & 1 != 0;
++                if run != self.running {
++                    self.base = self.count(now_ns);
++                    self.at_ns = now_ns;
++                    self.running = run;
++                }
++            }
++            0x10 => self.imsc = val & 1,
++            0x1c if val & 1 != 0 => {
++                self.ris = false;
++                self.armed_from = self.count(now_ns);
++            }
++            _ => {}
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    const S: u64 = 1_000_000_000;
++
++    #[test]
++    fn counts_1024_a_second_from_reset_and_from_a_load() {
++        let mut rtc = Rtc::new();
++        assert_eq!(rtc.read(0x00, 0), 0);
++        assert_eq!(rtc.read(0x00, 3 * S), 3 * 1024);
++        rtc.write(0x08, 1000, 3 * S);
++        assert_eq!(rtc.read(0x00, 3 * S + S / 2), 1000 + 512);
++        assert_eq!(rtc.read(0x08, 4 * S), 1000);
++    }
++
++    #[test]
++    fn stops_while_disabled() {
++        let mut rtc = Rtc::new();
++        rtc.write(0x0c, 0, 2 * S);
++        assert_eq!(rtc.read(0x00, 10 * S), 2048);
++        rtc.write(0x0c, 1, 10 * S);
++        assert_eq!(rtc.read(0x00, 11 * S), 3072);
++    }
++
++    #[test]
++    fn matches_once_it_reaches_mr_until_cleared() {
++        let mut rtc = Rtc::new();
++        assert_eq!(rtc.read(0x14, 100 * S), 0, "MR 0 at reset isn't a match");
++        rtc.write(0x04, 100 * 1024 + 2048, 100 * S);
++        rtc.write(0x10, 1, 100 * S);
++        assert_eq!(rtc.read(0x14, 101 * S), 0);
++        assert_eq!(rtc.read(0x14, 102 * S), 1);
++        assert_eq!(rtc.read(0x18, 102 * S), 1);
++        rtc.write(0x1c, 1, 103 * S);
++        assert_eq!(rtc.read(0x14, 104 * S), 0);
++    }
++}
+diff --git a/src/bus/soc.rs b/src/bus/soc.rs
+index 42992dc..14dbe6b 100644
+--- a/src/bus/soc.rs
++++ b/src/bus/soc.rs
+@@ -10,6 +10,8 @@ pub struct Soc {
+     pub ticktimer: TickTimer,
+     pub timer0: Timer0,
+     pub d11ctime: D11cTime,
++    /// maki: the PL031 RTC, which maki's clock runs on
++    pub rtc: Rtc,
+     pub irqarray: [IrqArray; 20],
+     pub duart: Duart,
+     pub trng: Trng,
+@@ -110,6 +112,7 @@ pub const ONEWAY_STRIDE: u32 = 32;
+ pub const TICKTIMER_BASE: u32 = 0xe001_b000;
+ pub const TIMER0_BASE: u32 = 0xe001_c000;
+ pub const D11CTIME_BASE: u32 = 0xe000_0000;
++pub const RTC_BASE: u32 = 0x4006_1000;
+ pub const IRQARRAY_BASE: u32 = 0xe000_4000;
+ pub const DUART_BASE: u32 = 0x4004_2000;
+ pub const TRNG_BASE: u32 = 0x4002_e000;
+@@ -146,6 +149,7 @@ impl Soc {
+             ticktimer: TickTimer::new(),
+             timer0: Timer0::new(),
+             d11ctime: D11cTime::new(),
++            rtc: Rtc::new(),
+             irqarray: core::array::from_fn(|_| IrqArray::new()),
+             duart: Duart::new(),
+             trng: Trng::new(),
+@@ -334,6 +338,7 @@ impl Soc {
+             a if a >= D11CTIME_BASE && a < D11CTIME_BASE + 0x1000 => {
+                 self.d11ctime.read(a - D11CTIME_BASE)
+             }
++            a if a >= RTC_BASE && a < RTC_BASE + 0x1000 => self.rtc.read(a - RTC_BASE, self.settled_ns),
+             a if a >= IRQARRAY_BASE && a < IRQARRAY_BASE + 20 * 0x1000 => {
+                 self.irqarray[((a - IRQARRAY_BASE) / 0x1000) as usize].read((a - IRQARRAY_BASE) % 0x1000)
+             }
+@@ -415,6 +420,9 @@ impl Soc {
+             a if a >= D11CTIME_BASE && a < D11CTIME_BASE + 0x1000 => {
+                 self.d11ctime.write(a - D11CTIME_BASE, val)
+             }
++            a if a >= RTC_BASE && a < RTC_BASE + 0x1000 => {
++                self.rtc.write(a - RTC_BASE, val, self.settled_ns)
++            }
+             a if a >= IRQARRAY_BASE && a < IRQARRAY_BASE + 20 * 0x1000 => {
+                 self.irqarray[((a - IRQARRAY_BASE) / 0x1000) as usize]
+                     .write((a - IRQARRAY_BASE) % 0x1000, val)
+-- 
+2.55.0
+

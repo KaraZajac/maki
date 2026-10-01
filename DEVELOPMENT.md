@@ -221,7 +221,8 @@ a message's packets), so pace the emulator to real time once maki is up: `--real
 (scripted presses before then keep their timing). Paced, an idle maki waits for this computer's
 clock instead of skipping to its next timer, and wakes for the host's bytes as a badge's USB
 interrupt would wake it (patch 0012); counts after that (presses, answers, profiles) are of time,
-10 ns each. `--console-live` prints maki's log as it
+10 ns each. maki's clock runs on the chip's RTC, which upstream Baomulator leaves out: patch 0013
+models it, so a time maki was given keeps time. `--console-live` prints maki's log as it
 comes, and `--answer` says yes on maki's screen. With a demo build (`MAKI_DEMO=1`, so the PIN
 script works) and the storage of a set-up maki:
 
