@@ -25,7 +25,7 @@ link.slow = SLOW
 link.store = new Store(storeSource(where))
 await link.storeCheck()
 if (link.store.problem) throw new Error(`the store: ${link.store.problem}`)
-if (!(await link.attach(await TcpTransport.open(7878), 'emulated maki')))
+if (!(await link.attach(await TcpTransport.open(7878), 'fake maki')))
   throw new Error(`maki did not link: ${link.log.join('; ')}`)
 const report = await link.syncNow()
 console.log(`clock: ${report ? JSON.stringify(report).slice(0, 120) : 'not synced'}`)

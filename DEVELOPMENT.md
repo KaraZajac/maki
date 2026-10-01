@@ -237,7 +237,8 @@ python scripts/emu-usb/fido-cancel.py                       # the computer cance
 A test drives maki's buttons and looks at its screen on port 7881 (patch 0011): `press N`,
 `press 3+4` (left and right together, maki's menu), `shot NAME`, `screen`, `profile L S`,
 `camera PATH` (what maki's camera sees, a PGM, until `camera` alone; patch 0014) and `quit`, a
-line each (shot.rs says more). With `--answer` saying yes to installs:
+line each (shot.rs says more); `scripts/emu-usb/emu.ts` has them for the tests, with opening a home
+screen item by name and QR codes drawn for maki's camera. With `--answer` saying yes to installs:
 
 ```sh
 npx --prefix desktop vite-node scripts/emu-usb/install.ts xous-core/libs/maki-wasm/tests/fixtures/*.maki
@@ -245,6 +246,7 @@ npx --prefix desktop vite-node scripts/emu-usb/store-install.ts   # or as maki d
 python scripts/emu-usb/apps.py LOG       # each home screen item opened, timed, screenshot, closed
 python scripts/emu-usb/profile.py LOG "4 4 5"   # where the time goes as the third item opens
 npx --prefix desktop vite-node scripts/emu-usb/totp.ts LOG   # a code's QR code scanned, its codes checked
+npx --prefix desktop vite-node scripts/emu-usb/scanner.ts LOG   # Scanner reads a code and types it
 MAKI_FIDO_PYTHON=venv/bin/python npx --prefix desktop vite-node scripts/emu-usb/logins.ts   # passkey first
 ```
 

@@ -20,7 +20,7 @@ const [USER, PASSWORD] = ['alice', 'correct horse battery staple']
 const link = new Link(relay)
 link.autoSync = false
 link.slow = SLOW
-if (!(await link.attach(await TcpTransport.open(7878), 'emulated maki')))
+if (!(await link.attach(await TcpTransport.open(7878), 'fake maki')))
   throw new Error(`maki did not link: ${link.log.join('; ')}`)
 
 let failed = 0
@@ -31,9 +31,10 @@ function check(what: string, ok: boolean, got: unknown): void {
 
 type Login = { approval?: string; username?: string; password?: string }
 const ask = (evenWithPasskey = false): Promise<Login> =>
-  link.fromBrowser({ type: 'getLogin', site: SITE, evenWithPasskey }) as Promise<Login>
+  link.fromBrowser({ id: 0, type: 'getLogin', site: SITE, evenWithPasskey }) as Promise<Login>
 
 const saved = (await link.fromBrowser({
+  id: 0,
   type: 'saveLogin',
   site: SITE,
   username: USER,
