@@ -450,10 +450,10 @@ Done in the emulator; not yet on a badge.
   fault says nothing: the host finds it gone the next time it looks (a button press, say) and
   says it crashed.
 - **Memory swaps like everyone else's.** The swapper had page tables only for the processes in
-  the firmware image, and the kernel never told it when a process ended. It now makes them
-  for a process started later, and the kernel tells it which processes ended, so it frees what
+  the firmware image, and the kernel never told it when a process ended. Its one swap map now
+  holds any process's pages, and the kernel tells it which processes ended, so it frees what
   they had in swap before their PIDs are used again. Keeping a native app's pages in RAM
-  instead doesn't fit: about 300 of the badge's 512 pages are wired already (DEVELOPMENT.md,
+  instead doesn't fit: about 227 of the badge's 512 pages are wired already (DEVELOPMENT.md,
   "Known issues"), and an app that filled its memory would have hung maki.
 - **Key injection** (`InjectKey`, which presses maki's buttons) exists only in firmware built
   with the `key-injection` feature, for driving a badge from its serial console; maki's own

@@ -4,6 +4,27 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
+## Preview, 2026-10-01.3
+
+maki's firmware (maki-firmware `0181b4633`), with maki desktop 0.1.3 and the extension 0.1.3 as
+before, on the [download page](https://maki.netslum.io/download/); maki desktop 0.1.3 updates a
+maki on preview 2026-10-01 or later to it. It has run in the emulator through everything: a
+blank maki set up from its phrase, all 31 store apps installed and opened, logins with a passkey
+first, passkeys made and used, TOTP codes scanned, sent and typed, native apps opened and closed
+again and again, backups. Not yet on a badge.
+
+- **Apps open about a third sooner, and a backup takes a quarter of the time.** maki's 2 MiB of
+  RAM is shared by everything, and the swapper, which moves what doesn't fit out to encrypted
+  swap, kept a sixth of it for itself, for good: a 4 KiB table for every 4 MiB of each process
+  with anything swapped out, never freed. One table for all of swap took their place, made once
+  and 32 KiB, so 70 more pages are maki's: in the emulator, apps open 19 to 51% sooner (38%
+  over thirty of them), Bitcoin's first open went from 37.5 to 21.5 seconds, and a backup from
+  46 seconds to 12.
+- **A page comes back from swap only as it went out.** Each page in swap is sealed to its
+  process, its address and how many times its place in swap has been written, so another
+  process's page, or an older one put back, doesn't open. The swapper now also refuses an old
+  copy of the very page, which still would: a mistake in its own records fails closed.
+
 ## Preview, 2026-10-01.2
 
 The morning's preview again, with fixes: maki's firmware (maki-firmware `0cf07cd06`), maki desktop

@@ -1,32 +1,32 @@
 {
   "firmware": {
-    "name": "preview 2026-10-01.2",
-    "commit": "0cf07cd060e41e612f00fb2c27650675b3cd0462",
+    "name": "preview 2026-10-01.3",
+    "commit": "0181b463381abffd922c0c017249a0814306691c",
     "date": "2026-10-01",
     "protocol": 3,
-    "release": "https://github.com/KaraZajac/maki-firmware/releases/tag/preview-2026-10-01.2",
-    "sums": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.2/SHA256SUMS",
+    "release": "https://github.com/KaraZajac/maki-firmware/releases/tag/preview-2026-10-01.3",
+    "sums": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.3/SHA256SUMS",
     "files": [
       {
         "name": "loader.uf2",
-        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.2/loader.uf2",
+        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.3/loader.uf2",
         "bytes": 354816,
-        "sha256": "b1b867fe8f62313c21220f170f289ed5491290f51ae71ce32d7deec1f2e6b453"
+        "sha256": "a78ffe9227d852b739e59d877ea32f1a273da4639c211c8ef3730344ec49dc83"
       },
       {
         "name": "xous.uf2",
-        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.2/xous.uf2",
+        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.3/xous.uf2",
         "bytes": 6186496,
-        "sha256": "c5a6e0dafed0372fb7f77cebf85da28b32f861d727847918c6fd3ef0ab1385d6"
+        "sha256": "b76752b769063b29b88fc5de73ab681dce3e33a3c595f8e3599846e8efe24337"
       },
       {
         "name": "swap.uf2",
-        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.2/swap.uf2",
+        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.3/swap.uf2",
         "bytes": 7393280,
-        "sha256": "7655ebb50eab981a484fbf6bf40ddf3945a0208ddfb016520cb3b39cc20d1f32"
+        "sha256": "0397606f2899416b50e0cd140322634ea57556587f0c4f46fa4d7721f738759d"
       }
     ],
-    "notices": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.2/THIRD-PARTY-NOTICES.md"
+    "notices": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.3/THIRD-PARTY-NOTICES.md"
   },
   "desktop": {
     "name": "0.1.3",

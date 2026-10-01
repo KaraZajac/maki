@@ -242,6 +242,7 @@ A test drives maki's buttons and looks at its screen on port 7881 (patch 0011): 
 screen item by name and QR codes drawn for maki's camera. With `--answer` saying yes to installs:
 
 ```sh
+npx --prefix desktop vite-node scripts/emu-usb/setup.ts LOG   # a blank maki: the test phrase, PIN 000000
 npx --prefix desktop vite-node scripts/emu-usb/install.ts xous-core/libs/maki-wasm/tests/fixtures/*.maki
 npx --prefix desktop vite-node scripts/emu-usb/store-install.ts   # or as maki desktop does, from apps/store
 python scripts/emu-usb/apps.py LOG       # each home screen item opened, timed, screenshot, closed
@@ -692,12 +693,11 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
   - The swapper records where each process's evicted pages went in page tables of its own, made
     by the loader for the processes in the image; one started later had none. Evicting one of
     its pages indexed past the end, the swapper panicked mid-OOM, and the kernel after it
-    (`Nesting should not happen`). The fork's swapper makes a process's tables the first time
-    it evicts one of its pages, and the kernel tells it which processes ended (`SwapAbi::
-    TakeEnded`, new), so before it next evicts anything it frees what they had in swap and
-    empties their tables for whatever gets the PID next. Keeping native apps' pages in RAM
-    instead doesn't fit: about 300 of the 512 pages are wired already, and an app may ask for
-    up to 256 more (1 MiB).
+    (`Nesting should not happen`). The fork's swapper keeps one swap map for every process
+    (below), and the kernel tells it which processes ended (`SwapAbi::TakeEnded`, new), so
+    before it next evicts anything it frees what they had in swap and forgets it, for whatever
+    gets the PID next. Keeping native apps' pages in RAM instead doesn't fit: about 227 of the
+    512 pages are wired already, and an app may ask for up to 256 more (1 MiB).
   - The kernel starts the swapper by making a syscall itself, as the process that ran out of
     memory or touched a swapped page. For a confined process that call was refused like any
     other it may not make, and the kernel retried it forever: maki froze the first time a native
@@ -708,12 +708,21 @@ stock console never runs anything) and then leaves it alone. Don't flash it: tha
     (`InternalError`), and the slot stayed allocated to nothing. An app opened a second time
     couldn't start. Ending a process now clears the slot.
 
-- **RAM, and paging.** The badge has 2 MiB of RAM, 512 pages, and in the app demo about 295
-  are wired for good: the kernel's 41; the swapper's 120, mostly shadow page tables (one for
-  each 4 MiB of a process that has pages swapped out, and a root per process); and 8 to 10 for
-  each process's own page tables and kernel pages. So every process costs pages before it does
-  anything, and maki's share the other ~215. Measured in the emulator (`shot --sample` and
-  `--rpt`, in our Baomulator patch):
+- **RAM, and paging.** The badge has 2 MiB of RAM, 512 pages, and about 227 are wired for good:
+  the kernel's 43; the swapper's 49 (its code and data, its stack, and its swap map); and 8 to
+  10 for each process's own page tables and kernel pages. So every process costs pages before it
+  does anything, and maki's share the other ~285. Measured in the emulator (`shot --sample`,
+  `--rpt` and the control port's `rpt NAME`, in our Baomulator patches):
+  - The swapper kept where each page in swap belonged as shadow page tables: a 4 KiB table for
+    every 4 MiB of a process with anything swapped out, made as pages went out and never freed,
+    and a root per process, wired like all its memory. They came to 84 pages, and the swapper to
+    119. One swap map took their place (`services/xous-swapper/src/swapmap.rs`, from
+    preview-2026-10-01.3): (PID, page) to its slot in swap, an open-addressed table with twice
+    as many places as swap has pages (8 pages for 8 MiB), made once, so an eviction allocates
+    nothing. Apps open about 38% sooner; a backup takes a quarter of the time. A page comes back
+    only from a slot the count tracker says holds it: a stale entry would point at an old copy
+    of the page, which still decrypts (its count, PID, slot and address unchanged), so the
+    swapper refuses it rather than hand back old memory. Upstream-worthy.
   - Wake-ups were the worst of it. Anything that wakes on a timer pages its process back in and
     pushes out whatever runs, and there were plenty: vault2's TOTP pump (four times a second from
     boot, on screen or not), the keyboard's chord timer (every 40 ms), three vault2 threads
