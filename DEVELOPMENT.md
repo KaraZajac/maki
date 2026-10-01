@@ -79,7 +79,7 @@ What's where in the fork:
 | `libs/maki-native` | native apps: the ELF check, the stub's load request, the app service's operations and the drawing a native app sends |
 | `libs/maki-app-host-api` | how maki-link asks the app host to install, list and remove apps |
 | `libs/maki-bundle` | the `.maki` format, host-tested and fuzzed: manifest, code, icon, Ed25519 signature; permissions and their warnings; who may update an app |
-| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer; API 2: BIP340 Schnorr and X25519 keys; API 3: the wallet permission's keys, locked to the manifest's paths, and reviews with pages, whose yes allows the signatures it names; API 4: Monero's keys and subaddresses, and backup words maki shows its owner itself; API 5: spending Monero, the view key after a yes, key images with their proofs, and whole transactions made and signed by maki; API 6: Ed25519 wallets, Solana's, a key by SLIP-10 and signatures over whole messages, a wallet held to its manifest's curve) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
+| `libs/maki-wasm` | the WebAssembly host core, host-tested: wasmi, maki's functions for apps (API 1: drawing in maki's fonts, events, storage, time, randomness; and behind their permissions, asks, keys, typing and messages from the computer; API 2: BIP340 Schnorr and X25519 keys; API 3: the wallet permission's keys, locked to the manifest's paths, and reviews with pages, whose yes allows the signatures it names; API 4: Monero's keys and subaddresses, and backup words maki shows its owner itself; API 5: spending Monero, the view key after a yes, key images with their proofs, and whole transactions made and signed by maki; API 6: Ed25519 wallets, Solana's, a key by SLIP-10 and signatures over whole messages, a wallet held to its manifest's curve; API 7: reviews of pages for asks; API 8: the jog dial, keys beyond text, the accelerometer's range and a dark screen; API 9: maki's fonts drawn bigger, and BIP-85 child seeds' words shown by maki) in `Session`, which native apps' requests go through too, fuel, memory and storage limits, `admit` (what maki takes, of either kind); the same code runs in the SDK's simulator and the fake maki |
 | `sdk/` | its own workspace: `maki-app` (the crate apps are written with), the `maki` tool (keygen, build, pack, inspect, run in a terminal simulator, store records, reproduce), twenty-five example apps (Hello, Dice, Tally; Signer, which asks, signs and types; Sensors; SSH, maki's SSH key and certificate authority for maki desktop's SSH agent and `maki-ssh-keygen`; Nostr; Age, maki's age key for maki desktop's `age-plugin-maki`; OpenPGP, for `maki-gpg`; Minisign, for `maki-minisign`; Notes; Contacts; Scanner; Wi-Fi; Passphrase; Snake, Marble and Breakout; Status; Bitcoin, Ethereum, Monero and Solana, maki's wallets; Hello Native and Pomodoro, built as native apps); see `sdk/README.md` |
 | `apps-baosec/maki-apps` | maki's own apps, sharing one process to spare memory: now just Passkeys (the passkeys the vault's authenticator holds, listed, and deleted with the owner's yes). The wallets are store apps (`sdk/examples/bitcoin`, `ethereum`, `monero`, `solana`) |
 | `libs/maki-fido` | the FIDO store's records as maki reads them (credential IDs, sites, users): for backups and the Passkeys app |
@@ -251,7 +251,18 @@ npx --prefix desktop vite-node scripts/emu-usb/totp.ts LOG   # a code's QR code 
 npx --prefix desktop vite-node scripts/emu-usb/scanner.ts LOG   # Scanner reads a code and types it
 npx --prefix desktop vite-node scripts/emu-usb/import.ts LOG   # a Google Authenticator export, imported
 MAKI_FIDO_PYTHON=venv/bin/python npx --prefix desktop vite-node scripts/emu-usb/logins.ts   # passkey first
+npx --prefix desktop vite-node scripts/emu-usb/childseeds.ts LOG OUT   # a child seed's words, on maki's screen
+npx --prefix desktop vite-node scripts/emu-usb/nametag.ts LOG OUT   # a tag scanned, its link's QR code read back
+npx --prefix desktop vite-node scripts/emu-usb/minesweeper.ts LOG OUT   # a flag, a step, the game kept
 ```
+
+The last three read maki's screen from frames the emulator saved in its folder (OUT) with
+`scripts/emu-usb/screenread`, which finds text drawn in maki's fonts (as maki-wasm's canvas draws
+them: the same glyphs) and reads QR codes. Build it before starting the emulator (`cargo build
+--release --manifest-path scripts/emu-usb/screenread/Cargo.toml`): a build while it runs starves
+it. childseeds.ts wants `--answer --answer-shots`, a frame of each page of maki's asks, for the
+words: it works them out itself (BIP-85 on @scure/bip32's keys, from the test phrase setup.ts
+gives maki) and looks for each beside its number.
 
 The emulator's buttons by number: 0 the dial down, 2 the dial up, 3 left, 4 right, 5 the
 centre (shot names 3 and 4 the other way round). Build with `MAKI_TRACE_WASM=1` too and the app

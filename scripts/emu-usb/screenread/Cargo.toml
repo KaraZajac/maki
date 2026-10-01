@@ -1,0 +1,14 @@
+[package]
+name = "screenread"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[dependencies]
+# maki's fonts, as maki-wasm's canvas draws them (the glyphs maki draws its own screens with)
+maki-wasm = { path = "../../../xous-core/libs/maki-wasm" }
+# QR codes, with the decoder maki's camera uses (bao-video's)
+rqrr = { git = "https://github.com/betrusted-io/rqrr.git", branch = "rv32-opt" }
+
+[workspace]
