@@ -46,7 +46,7 @@ python3 "$EMU/tools/uf2conv.py" "$FW_BIN" \
 rm -f "$OUT"/*.pgm "$OUT"/*.png
 "$CARGO_TARGET_DIR/release/shot" "$CHECKPOINTS" --dev-mode --fw "$FW_BIN" \
   --out "$OUT" --no-ascii --console-final 2000 "$@" \
-  | grep -v '^    on=\|^controller'
+  | grep --line-buffered -v '^    on=\|^controller'
 
 for f in "$OUT"/*.pgm; do
   python3 "$ROOT/scripts/pgm2png.py" "$f" "${f%.pgm}.png" 3

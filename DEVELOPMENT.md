@@ -210,6 +210,26 @@ compiled in unless set, so rebuild without them before flashing:
   the restart itself (`SYSCTRL reset requested (ignored)`) and has no boot1 to wait in update
   mode, so the rest is the badge's.
 
+**USB in the emulator.** Baomulator has no USB controller to speak of, so maki's USB service,
+built with `MAKI_EMU_USB=1`, carries its serial port, FIDO reports and keystrokes through a pipe
+the emulator has at the end of the controller's registers (patch 0010; nothing changes on a
+badge). `shot --usb 7878` (or `scripts/emu.sh ... --usb 7878`) makes them TCP servers: the serial
+port on 7878, where maki desktop's "Use fake maki" and its client connect as to the fake maki;
+FIDO's 64-byte HID reports on 7879; keystrokes on 7880 (HID usages, printed as text too). A host
+waits on time (maki-link drops the link after 25 s without a frame, CTAPHID allows 100 ms between
+a message's packets), so pace the emulator to real time once maki is up: `--realtime-from 8G`
+(scripted presses before then keep their timing). `--console-live` prints maki's log as it
+comes, and `--answer` says yes on maki's screen. With a demo build (`MAKI_DEMO=1`, so the PIN
+script works) and the storage of a set-up maki:
+
+```sh
+MAKI_DEMO=1 MAKI_EMU_USB=1 cargo xtask baosec-lite maki-launcher~flash maki-keys vault2 maki-link maki-apps maki-app-host
+scripts/emu.sh 400G <the PIN's presses> --flash-in FLASH@0x400000 --usb 7878 --realtime-from 8G --answer --console-live &
+npx --prefix desktop vite-node scripts/emu-usb/link.ts       # HELLO, STATUS, apps, a login
+python scripts/emu-usb/fido.py                              # python-fido2: make, sign in, delete
+python scripts/emu-usb/fido-cancel.py                       # the computer cancels mid-question
+```
+
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `3` is maki's left, `4` its
 right and `5` the centre; `3` and `4` together are the menu. (Baomulator names `3` and `4` the
 other way round, as Right and Left.) The emulator runs at

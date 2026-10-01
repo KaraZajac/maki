@@ -1,0 +1,434 @@
+From 11d478dffd65f9f96d36b649c7f25df0ffcffd1c Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Thu, 1 Oct 2026 01:57:02 -0400
+Subject: [PATCH] maki: USB through a pipe (shot --usb), real time (--realtime,
+ --realtime-from), live console
+
+- A paravirtual pipe at 0x5020_4F00, the end of the USB controller's registers maki's USB
+  service maps, where the real controller has nothing: "maki" at +0, then for each channel (0
+  serial, 1 FIDO, 2 keyboard) TX, RXAVAIL and RX. maki's USB service built with MAKI_EMU_USB
+  carries its serial port, FIDO reports and keystrokes through it.
+- `shot --usb PORT` joins the channels to TCP servers on PORT, PORT+1 and PORT+2: maki desktop's
+  client reaches the emulated maki on the serial port, python-fido2 on FIDO's 64-byte reports,
+  and keystrokes come out as HID usages, printed as text too.
+- `--realtime` keeps maki's time from running ahead of this computer's: it sleeps rather than
+  skipping idle time (a few milliseconds at a time, the pipe still moving), so a host's timing
+  holds (maki-link's link watchdog, CTAPHID's 100 ms between a message's packets). `--realtime-
+  from T` paces from instruction count T on, so scripted presses (a PIN) keep their timing.
+- `--console-live` prints maki's console as it comes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/shot.rs        | 217 ++++++++++++++++++++++++++++++++++++++++-
+ src/bus/devices/udc.rs |  56 ++++++++++-
+ src/bus/soc.rs         |   7 ++
+ src/lib.rs             |  15 +++
+ 4 files changed, 293 insertions(+), 2 deletions(-)
+
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index 5451513..562ea5d 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -45,6 +45,16 @@
+ //!   --answer-shots    and take a frame just before each of those presses,
+ //!                     and one after the answer
+ //!   --quiet           only print the summary table
++//!   --usb PORT        maki's USB, for a build of maki made with MAKI_EMU_USB: its serial port
++//!                     as a TCP server on PORT (maki desktop's fake-maki link, or anything that
++//!                     speaks maki's protocol), FIDO's 64-byte HID reports on PORT+1, and its
++//!                     keystrokes (HID usage codes, 0 for all keys up) on PORT+2, which are also
++//!                     printed as text
++//!   --realtime        never let maki's time run ahead of this computer's: it waits rather than
++//!                     skipping idle time, so a host's timing (heartbeats, timeouts) holds
++//!   --realtime-from T from instruction count T on (once maki's booted and its PIN's in, say):
++//!                     before then, as fast as it goes
++//!   --console-live    print maki's console as it comes, a line at a time
+ //!
+ //! Examples:
+ //!   shot 500M,1G,2G
+@@ -98,6 +108,162 @@ struct Args {
+     flash_out: Option<String>,
+     /// maki: `--show-owc SLOT`, counters to print at the end
+     show_owc: Vec<u32>,
++    /// maki: `--usb PORT`, the pipe's channels as TCP servers from PORT up
++    usb: Option<u16>,
++    /// maki: `--realtime`, maki's time held to this computer's, from `realtime_from` on
++    realtime: bool,
++    realtime_from: u64,
++    /// maki: `--console-live`, maki's console printed as it comes
++    console_live: bool,
++}
++
++/// maki: `--usb`: the pipe's channels (0 serial, 1 FIDO, 2 keyboard) as TCP servers, a client
++/// each, and what's waiting to go to each client.
++struct UsbPipe {
++    listeners: Vec<std::net::TcpListener>,
++    clients: Vec<Option<std::net::TcpStream>>,
++    pending: Vec<Vec<u8>>,
++    /// the keys down, for printing what's typed
++    keys: Vec<u8>,
++    typed: String,
++}
++
++const PIPE_NAMES: [&str; 3] = ["serial", "FIDO", "keyboard"];
++
++impl UsbPipe {
++    fn bind(port: u16) -> std::io::Result<UsbPipe> {
++        let mut listeners = Vec::new();
++        for c in 0..3u16 {
++            let l = std::net::TcpListener::bind(("127.0.0.1", port + c))?;
++            l.set_nonblocking(true)?;
++            listeners.push(l);
++        }
++        Ok(UsbPipe {
++            listeners,
++            clients: vec![None, None, None],
++            pending: vec![Vec::new(), Vec::new(), Vec::new()],
++            keys: Vec::new(),
++            typed: String::new(),
++        })
++    }
++
++    /// Move what's waiting each way. Bytes for a channel nobody's connected to are dropped, as
++    /// USB with no host would.
++    fn pump(&mut self, e: *mut Emulator, total: u64) {
++        use std::io::{ErrorKind, Read, Write};
++        for c in 0..3 {
++            if self.clients[c].is_none() {
++                if let Ok((stream, peer)) = self.listeners[c].accept() {
++                    stream.set_nonblocking(true).ok();
++                    stream.set_nodelay(true).ok();
++                    println!("[{total:>13}] usb: {} connected from {peer}", PIPE_NAMES[c]);
++                    self.clients[c] = Some(stream);
++                    self.pending[c].clear();
++                }
++            }
++            let out = baomulator::emu_pipe_take(e, c);
++            if c == 2 {
++                self.typing(&out, total);
++            }
++            let Some(stream) = self.clients[c].as_mut() else { continue };
++            let mut gone = false;
++            let mut buf = [0u8; 4096];
++            loop {
++                match stream.read(&mut buf) {
++                    Ok(0) => {
++                        gone = true;
++                        break;
++                    }
++                    Ok(n) => baomulator::emu_pipe_give(e, c, &buf[..n]),
++                    Err(err) if err.kind() == ErrorKind::WouldBlock => break,
++                    Err(err) if err.kind() == ErrorKind::Interrupted => continue,
++                    Err(_) => {
++                        gone = true;
++                        break;
++                    }
++                }
++            }
++            self.pending[c].extend_from_slice(&out);
++            while !gone && !self.pending[c].is_empty() {
++                match stream.write(&self.pending[c]) {
++                    Ok(n) => {
++                        self.pending[c].drain(..n);
++                    }
++                    Err(err) if err.kind() == ErrorKind::WouldBlock => break,
++                    Err(err) if err.kind() == ErrorKind::Interrupted => continue,
++                    Err(_) => gone = true,
++                }
++            }
++            if gone {
++                println!("[{total:>13}] usb: {} disconnected", PIPE_NAMES[c]);
++                self.clients[c] = None;
++                self.pending[c].clear();
++            }
++        }
++    }
++
++    /// Keystrokes as text: each key pressed, shifted or not, once all keys are up again.
++    fn typing(&mut self, codes: &[u8], total: u64) {
++        for &code in codes {
++            if code != 0 {
++                self.keys.push(code);
++                continue;
++            }
++            let shift = self.keys.iter().any(|&k| k == 0xe1 || k == 0xe5);
++            for &k in &self.keys {
++                if let Some(text) = usage_text(k, shift) {
++                    self.typed.push_str(&text);
++                }
++            }
++            self.keys.clear();
++        }
++        if !self.typed.is_empty() && self.keys.is_empty() {
++            println!("[{total:>13}] usb: typed {:?}", self.typed);
++            self.typed.clear();
++        }
++    }
++}
++
++/// A HID keyboard usage as text (US layout), or a name in brackets for keys that aren't text.
++fn usage_text(code: u8, shift: bool) -> Option<String> {
++    const LOWER: &[u8] = b"abcdefghijklmnopqrstuvwxyz1234567890";
++    const UPPER: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()";
++    const PUNCT: [(u8, char, char); 11] = [
++        (0x2d, '-', '_'),
++        (0x2e, '=', '+'),
++        (0x2f, '[', '{'),
++        (0x30, ']', '}'),
++        (0x31, '\\', '|'),
++        (0x33, ';', ':'),
++        (0x34, '\'', '"'),
++        (0x35, '`', '~'),
++        (0x36, ',', '<'),
++        (0x37, '.', '>'),
++        (0x38, '/', '?'),
++    ];
++    Some(match code {
++        0x04..=0x27 => {
++            let i = (code - 0x04) as usize;
++            ((if shift { UPPER } else { LOWER })[i] as char).to_string()
++        }
++        0x28 => "\n".into(),
++        0x29 => "[Esc]".into(),
++        0x2a => "[Backspace]".into(),
++        0x2b => "\t".into(),
++        0x2c => " ".into(),
++        0x3a..=0x45 => format!("[F{}]", code - 0x39),
++        0x4b => "[PageUp]".into(),
++        0x4e => "[PageDown]".into(),
++        0x4f => "[Right]".into(),
++        0x50 => "[Left]".into(),
++        0x51 => "[Down]".into(),
++        0x52 => "[Up]".into(),
++        0xe0..=0xe7 => return None,
++        _ => match PUNCT.iter().find(|(c, _, _)| *c == code) {
++            Some((_, plain, shifted)) => (if shift { *shifted } else { *plain }).to_string(),
++            None => format!("[{code:#04x}]"),
++        },
++    })
+ }
+ 
+ /// Parse "500M" / "2.5G" / "1500000000" / "250k" into an instruction count.
+@@ -161,6 +327,10 @@ fn parse_args() -> Args {
+         flash_in: None,
+         flash_out: None,
+         show_owc: Vec::new(),
++        usb: None,
++        realtime: false,
++        realtime_from: 0,
++        console_live: false,
+     };
+     let argv: Vec<String> = std::env::args().skip(1).collect();
+     let mut i = 0;
+@@ -204,6 +374,16 @@ fn parse_args() -> Args {
+                 a.answer = Some(gap.unwrap_or(100_000_000));
+             }
+             "--answer-shots" => a.answer_shots = true,
++            "--usb" => match next(&mut i).parse() {
++                Ok(port) => a.usb = Some(port),
++                Err(_) => eprintln!("shot: --usb wants a port"),
++            },
++            "--realtime" => a.realtime = true,
++            "--realtime-from" => {
++                a.realtime = true;
++                a.realtime_from = parse_count(&next(&mut i)).unwrap_or(0);
++            }
++            "--console-live" => a.console_live = true,
+             "--no-ascii" => a.ascii = false,
+             "--no-pgm" => a.pgm = false,
+             "--gddram" => a.gddram = true,
+@@ -501,6 +681,17 @@ fn main() {
+ 
+     let mut frames: Vec<Frame> = Vec::new();
+     let mut total: u64 = 0;
++    let mut usb = a.usb.map(|port| {
++        UsbPipe::bind(port).unwrap_or_else(|err| {
++            eprintln!("shot: --usb {port}: {err}");
++            std::process::exit(1)
++        })
++    });
++    if let Some(port) = a.usb {
++        println!("shot: maki's USB: serial on 127.0.0.1:{port}, FIDO on {}, keyboard on {}", port + 1, port + 2);
++    }
++    // `--realtime`: this computer's clock and maki's when pacing began
++    let mut paced: Option<(std::time::Instant, u64)> = None;
+     // Run in slices so virtual time advances the same way as the web UI does.
+     const SLICE: u64 = 10_000_000;
+     let mut samples = String::new();
+@@ -518,6 +709,24 @@ fn main() {
+                 .min(rpt_at.saturating_sub(total).max(1));
+             baomulator::emu_run(e, chunk as u32, 10);
+             total += chunk;
++            if let Some(pipe) = usb.as_mut() {
++                pipe.pump(e, total);
++            }
++            if a.realtime && total >= a.realtime_from && paced.is_none() {
++                paced = Some((std::time::Instant::now(), baomulator::emu_time_ns(e)));
++                println!("[{total:>13}] realtime from here");
++            }
++            // a few milliseconds at a time, the host's bytes moving meanwhile
++            while let Some((wall, emu)) = paced {
++                let ahead = (baomulator::emu_time_ns(e) - emu).saturating_sub(wall.elapsed().as_nanos() as u64);
++                if ahead < 2_000_000 {
++                    break;
++                }
++                std::thread::sleep(std::time::Duration::from_nanos(ahead.min(5_000_000)));
++                if let Some(pipe) = usb.as_mut() {
++                    pipe.pump(e, total);
++                }
++            }
+             while total >= rpt_at {
+                 let base = rpt_next.unwrap().1;
+                 let mut dump = String::new();
+@@ -554,8 +763,14 @@ fn main() {
+                     next_sample = u64::MAX;
+                 }
+             }
++            let lines = if a.answer.is_some() || a.console_live { console.new_lines(e) } else { Vec::new() };
++            if a.console_live {
++                for line in &lines {
++                    println!("[{total:>13}] {line}");
++                }
++            }
+             if let Some(gap) = a.answer {
+-                for line in console.new_lines(e) {
++                for line in lines {
+                     if let Some(at) = line.find("showing the ask from ") {
+                         if !a.quiet {
+                             println!("[{total:>13}] answering: {}", &line[at..]);
+diff --git a/src/bus/devices/udc.rs b/src/bus/devices/udc.rs
+index 45a43cf..58c8104 100644
+--- a/src/bus/devices/udc.rs
++++ b/src/bus/devices/udc.rs
+@@ -5,14 +5,46 @@
+ //!   STATUS reads 0 (success)
+ //! - EPRUNNING @0x464 = 0, PORTSC @0x430 = 0 (no connection)
+ //! - all other registers read-as-written
++//!
++//! maki: and a paravirtual pipe at PIPE_BASE (0x5020_4F00), the last of the registers usb-bao1x
++//! maps (from 0x5020_2000), where the real controller has nothing. maki's USB service built for
++//! the emulator (MAKI_EMU_USB) carries its serial port, FIDO reports and keystrokes through it
++//! instead of the controller, and `shot --usb PORT` joins each channel to a TCP stream on the
++//! host, so maki desktop and test clients reach the emulated maki as they would a real one.
++//!
++//! - +0x00 MAGIC reads "maki" (little-endian), so the service can tell it's there
++//! - channel c (0 serial, 1 FIDO, 2 keyboard) at +0x10 + 0x10*c: +0x0 TX (write: a byte out),
++//!   +0x8 RXAVAIL (read: bytes waiting), +0xC RX (read: the next byte, 0 if none)
++
++use std::collections::VecDeque;
++
++pub const PIPE_BASE: u32 = 0x5020_4F00;
++pub const PIPE_LEN: u32 = 0x100;
++pub const PIPE_MAGIC: u32 = u32::from_le_bytes(*b"maki");
++pub const PIPE_CHANNELS: usize = 3;
++/// What a channel keeps for a host that isn't reading, at most: older bytes go.
++const PIPE_KEEP: usize = 1 << 20;
+ 
+ pub struct Udc {
+     regs: Vec<u32>, // 0x5020_0000 .. 0x5021_0000
++    /// bytes from the host, for the firmware to read, per channel
++    pub pipe_rx: [VecDeque<u8>; PIPE_CHANNELS],
++    /// bytes the firmware wrote, for the host, per channel
++    pub pipe_tx: [VecDeque<u8>; PIPE_CHANNELS],
++}
++
++fn pipe_channel(off: u32) -> Option<(usize, u32)> {
++    let c = off.checked_sub(0x10)? / 0x10;
++    ((c as usize) < PIPE_CHANNELS).then(|| (c as usize, (off - 0x10) % 0x10))
+ }
+ 
+ impl Udc {
+     pub fn new() -> Udc {
+-        Udc { regs: vec![0; 0x1000 / 4] }
++        Udc {
++            regs: vec![0; 0x1000 / 4],
++            pipe_rx: Default::default(),
++            pipe_tx: Default::default(),
++        }
+     }
+ 
+     pub fn read(&mut self, off: u32) -> u32 {
+@@ -30,6 +62,28 @@ impl Udc {
+         }
+     }
+ 
++    /// The pipe's registers, `off` from PIPE_BASE.
++    pub fn pipe_read(&mut self, off: u32) -> u32 {
++        if off == 0 {
++            return PIPE_MAGIC;
++        }
++        match pipe_channel(off) {
++            Some((c, 0x8)) => self.pipe_rx[c].len().min(u32::MAX as usize) as u32,
++            Some((c, 0xC)) => self.pipe_rx[c].pop_front().unwrap_or(0) as u32,
++            _ => 0,
++        }
++    }
++
++    pub fn pipe_write(&mut self, off: u32, val: u32) {
++        if let Some((c, 0x0)) = pipe_channel(off) {
++            let tx = &mut self.pipe_tx[c];
++            if tx.len() >= PIPE_KEEP {
++                tx.pop_front();
++            }
++            tx.push_back(val as u8);
++        }
++    }
++
+     pub fn write(&mut self, off: u32, val: u32) {
+         let idx = (off / 4) as usize;
+         if idx < self.regs.len() {
+diff --git a/src/bus/soc.rs b/src/bus/soc.rs
+index 1c5d260..42992dc 100644
+--- a/src/bus/soc.rs
++++ b/src/bus/soc.rs
+@@ -376,6 +376,10 @@ impl Soc {
+                 v
+             }
+             a if a >= 0x5020_0000 && a < 0x5020_0000 + 0x1000 => self.udc.read(a - 0x5020_0000),
++            // maki: the paravirtual USB pipe (see `udc`)
++            a if a >= udc::PIPE_BASE && a < udc::PIPE_BASE + udc::PIPE_LEN => {
++                self.udc.pipe_read(a - udc::PIPE_BASE)
++            }
+             a if a == 0x5012_400c => 0, // BIO SFR_FLEVEL: FIFOs always empty
+             a if a >= COREUSER_BASE && a < COREUSER_BASE + 0x1000 => {
+                 self.coreuser.read(a - COREUSER_BASE)
+@@ -473,6 +477,9 @@ impl Soc {
+                 self.bio.write(a, val)
+             }
+             a if a >= 0x5020_0000 && a < 0x5020_0000 + 0x1000 => self.udc.write(a - 0x5020_0000, val),
++            a if a >= udc::PIPE_BASE && a < udc::PIPE_BASE + udc::PIPE_LEN => {
++                self.udc.pipe_write(a - udc::PIPE_BASE, val)
++            }
+             a if a >= COREUSER_BASE && a < COREUSER_BASE + 0x1000 => {
+                 self.coreuser.write(a - COREUSER_BASE, val)
+             }
+diff --git a/src/lib.rs b/src/lib.rs
+index 19b991c..2c6649c 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -486,6 +486,21 @@ pub extern "C" fn emu_time_ns(e: *mut Emulator) -> u64 {
+     unsafe { &mut *e }.mach.time_ns()
+ }
+ 
++/// maki: what maki's USB service has written on pipe channel `chan` (0 serial, 1 FIDO, 2
++/// keyboard) since the last call. See `bus::devices::udc`.
++pub fn emu_pipe_take(e: *mut Emulator, chan: usize) -> Vec<u8> {
++    let e = unsafe { &mut *e };
++    e.mach.soc.udc.pipe_tx.get_mut(chan).map(|q| q.drain(..).collect()).unwrap_or_default()
++}
++
++/// maki: bytes for maki's USB service to read on pipe channel `chan`.
++pub fn emu_pipe_give(e: *mut Emulator, chan: usize, data: &[u8]) {
++    let e = unsafe { &mut *e };
++    if let Some(q) = e.mach.soc.udc.pipe_rx.get_mut(chan) {
++        q.extend(data);
++    }
++}
++
+ // ---------- debug / inspection ----------
+ 
+ #[no_mangle]
+-- 
+2.55.0
+
