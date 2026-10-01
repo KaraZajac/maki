@@ -30,6 +30,8 @@ Plug maki in and unlock it with its PIN. maki desktop finds it by itself: any po
 IDs gets one short, harmless hello, and a device that doesn't answer (a stock DC34 badge shares
 the IDs) is left alone. Once linked, maki shows a dot in its bar, and maki desktop shows maki's
 name. A heartbeat every ten seconds keeps the link; after 25 seconds of silence, maki drops it.
+Unplug maki and plug it back in, and maki desktop links again by itself once maki has started
+(about 20 seconds): a port that doesn't answer yet is tried again for a minute.
 
 ## The time
 
@@ -54,6 +56,22 @@ The **Apps** page shows maki's room for apps, what's installed, and the [maki st
 apps by category. Installing one sends it to maki, which goes through it on its own screen (what it
 is, where it's from, who signed it and each permission it wants) and installs it once you say so.
 `maki install app.maki`, from the SDK, installs a file of your own the same way.
+
+## Updates
+
+The Overview's **Updates** card says whether there's newer firmware for maki, a newer maki
+desktop, or newer versions of maki's apps. Each release comes from the maki store's index, which
+the store signs: maki desktop takes a file only if it's the size and SHA-256 the store signed
+for.
+
+- **Update maki** fetches the new firmware, and maki asks you on its screen whether to restart
+  for it. Say yes, and maki restarts into its update mode. maki desktop puts the three files on
+  maki's update drive, starts the new firmware, and waits for maki to link again. Then enter your
+  PIN. Your PIN, phrase, name, apps and data stay, as with any update ([Updating
+  maki](updates.md)). On Linux, for now. Firmware from before this asks you to put maki in update
+  mode yourself, then carries on.
+- **Update and restart** replaces maki desktop's AppImage with the new one and starts it again.
+- **maki's apps** update from the [maki store](apps.md), on the Apps page.
 
 ## Wallets
 

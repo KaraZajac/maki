@@ -6,6 +6,30 @@ one, maki was built a day at a time, and that's here too.
 
 ## Coming in the next preview
 
+- **Updates through maki desktop.** Its Overview says when there's newer firmware for maki, a
+  newer maki desktop, or newer apps, all from the maki store's signed index. **Update maki**
+  fetches the firmware and checks it against what the store signed for. maki asks you on its
+  screen whether to restart for it, and maki desktop puts it on and starts it: no button held
+  while plugging in. **Update and restart** does the same for maki desktop. On Linux, for now.
+  [Updates](docs/desktop.md#updates).
+- **maki says which firmware it runs** (its build, `preview-2026-10-01` for a release), so maki
+  desktop can tell when there's newer.
+- **A passkey comes first.** On a site maki holds a passkey for, the extension no longer asks for
+  the password each time the username field is focused. It says maki has a passkey, with **Use
+  password** for when you want the password anyway. [Logins](docs/extension.md#logins).
+- **Passkeys ask as logins do:** one question at a time on maki's screen, naming the site, "Sign
+  in?" or "Save a passkey?", and whose. Only the centre answers. A site asking for a passkey while
+  the extension asked for its login made the screen flash between the two, and any button but
+  the dial's down approved the passkey.
+- **Apps no longer go blank after the accelerometer.** A read that finished while maki's I2C
+  driver was busy elsewhere left it waiting forever, and with it every app after, until maki was
+  unplugged. A bug in the driver the firmware builds on, fixed.
+- **maki desktop links again when maki's plugged back in,** without being restarted. A maki that's
+  starting doesn't answer at once, and maki desktop took that for a stock badge.
+- **No "restart it" for a browser that's been restarted:** an old Flatpak sandbox, kept only by a
+  helper that outlived the browser (about:debugging's adb), counted as the browser.
+- **[Privacy](docs/privacy.md):** what maki, maki desktop and the extension send anywhere, and to
+  whom.
 - **Passkeys for every site.** maki verifies you with its own PIN, the one you unlock it with, and
   one press on maki approves each passkey: no security key PIN to set up, nothing typed on the
   computer. GitHub, which wants verification for a passkey, turned maki down before, as Firefox

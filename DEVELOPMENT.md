@@ -204,6 +204,11 @@ compiled in unless set, so rebuild without them before flashing:
   about 1,750 of its 2,040 pages with all twenty-three installed. The swapper can't print (its
   UART is compiled out): its panics come out through the kernel, as `swapper: panicked at
   xous-swapper/src/main.rs:LINE`.
+- `MAKI_DEMO_UPDATE=1`: once maki is unlocked, maki-link asks to restart into update mode as maki
+  desktop would (UPDATE_MODE, for `preview-2026-10-01`), so maki-keys' question can be seen and
+  answered. A yes logs `update mode: 0` and `restarting into update mode`; the emulator ignores
+  the restart itself (`SYSCTRL reset requested (ignored)`) and has no boot1 to wait in update
+  mode, so the rest is the badge's.
 
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `3` is maki's left, `4` its
 right and `5` the centre; `3` and `4` together are the menu. (Baomulator names `3` and `4` the
@@ -506,6 +511,52 @@ root names a new one: `maki store root --version N+1` with the next catalogue ke
 root keys of the current root (recovered from paper, offline) and two of its own; then every
 bundle is stamped again with the new catalogue key, and the revocation list and index signed
 again. maki and maki desktop take a new root only when it's signed so.
+
+**Releases in the index.** maki desktop updates maki's firmware and itself from the releases the
+store signs into its index: `maki store index --releases releases.toml` (from the SDK at
+`12547b8f6` or later). `releases.toml`, in the store's repository beside `revocations.txt`, names
+the newest of each, `[firmware]` and `[desktop]`: its name (the tag, `preview-2026-10-01` or
+`0.1.3`), its whole commit, its date, an https `notes` address, and its files under
+`[[firmware.files]]` (exactly `loader.uf2`, `xous.uf2` and `swap.uf2`) or `[[desktop.files]]`
+(each with a `platform`, `linux-x86_64`), each with its https `url` (the GitHub release's), its
+`bytes` and its `sha256`. The tool checks it and `publish.sh` passes it when the file is there.
+maki desktop takes a file only if it's that size and hash. A firmware release is tagged in the
+fork (`git tag preview-2026-10-01`) before it's built, so the firmware names itself after it.
+
+## The browser extension in the stores
+
+The extension goes to addons.mozilla.org (listed: Firefox, Zen and the other Firefox browsers
+install it from there and keep it up to date) and to the Chrome Web Store (Chrome, Brave, Vivaldi
+and Edge install from it). Edge's and Opera's own stores aren't worth it: Edge takes wallets only
+from verified companies, and Opera's reviews take months.
+
+`desktop/scripts/extension-release.sh` builds what they take from a commit: the Firefox package,
+a Chrome package for Load unpacked, one for the Chrome Web Store (no `key`: the store keeps its
+own), and the source archive reviewers rebuild it from (with BUILD.md). It rebuilds the extension
+from that archive and checks it comes out the same, byte for byte, and lints it with web-ext.
+With an addons.mozilla.org API key in `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET`, it also sends it
+to Mozilla, with the source and `extension/amo-metadata.json` (the listing: its text, Privacy &
+Security, MIT, needs extra hardware, desktop Firefox only, and notes for the reviewers), and
+saves the signed package. The manifest declares, as Mozilla requires, what the extension hands
+maki desktop, which Firefox counts as data leaving the browser: authentication info, browsing
+activity, financial info and communications. The privacy policy both stores ask for is
+[Privacy](docs/privacy.md), `https://maki.netslum.io/docs/privacy.html`.
+
+Kara's part, once:
+
+1. **Mozilla:** a Mozilla account with two-step sign-in; accept the developer agreement on
+   addons.mozilla.org; make an API key (Tools, Manage API Keys). Then run the script with it.
+   The first version goes through review, and is live on addons.mozilla.org once it passes.
+2. **Chrome Web Store:** register as a developer (a one-time fee, two-step verification, the
+   trader or non-trader declaration), then upload `maki-extension-VERSION-chrome-store.zip` by
+   hand, with the listing (the icon, a screenshot, the description), the privacy tab (single
+   purpose: the browser's side of maki; why it needs native messaging and its content scripts;
+   no remote code; the data it handles), and the privacy policy's address. Reviews take days to
+   weeks.
+3. **After Chrome's first upload,** its dashboard shows the store's public key: it goes in
+   `manifest.chrome.json` as `key` (so a Load unpacked build has the store's ID), and that ID
+   goes into maki desktop's native messaging manifests beside the current one
+   (`CHROME_EXTENSION_ID` in `desktop/src/main/browsers.ts` becomes a list).
 
 ## Two emulators
 

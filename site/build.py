@@ -61,6 +61,7 @@ DOCS = [
     ]),
     ("Reference", [
         ("security", "Security model", "What maki protects you from, and what it doesn't.", ("maki", "docs/security.md")),
+        ("privacy", "Privacy", "What maki, maki desktop and the browser extension send anywhere, and to whom.", ("maki", "docs/privacy.md")),
         ("faq", "Questions", "Short answers, and what to do when something's wrong.", ("maki", "docs/faq.md")),
         ("sdk", "Writing apps", "The SDK: the maki-app crate, the maki tool, the permissions and the example apps.", ("firmware", "sdk/README.md")),
         ("protocol", "The link protocol", "What maki desktop and maki say to each other over USB, message by message.", ("firmware", "libs/maki-proto/PROTOCOL.md")),

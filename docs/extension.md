@@ -49,6 +49,10 @@ Click into a login field and the extension asks maki. maki shows the site and th
 fill; press, and it fills. More than one login for the site? maki shows each, and you pick. Submit
 a login maki doesn't have, and maki offers to keep it.
 
+A site maki holds a passkey for gets no question about its password: the passkey is the way in,
+and the extension says so ("maki has a passkey for this site"). **Use password** asks maki for
+the password anyway.
+
 The site maki names is the hostname the browser reports for the frame that's asking, never
 something the page says about itself. The extension works on https pages only (and localhost).
 
@@ -64,8 +68,9 @@ browser talks to it directly, phones included. Their keys come from the recovery
 restored maki still opens every site it signed you up for.
 
 maki verifies you itself, with its own PIN: the one you enter to unlock it. There's no second PIN
-to set up and nothing to type on the computer. When a site makes or uses a passkey, maki asks, and
-one press approves it. Sites that insist on verification, as GitHub and most passkey sites do,
+to set up and nothing to type on the computer. When a site makes or uses a passkey, maki asks: the
+site, "Sign in?" or "Save a passkey?", and whose it is. The centre approves it, as it does a
+login's question, and maki shows one question at a time. Sites that insist on verification, as GitHub and most passkey sites do,
 take that, in every browser (Firefox and Zen included, which can't set up a security key's PIN
 midway). A press counts for the one request it answered, and while maki is locked it answers
 nothing. Unplugging it locks it.

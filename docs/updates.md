@@ -17,9 +17,11 @@ data.** Your storage isn't in the firmware, so flashing new firmware doesn't tou
 
 ## Updating the firmware keeps your data
 
-Flash a newer maki exactly the way you flashed the first one ([Flashing maki](flashing.md)):
-update mode, copy the three files, eject, reboot. Your **PIN, recovery phrase, name, installed
-apps and all their data stay.**
+maki desktop does it for you: **Update maki** on its Overview fetches the new firmware, maki asks
+you on its screen whether to restart for it, and maki desktop puts it on and starts it ([maki
+desktop](desktop.md#updates)). Or flash a newer maki exactly the way you flashed the first one
+([Flashing maki](flashing.md)): update mode, copy the three files, eject, reboot. Either way, your
+**PIN, recovery phrase, name, installed apps and all their data stay.**
 
 That's because maki keeps two things in two separate places:
 
