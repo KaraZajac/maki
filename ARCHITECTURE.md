@@ -675,6 +675,28 @@ device:
     keeps (checked with the real sudo, as root in a container, setup to teardown); Bitcoin 1.2's
     multisig (above); and Nostr apps signing through maki desktop as their bunker (NIP-46, over
     relays, NIP-44 checked against its test vectors), each event shown on maki by the Nostr app.
+15. **Updates through maki desktop**, firmware, maki desktop and apps. Built: maki restarts
+    into its boot stage's update mode when its owner says yes (UPDATE_MODE: boot1's bootwait
+    flag, for one start), maki desktop puts the new firmware on its update drive and starts it
+    on boot1's console, and replaces its own AppImage; what's newest, and each file's size and
+    SHA-256, signed into the store's index (`maki store index --releases`). maki names its
+    firmware's build in HELLO. Not yet: a run on a badge, and macOS and Windows.
+16. **The browser extension in the stores**, so nobody needs a browser's developer mode:
+    1. **addons.mozilla.org, listed**: one click in Firefox, Zen and the other Firefox browsers,
+       which keep it up to date. Ready: the manifest declares what it hands maki desktop
+       (Mozilla counts native messaging as data leaving the browser: authentication info,
+       browsing activity, financial info, communications; Kara to confirm), it needs Firefox
+       140, its icons are their real sizes, `extension/amo-metadata.json` is the listing, and
+       `scripts/extension-release.sh` builds it and the source archive reviewers rebuild it
+       from (checked byte for byte). Waiting for: Kara's Mozilla account and API key, then the
+       first review.
+    2. **The Chrome Web Store**: Chrome, Brave, Vivaldi and Edge install from it. Ready: the
+       store's package (no `key`) and the [privacy policy](docs/privacy.md). Waiting for: Kara's
+       developer registration (a one-time fee, two-step verification, the trader declaration)
+       and the first upload by hand; then the store's key goes in `manifest.chrome.json`, and
+       its extension ID beside the current one in maki desktop's native messaging manifests.
+    3. Not Edge's or Opera's own stores: Edge takes wallets only from verified companies, and
+       Opera's reviews take months.
 
 ## Constraints to design around
 
