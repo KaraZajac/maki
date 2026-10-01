@@ -13,7 +13,8 @@ import { TcpTransport } from '../../desktop/src/shared/test-support'
 
 const SLOW = Number(process.env.MAKI_EMU_SLOW ?? 10)
 const PYTHON = process.env.MAKI_FIDO_PYTHON ?? 'python3'
-// fido.py's made-up site
+// a site maki never has a passkey for, and fido.py's made-up site, which gets one
+const PLAIN = 'logins.example'
 const SITE = 'maki-test.example'
 const [USER, PASSWORD] = ['alice', 'correct horse battery staple']
 
@@ -30,37 +31,36 @@ function check(what: string, ok: boolean, got: unknown): void {
 }
 
 type Login = { approval?: string; username?: string; password?: string }
-const ask = (evenWithPasskey = false): Promise<Login> =>
-  link.fromBrowser({ id: 0, type: 'getLogin', site: SITE, evenWithPasskey }) as Promise<Login>
+const ask = (site: string, evenWithPasskey = false): Promise<Login> =>
+  link.fromBrowser({ id: 0, type: 'getLogin', site, evenWithPasskey }) as Promise<Login>
+const save = (site: string): Promise<Login> =>
+  link.fromBrowser({ id: 0, type: 'saveLogin', site, username: USER, password: PASSWORD }) as Promise<Login>
 
-const saved = (await link.fromBrowser({
-  id: 0,
-  type: 'saveLogin',
-  site: SITE,
-  username: USER,
-  password: PASSWORD
-})) as Login
-check('maki keeps a login offered to it', saved.approval === 'approved', saved)
-
-let got = await ask()
+let got = await save(PLAIN)
+check('maki keeps a login offered to it', got.approval === 'approved', got)
+got = await ask(PLAIN)
 check(
   'and gives it back',
   got.approval === 'approved' && got.username === USER && got.password === PASSWORD,
   got
 )
+// a login for the site that's to have a passkey (kept already, from an earlier run, it's still
+// "approved": maki doesn't ask about what it has)
+got = await save(SITE)
+check('and one for the passkey site', got.approval === 'approved', got)
 
 // a passkey for the same site, made as a site makes one: through FIDO2
 console.log(
   execFileSync(PYTHON, [`${__dirname}/fido.py`, '7879', '--keep'], { encoding: 'utf8' }).trim()
 )
 
-got = await ask()
+got = await ask(SITE)
 check(
   'with a passkey for the site, the password is not offered',
   got.approval === 'passkey' && !got.password,
   got
 )
-got = await ask(true)
+got = await ask(SITE, true)
 check(
   'unless the owner asks for it',
   got.approval === 'approved' && got.password === PASSWORD,

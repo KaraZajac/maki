@@ -84,6 +84,15 @@ for i in range(64):
         break
     name = opened.group(1)
     if name in seen:
+        # round again: close it, and leave maki on its home screen
+        if name in hosted:
+            wait_for(r"first frame after", at, OPEN_S)
+        time.sleep(3)
+        together(LEFT, RIGHT)
+        time.sleep(1.2)
+        press(LEFT, gap=0.5)
+        press(CENTRE, gap=0.8)
+        wait_for(r"exited from its menu|returned to the home screen", at, 15)
         break
     seen.append(name)
     # an app of the app host's says when it runs, then when its first frame is up; maki's own
