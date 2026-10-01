@@ -1,14 +1,16 @@
 # Passkeys against the emulated maki, through the emulator's virtual USB (shot --usb 7878: FIDO
 # on 7879): python-fido2's own CTAP2 client, as for the badge (hw-fido-test.py). The emulator's
 # --answer says yes on maki's screen. Makes a passkey for a made-up site, signs in with it, and
-# deletes it.
+# deletes it (or with --keep, leaves it: logins.ts needs one).
 import hashlib, socket, sys, time
 from fido2.hid import CtapHidDevice
 from fido2.hid.base import CtapHidConnection, HidDescriptor
 from fido2.ctap2 import Ctap2, ClientPin, CredentialManagement
 from fido2.ctap2.base import AuthenticatorData
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7879
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+PORT = int(ARGS[0]) if ARGS else 7879
+KEEP = "--keep" in sys.argv
 RP = "maki-test.example"
 UP, UV = AuthenticatorData.FLAG.UP, AuthenticatorData.FLAG.UV
 
@@ -67,6 +69,9 @@ t = time.time()
 a = ctap.get_assertion(RP, cdh, options={"up": False})
 print(f"silent check in {time.time() - t:.2f} s: {flags(a.auth_data)} (want -- --)", flush=True)
 
+if KEEP:
+    print("kept the test passkey", flush=True)
+    sys.exit(0)
 token = cp.get_uv_token(P.CREDENTIAL_MGMT)
 cm = CredentialManagement(ctap, cp.protocol, token)
 cm.delete_cred({"type": "public-key", "id": cred_id})

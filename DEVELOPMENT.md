@@ -245,6 +245,7 @@ npx --prefix desktop vite-node scripts/emu-usb/store-install.ts   # or as maki d
 python scripts/emu-usb/apps.py LOG       # each home screen item opened, timed, screenshot, closed
 python scripts/emu-usb/profile.py LOG "4 4 5"   # where the time goes as the third item opens
 npx --prefix desktop vite-node scripts/emu-usb/totp.ts LOG   # a code's QR code scanned, its codes checked
+MAKI_FIDO_PYTHON=venv/bin/python npx --prefix desktop vite-node scripts/emu-usb/logins.ts   # passkey first
 ```
 
 The emulator's buttons by number: 0 the dial down, 2 the dial up, 3 left, 4 right, 5 the
