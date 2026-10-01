@@ -4,7 +4,14 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
-## Coming in the next preview
+## Preview, 2026-10-01.4
+
+maki's firmware (maki-firmware `8acb4b03d`), with maki desktop 0.1.3 and the extension 0.1.3 as
+before, on the [download page](https://maki.netslum.io/download/); maki desktop 0.1.3 updates a
+maki on preview 2026-10-01 or later to it. It has run in the emulator: a Google Authenticator
+export of three codes scanned through maki's camera and each time-based code checked against RFC
+6238 as the browser extension gets it, busy QR codes read by the Scanner app, logins and
+passkeys, codes typed from Authenticator. Not yet on a badge.
 
 - **Bring your codes from Google Authenticator.** Its Transfer accounts screen shows QR codes
   that hold every code you pick; maki's Authenticator now takes them (Add from QR code), all the
