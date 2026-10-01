@@ -4,6 +4,34 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
+## Preview, 2026-10-01.5
+
+maki's firmware (maki-firmware `e757cd61b`), with maki desktop 0.1.4 and the extension 0.1.4, on
+the [download page](https://maki.netslum.io/download/); maki desktop updates a maki on preview
+2026-10-01 or later to it, and itself from 0.1.2 on. It has run in the emulator: a child seed
+shown by maki, each of its words found on maki's screen beside its number, as the BIP's steps
+make them on another library's keys; a name tag scanned through maki's camera, its name drawn
+big and its link's QR code read back off the screen; Minesweeper flagged, played, left and
+opened again as it was. Not yet on a badge.
+
+- **Child seeds (BIP-85).** New recovery phrases made from maki's, each a wallet of its own: a
+  phone's hot wallet, someone in your family's, a test's. Child Seeds, in the maki store, picks a
+  number and 12, 18 or 24 words, and maki shows the words itself, a word to a page, as it shows a
+  Monero wallet's: the app never sees them, and they're never in maki's log. maki makes the same
+  words for the same number from the same phrase, so restoring maki restores every child seed;
+  they're what any BIP-85 wallet makes (held to the BIP's own test vectors).
+- **Name Tag**, in the maki store: your name as big as it fits, with a line under it, and a link
+  of yours as a QR code people can scan, read from a QR code you make.
+- **Minesweeper**, in the maki store: twelve mines in a field of eighty, the jog dial for up and
+  down. The first step is always safe, the clock stops while you're away, and it keeps the game
+  and your best time.
+- **For apps** (host API 9): maki's own fonts drawn bigger, each pixel a square of up to eight,
+  for a name tag or a number read across a room; and child seeds' words, shown by maki.
+- **maki desktop** names Child Seeds' keys "child seeds" where it lists an app's wallets, as
+  maki does (it said "coin type 39").
+- The maki store has 35 apps now, and maki keeps 32 at a time: to install another, remove one
+  from maki desktop's Apps page (its data goes with it).
+
 ## Preview, 2026-10-01.4
 
 maki's firmware (maki-firmware `8acb4b03d`), with maki desktop 0.1.3 and the extension 0.1.3 as

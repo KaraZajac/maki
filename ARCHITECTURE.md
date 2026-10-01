@@ -329,6 +329,13 @@ accounts that phrase has always had.
   maki). A Monero wallet also has a backup of its own, the spend key as 25 words that restore it
   in any Monero wallet; maki shows those itself, on its own screens, after asking, when the
   Monero app asks it to (host API 4's `wallet_show_backup`): the words never reach the app.
+- **Child seeds** (BIP-85) are phrases of their own for other wallets, made from maki's: the
+  BIP32 key at `m/83696968'/39'/0'/{words}'/{index}'`, HMAC-SHA512'd under
+  "bip-entropy-from-k", its first 16, 24 or 32 bytes as a BIP39 phrase of 12, 18 or 24 words
+  (`libs/maki-hd`, held to the BIP's own test vectors). The same phrase gives the same child
+  seeds, so restoring maki restores them all. maki shows them as it shows a Monero wallet's
+  words, itself, after asking (host API 9's `wallet_show_backup` on such a path, for an app whose
+  manifest names `m/83696968'/39'/0'`, as Child Seeds does): never to the app, never in the log.
 - **Spending Monero, maki makes the whole transaction.** Monero can't be signed a digest at a
   time: what the signatures sign covers the outputs' keys and the range proof, curve work an app
   can't do in time. So a computer that watches the wallet (with the view key, which the Monero
