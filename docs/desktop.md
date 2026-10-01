@@ -69,8 +69,12 @@ for.
   maki's update drive, starts the new firmware, and waits for maki to link again. Then enter your
   PIN. Your PIN, phrase, name, apps and data stay, as with any update ([Updating
   maki](updates.md)). On Linux, for now. Firmware from before this asks you to put maki in update
-  mode yourself, then carries on.
-- **Update and restart** replaces maki desktop's AppImage with the new one and starts it again.
+  mode yourself, then carries on. The files go only to the maki that restarted for them, never
+  another badge in update mode; if putting them on fails, **Try again** does it again, as maki
+  waits in update mode. maki desktop won't quit or restart while it's putting them on.
+- **Update and restart** replaces maki desktop's AppImage with the new one and starts it again,
+  once any firmware update is done. The browsers and maki's commands (git's signing, age,
+  minisign) start the new one from then on.
 - **maki's apps** update from the [maki store](apps.md), on the Apps page.
 
 ## Wallets

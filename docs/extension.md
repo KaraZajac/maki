@@ -47,7 +47,13 @@ desktop; **Disconnect** takes that away again.
 
 Click into a login field and the extension asks maki. maki shows the site and the login it would
 fill; press, and it fills. More than one login for the site? maki shows each, and you pick. Submit
-a login maki doesn't have, and maki offers to keep it.
+a login maki doesn't have, or a new password on a change-password form, and maki offers to keep
+it.
+
+A field the page puts the cursor in by itself (most login pages do, as they open) gets a **Fill
+from maki** button instead: maki is asked only once you click it, or click into the field. A
+page's script can focus any field, a hidden one too, so the extension waits for you, and asks
+for fields you can see only.
 
 A site maki holds a passkey for gets no question about its password: the passkey is the way in,
 and the extension says so ("maki has a passkey for this site"). **Use password** asks maki for
