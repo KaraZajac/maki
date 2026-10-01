@@ -1,0 +1,267 @@
+From 332ffaaa36746c33d7eaffd81e72b523f20c821e Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Thu, 1 Oct 2026 03:43:24 -0400
+Subject: [PATCH] maki: a control port for tests, and a profile of what the CPU
+ runs
+
+With --usb PORT, PORT+3 takes a test's commands, a line each, and answers each:
+- `press N [D]`: button N, for D instructions (20M if not given); `press 3+4` presses those
+  together (maki's menu chord).
+- `shot NAME`: the screen now, into OUT/NAME.pgm.
+- `screen`: the screen now, as text.
+- `profile L S`: from now, for L instructions, every S, which process runs (satp's ASID, which
+  Xous makes the PID), in which mode, whether the CPU waits, and where: OUT/profile-*.txt.
+- `quit`: stop, as if the last checkpoint had come (the summary, --flash-out, --show-owc).
+
+A test can then install an app over the USB pipe, open it, look at it and close it again, and
+see where a slow launch's time goes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/shot.rs | 194 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 190 insertions(+), 4 deletions(-)
+
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index 562ea5d..d58936c 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -49,7 +49,12 @@
+ //!                     as a TCP server on PORT (maki desktop's fake-maki link, or anything that
+ //!                     speaks maki's protocol), FIDO's 64-byte HID reports on PORT+1, and its
+ //!                     keystrokes (HID usage codes, 0 for all keys up) on PORT+2, which are also
+-//!                     printed as text
++//!                     printed as text; and on PORT+3, a test's commands, a line each:
++//!                     `press N [D]` (button N for D instructions, 20M if not given; N+M for
++//!                     two together), `profile L S` (which process runs, every S instructions
++//!                     for L), `shot NAME`
++//!                     (the screen into OUT/NAME.pgm), `screen` (it as text, then "end") and
++//!                     `quit`
+ //!   --realtime        never let maki's time run ahead of this computer's: it waits rather than
+ //!                     skipping idle time, so a host's timing (heartbeats, timeouts) holds
+ //!   --realtime-from T from instruction count T on (once maki's booted and its PIN's in, say):
+@@ -224,6 +229,108 @@ impl UsbPipe {
+     }
+ }
+ 
++/// `--usb PORT`'s fourth port, PORT+3: a test's commands, one a line, each answered with a line
++/// (or, for `screen`, lines and then "end"):
++///
++///   press N [D]   press button N, for D instructions (20M if not given): "ok"; N+M+…
++///                 presses those together (left and right: maki's menu)
++///   shot NAME     the screen now, into OUT/NAME.pgm: "shot PATH"
++///   screen        the screen now, as text
++///   profile L S   from now, for L instructions, which process runs (satp's ASID, which Xous
++///                 makes the PID), whether the CPU is waiting (WFI) and where, every S
++///                 instructions: "profile PATH" once done, the samples in OUT/profile-*.txt
++///   quit          stop here, as if the last checkpoint had come
++struct Control {
++    listener: std::net::TcpListener,
++    client: Option<std::net::TcpStream>,
++    line: Vec<u8>,
++}
++
++enum Command {
++    Press(Vec<u32>, u64),
++    Shot(String),
++    Screen,
++    Profile(u64, u64),
++    Quit,
++}
++
++/// `N` or `N+M+…`: buttons to press together.
++fn buttons(spec: &str) -> Option<Vec<u32>> {
++    spec.split('+').map(|n| n.parse().ok().filter(|&n: &u32| (n as usize) < BUTTON_NAMES.len())).collect()
++}
++
++impl Control {
++    fn bind(port: u16) -> std::io::Result<Control> {
++        let listener = std::net::TcpListener::bind(("127.0.0.1", port))?;
++        listener.set_nonblocking(true)?;
++        Ok(Control { listener, client: None, line: Vec::new() })
++    }
++
++    /// The commands that came since.
++    fn poll(&mut self, total: u64) -> Vec<Command> {
++        use std::io::{ErrorKind, Read};
++        if self.client.is_none() {
++            if let Ok((stream, peer)) = self.listener.accept() {
++                stream.set_nonblocking(true).ok();
++                stream.set_nodelay(true).ok();
++                println!("[{total:>13}] control: connected from {peer}");
++                self.client = Some(stream);
++                self.line.clear();
++            }
++        }
++        let mut commands = Vec::new();
++        let Some(stream) = self.client.as_mut() else { return commands };
++        let mut buf = [0u8; 1024];
++        loop {
++            match stream.read(&mut buf) {
++                Ok(0) => {
++                    println!("[{total:>13}] control: disconnected");
++                    self.client = None;
++                    break;
++                }
++                Ok(n) => self.line.extend_from_slice(&buf[..n]),
++                Err(err) if err.kind() == ErrorKind::Interrupted => continue,
++                Err(_) => break,
++            }
++        }
++        while let Some(end) = self.line.iter().position(|&b| b == b'\n') {
++            let line: Vec<u8> = self.line.drain(..=end).collect();
++            let line = String::from_utf8_lossy(&line).trim().to_string();
++            let words: Vec<&str> = line.split_whitespace().collect();
++            let command = match words.as_slice() {
++                ["press", n] => buttons(n).map(|n| Command::Press(n, 20_000_000)),
++                ["press", n, d] => buttons(n).zip(parse_count(d)).map(|(n, d)| Command::Press(n, d)),
++                ["shot", name] if name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') => {
++                    Some(Command::Shot(name.to_string()))
++                }
++                ["screen"] => Some(Command::Screen),
++                ["profile", l, s] => parse_count(l).zip(parse_count(s)).filter(|(_, s)| *s > 0).map(|(l, s)| Command::Profile(l, s)),
++                ["quit"] => Some(Command::Quit),
++                [] => continue,
++                _ => None,
++            };
++            match command {
++                Some(c) => commands.push(c),
++                None => self.reply(&format!("error: {line:?}?")),
++            }
++        }
++        commands
++    }
++
++    fn reply(&mut self, text: &str) {
++        use std::io::Write;
++        if let Some(stream) = self.client.as_mut() {
++            // a short answer: blocking for it is fine
++            stream.set_nonblocking(false).ok();
++            if stream.write_all(format!("{text}\n").as_bytes()).is_err() {
++                self.client = None;
++                return;
++            }
++            stream.set_nonblocking(true).ok();
++        }
++    }
++}
++
+ /// A HID keyboard usage as text (US layout), or a name in brackets for keys that aren't text.
+ fn usage_text(code: u8, shift: bool) -> Option<String> {
+     const LOWER: &[u8] = b"abcdefghijklmnopqrstuvwxyz1234567890";
+@@ -687,8 +794,22 @@ fn main() {
+             std::process::exit(1)
+         })
+     });
++    let mut control = a.usb.map(|port| {
++        Control::bind(port + 3).unwrap_or_else(|err| {
++            eprintln!("shot: --usb {port}: control on {}: {err}", port + 3);
++            std::process::exit(1)
++        })
++    });
++    let mut quit = false;
++    // `profile`: until when, how often, the next sample, and the samples
++    let mut profile: Option<(u64, u64, u64, String)> = None;
+     if let Some(port) = a.usb {
+-        println!("shot: maki's USB: serial on 127.0.0.1:{port}, FIDO on {}, keyboard on {}", port + 1, port + 2);
++        println!(
++            "shot: maki's USB: serial on 127.0.0.1:{port}, FIDO on {}, keyboard on {}; control on {}",
++            port + 1,
++            port + 2,
++            port + 3
++        );
+     }
+     // `--realtime`: this computer's clock and maki's when pacing began
+     let mut paced: Option<(std::time::Instant, u64)> = None;
+@@ -706,12 +827,74 @@ fn main() {
+             let chunk = SLICE
+                 .min(at - total)
+                 .min(next_sample.saturating_sub(total).max(1))
+-                .min(rpt_at.saturating_sub(total).max(1));
++                .min(rpt_at.saturating_sub(total).max(1))
++                .min(profile.as_ref().map_or(u64::MAX, |p| p.2.saturating_sub(total).max(1)));
+             baomulator::emu_run(e, chunk as u32, 10);
+             total += chunk;
+             if let Some(pipe) = usb.as_mut() {
+                 pipe.pump(e, total);
+             }
++            if let Some(ctl) = control.as_mut() {
++                for command in ctl.poll(total) {
++                    match command {
++                        Command::Press(btns, dur) => {
++                            for btn in btns {
++                                events.push(Reverse((total + 1, Kind::Press, btn)));
++                                events.push(Reverse((total + 1 + dur, Kind::Release, btn)));
++                            }
++                            ctl.reply("ok");
++                        }
++                        Command::Shot(name) => {
++                            let f = capture(e, total);
++                            let path = format!("{}/{name}.pgm", a.out_dir);
++                            match write_pgm(&path, &f.fb) {
++                                Ok(()) => ctl.reply(&format!("shot {path}")),
++                                Err(err) => ctl.reply(&format!("error: {err}")),
++                            }
++                        }
++                        Command::Screen => {
++                            let f = capture(e, total);
++                            ctl.reply(&format!("{}\nend", ascii_art(&f.fb, true).trim_end()));
++                        }
++                        Command::Profile(len, step) => {
++                            profile = Some((total + len, step, total, String::new()));
++                        }
++                        Command::Quit => {
++                            ctl.reply("ok");
++                            quit = true;
++                        }
++                    }
++                }
++                if quit || events.peek().is_some_and(|Reverse((next, _, _))| *next < at) {
++                    sooner = !quit;
++                    break;
++                }
++            }
++            if let Some((to, step, next, out)) = profile.as_mut() {
++                if total >= *next && total < *to {
++                    let satp = baomulator::emu_dbg_csr(e, 0x180);
++                    out.push_str(&format!(
++                        "{} {} {} {} {:08x}\n",
++                        total,
++                        (satp >> 22) & 0x1ff,
++                        baomulator::emu_dbg_prv(e),
++                        baomulator::emu_dbg_wfi(e) as u8,
++                        baomulator::emu_dbg_pc(e)
++                    ));
++                    *next = total + *step;
++                }
++                if total >= *to {
++                    let path = format!("{}/profile-{total}.txt", a.out_dir);
++                    let written = std::fs::write(&path, out.as_bytes());
++                    if let Some(ctl) = control.as_mut() {
++                        match written {
++                            Ok(()) => ctl.reply(&format!("profile {path}")),
++                            Err(err) => ctl.reply(&format!("error: {err}")),
++                        }
++                    }
++                    profile = None;
++                }
++            }
+             if a.realtime && total >= a.realtime_from && paced.is_none() {
+                 paced = Some((std::time::Instant::now(), baomulator::emu_time_ns(e)));
+                 println!("[{total:>13}] realtime from here");
+@@ -794,8 +977,11 @@ fn main() {
+                 }
+             }
+         }
++        if quit {
++            break;
++        }
+         if sooner {
+-            // an answer comes first: this waits its turn
++            // an answer (or a test's press) comes first: this waits its turn
+             events.push(Reverse((at, kind, btn)));
+             continue;
+         }
+-- 
+2.55.0
+

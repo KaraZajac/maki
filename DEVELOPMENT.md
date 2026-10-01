@@ -230,6 +230,26 @@ python scripts/emu-usb/fido.py                              # python-fido2: make
 python scripts/emu-usb/fido-cancel.py                       # the computer cancels mid-question
 ```
 
+A test drives maki's buttons and looks at its screen on port 7881 (patch 0011): `press N`,
+`press 3+4` (left and right together, maki's menu), `shot NAME`, `screen`, `profile L S` and
+`quit`, a line each (shot.rs says more). With `--answer` saying yes to installs:
+
+```sh
+npx --prefix desktop vite-node scripts/emu-usb/install.ts xous-core/libs/maki-wasm/tests/fixtures/*.maki
+python scripts/emu-usb/apps.py LOG       # each home screen item opened, timed, screenshot, closed
+python scripts/emu-usb/profile.py LOG "4 4 5"   # where the time goes as the third item opens
+```
+
+The emulator's buttons by number: 0 the dial down, 2 the dial up, 3 left, 4 right, 5 the
+centre (shot names 3 and 4 the other way round). Build with `MAKI_TRACE_WASM=1` too and the app
+host logs how long each step of loading an app takes, and each app's first frame.
+
+A run's storage carries on into the next with `--flash-out` and `--flash-in`, but the chip's
+one-way counters don't: maki counts PIN tries on counter 192, and storage from a run whose
+counter was ahead of the next run's looks like a copy put back, so maki wipes it at the PIN.
+End a run with `--show-owc 192` (or the control port's `quit`, which prints it) and start the
+next with `--owc 192=N`.
+
 Screenshots land in `.emu/shots/*.png`. Buttons for `--press N@T`: `3` is maki's left, `4` its
 right and `5` the centre; `3` and `4` together are the menu. (Baomulator names `3` and `4` the
 other way round, as Right and Left.) The emulator runs at
