@@ -4,7 +4,13 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
-## Coming in the next preview
+## Preview, 2026-10-01.2
+
+The morning's preview again, with fixes: maki's firmware (maki-firmware `0cf07cd06`), maki desktop
+0.1.3 and the extension 0.1.3 (maki-desktop `d45c4dd`), on the
+[download page](https://maki.netslum.io/download/). maki desktop 0.1.2 updates itself to 0.1.3,
+which updates a maki on the morning's preview to this one; a maki on anything older is flashed by
+hand. The fixes have run in the emulator.
 
 - **Codes from most sites' QR codes work.** A QR code that names no algorithm, as GitHub's and
   Google's don't, means SHA1, but maki saved its code as having none and could never read it back:
@@ -13,7 +19,10 @@ one, maki was built a day at a time, and that's here too.
   and one record maki can't read no longer hides the rest. The stock badge's vault has the same bug.
 - **The clock on a question keeps time:** the bar over an ask showed the minute it appeared in.
 - **maki's serial port carries only maki's link:** the log, which an app could have had mirrored
-  onto it, goes there only when a console asks, and maki has none.
+  onto it, goes there only when a console asks, and maki has none. And a scanned code that would
+  add a login (not supported) no longer puts its password in maki's log.
+- **A second release the same day is an update:** maki desktop read this one as the morning's
+  day, and would have told a maki on the morning's preview it was ahead.
 - **The emulator** waits for this computer's clock when maki is idle, so the host's bytes reach it
   at once (a store install took 12 minutes, now under a minute), keeps maki's clock running (it
   stood still), and shows maki's camera a picture: tests install every app from the store as maki
