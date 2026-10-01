@@ -457,9 +457,9 @@ and developer key), and `scripts/check.sh` rebuilds every app from its source an
 `scripts/sdk.txt` pins; its CI runs them on each pull request, for the apps it touches, and on
 every app weekly. `scripts/publish.sh CATALOGUE.key DAYS` stamps each app's newest bundle, signs
 the revocation list again if `revocations.txt` changed, and signs a new index, whose version is
-the hour (UTC, YYYYMMDDHH) so it always goes up. Its eleven apps are Pomodoro, Age, Nostr, Wi-Fi,
-Passphrase, Snake, Status, Dice, Tally, Sensors and SSH; it's signed with the development keys,
-for ten years, as the development store is. maki desktop reads it straight from GitHub; a store
+the hour (UTC, YYYYMMDDHH) so it always goes up. It has 31 apps, the SDK's examples (all but
+Hello, Hello Native and Signer); it's signed with the development keys, for ten years, as the
+development store is. maki desktop reads it straight from GitHub; a store
 in a private repository needs a token, `MAKI_STORE_TOKEN=$(gh auth token) npm --prefix desktop
 run dev`. Its README says how an app gets in.
 
@@ -468,8 +468,8 @@ from the development store's root: `xous-core/libs/maki-store/dev-store`, made b
 from keys that are never committed (they live outside the repos; anyone can make a new set and
 run it again, since nothing flashed trusts them yet). Its root 2 replaces root 1's catalogue key,
 so maki and maki desktop have to follow the chain before anything else checks out; its apps are
-the SDK's examples, stamped; its revocation list revokes Tally 1, which isn't in it, to show a
-revocation covering a sideloaded app. Try it with the fake maki:
+the SDK's examples, stamped; its revocation list revokes Tally up to version 2, which isn't in
+it, to show a revocation covering a sideloaded app. Try it with the fake maki:
 
 ```sh
 (cd xous-core && cargo run -p maki-proto --features fake --example fake_maki -- --clock-verified) &
