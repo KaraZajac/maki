@@ -123,16 +123,21 @@ export function finderCount(img: Uint8Array, w: number, h: number): number {
 
 // the QR code as maki's camera should see it: at the size it captures, so nothing's resampled,
 // with square modules a whole number of pixels wide, dark on white, in the middle. maki's
-// camera sees it still, as a real one never would: of the eight masks, the first whose data
-// doesn't look like a fourth finder to bao-video
-export function qrPicture(text: string): string {
+// camera sees it still, as a real one never would: of the eight masks, the first in which
+// bao-video finds `finders` finder-like patterns (3, the code's own, unless a test wants a code
+// whose data looks like more); null if no mask gives that many. `ecc`: the code's error correction,
+// lower for a long text (bigger modules: maki's camera sees 256 by 240 pixels)
+export function qrPicture(
+  text: string,
+  finders = 3,
+  ecc: 'low' | 'medium' | 'quartile' | 'high' = 'medium'
+): string | null {
   const [w, h] = [256, 240]
-  let pixels = Buffer.alloc(0)
   for (let mask = 0; mask < 8; mask++) {
-    const modules = encodeQR(text, 'raw', { mask }) // with a quiet zone of its own
+    const modules = encodeQR(text, 'raw', { mask, ecc }) // with a quiet zone of its own
     const scale = Math.floor(Math.min(w, h) / modules.length)
     const [ox, oy] = [(w - modules.length * scale) >> 1, (h - modules.length * scale) >> 1]
-    pixels = Buffer.alloc(w * h, 0xff)
+    const pixels = Buffer.alloc(w * h, 0xff)
     modules.forEach((row, y) =>
       row.forEach((dark, x) => {
         if (!dark) return
@@ -142,16 +147,14 @@ export function qrPicture(text: string): string {
         }
       })
     )
-    const finders = finderCount(pixels, w, h)
-    if (finders === 3) {
-      console.log(`QR code with mask ${mask}`)
-      break
+    const found = finderCount(pixels, w, h)
+    if (found === finders) {
+      const path = join(tmpdir(), `maki-qr-${process.pid}-${mask}.pgm`)
+      writeFileSync(path, Buffer.concat([Buffer.from(`P5\n${w} ${h}\n255\n`), pixels]))
+      return path
     }
-    console.log(`QR code with mask ${mask}: ${finders} finders as bao-video looks`)
   }
-  const path = join(tmpdir(), `maki-totp-${process.pid}.pgm`)
-  writeFileSync(path, Buffer.concat([Buffer.from(`P5\n${w} ${h}\n255\n`), pixels]))
-  return path
+  return null
 }
 
 /** The home screen's items, as maki orders them: by name, whatever the case. */

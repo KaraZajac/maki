@@ -52,7 +52,9 @@ await sleep(3000)
 // first item; a press on an empty list scans too, but on a code it types the code)
 const unreadable = log.since(0).match(/Couldn't deserialize TOTP.*$/m)
 console.log(`codes maki couldn't read: ${unreadable ? unreadable[0] : 'none'}`)
-console.log(`camera: ${await ctl.send(`camera ${qrPicture(URI)}`)}`)
+const picture = qrPicture(URI)
+if (!picture) throw new Error('no mask gives the code three finders, as bao-video looks')
+console.log(`camera: ${await ctl.send(`camera ${picture}`)}`)
 let at = log.size()
 await ctl.press('3+4', 1500)
 await ctl.press(CENTRE, 0)
@@ -69,7 +71,7 @@ if (!scanned) throw new Error("maki's camera didn't read the code")
 // 4. a code for a site, as the browser extension asks: maki asks "Code from?" and --answer
 // says yes
 let from = Math.floor(Date.now() / 1000)
-const r = (await link.fromBrowser({ id: 0, type: 'getTotp', site: 'example.com' })) as { code?: string }
+const r = (await link.fromBrowser({ id: 0, type: 'getTotp', site: 'maki-test.example' })) as { code?: string }
 check('the code the extension gets', r.code ?? '', from, Math.floor(Date.now() / 1000))
 
 // 5. Authenticator's own "type code": the keystrokes maki types over USB

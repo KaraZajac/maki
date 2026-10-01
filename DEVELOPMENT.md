@@ -249,6 +249,7 @@ python scripts/emu-usb/apps.py LOG       # each home screen item opened, timed, 
 python scripts/emu-usb/profile.py LOG "4 4 5"   # where the time goes as the third item opens
 npx --prefix desktop vite-node scripts/emu-usb/totp.ts LOG   # a code's QR code scanned, its codes checked
 npx --prefix desktop vite-node scripts/emu-usb/scanner.ts LOG   # Scanner reads a code and types it
+npx --prefix desktop vite-node scripts/emu-usb/import.ts LOG   # a Google Authenticator export, imported
 MAKI_FIDO_PYTHON=venv/bin/python npx --prefix desktop vite-node scripts/emu-usb/logins.ts   # passkey first
 ```
 

@@ -4,6 +4,25 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
+## Coming in the next preview
+
+- **Bring your codes from Google Authenticator.** Its Transfer accounts screen shows QR codes
+  that hold every code you pick; maki's Authenticator now takes them (Add from QR code), all the
+  codes of one at a time, and says how many it got and whether there's another QR code to scan.
+  Pick a few codes per QR code: maki's camera sees 256 by 240 pixels, and a code of many is dense.
+- **QR codes that wouldn't scan, scan.** maki tried to decode only a picture with exactly three
+  of the squares a QR code has in its corners; a dense code's own data often looks like a few
+  more, and such a code, held still, never scanned. A picture with three to twelve now goes to
+  the decoder, which finds the code's own.
+- **After a scan, Authenticator shows the code you added.** Enrolling a site's two-factor login,
+  the site asks for the code next; the list stayed on whatever it showed before. (An import shows
+  the first code it brought.)
+- **A code scanned again keeps its sites.** Scanning or importing a code maki already had (the
+  same account, its secret perhaps new) forgot which sites it gave codes for, so the browser was
+  asked again which code a site uses.
+- **2048**, in the maki store: slide the tiles with left and right and the jog dial; it keeps the
+  game and your best score.
+
 ## Preview, 2026-10-01.3
 
 maki's firmware (maki-firmware `0181b4633`), with maki desktop 0.1.3 and the extension 0.1.3 as
