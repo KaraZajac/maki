@@ -4,6 +4,21 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
+## Coming in the next preview
+
+- **Codes from most sites' QR codes work.** A QR code that names no algorithm, as GitHub's and
+  Google's don't, means SHA1, but maki saved its code as having none and could never read it back:
+  it didn't show in Authenticator, and every other code went unavailable to the browser extension
+  with it. Such codes now come out SHA1, codes already saved that way read back as what they were,
+  and one record maki can't read no longer hides the rest. The stock badge's vault has the same bug.
+- **The clock on a question keeps time:** the bar over an ask showed the minute it appeared in.
+- **maki's serial port carries only maki's link:** the log, which an app could have had mirrored
+  onto it, goes there only when a console asks, and maki has none.
+- **The emulator** waits for this computer's clock when maki is idle, so the host's bytes reach it
+  at once (a store install took 12 minutes, now under a minute), keeps maki's clock running (it
+  stood still), and shows maki's camera a picture: tests install every app from the store as maki
+  desktop does, and scan a TOTP code's QR code and check maki's codes against RFC 6238.
+
 ## Preview, 2026-10-01
 
 maki's firmware (maki-firmware `4375d3b32`), maki desktop 0.1.2 for Linux and the extension 0.1.2

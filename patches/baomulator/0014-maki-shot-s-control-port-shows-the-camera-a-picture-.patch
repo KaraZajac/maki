@@ -1,0 +1,128 @@
+From 6cc62a1300249345e77aa4616fc12ee30cb20891 Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Thu, 1 Oct 2026 10:10:19 -0400
+Subject: [PATCH] maki: shot's control port shows the camera a picture (camera
+ PATH)
+
+`camera PATH` latches a greyscale PGM as what the camera sees, until `camera` alone puts the
+built-in test QR back: a test can have maki scan a QR code of its own, a TOTP code's say. The
+camera sees it perfectly still, as a real one never would, so bao-video's finder search (which
+wants exactly three finders) must find three in it as it stands.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/shot.rs | 69 +++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 67 insertions(+), 2 deletions(-)
+
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index 3ecfdc4..5babe79 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -53,8 +53,9 @@
+ //!                     `press N [D]` (button N for D instructions, 20M if not given; N+M for
+ //!                     two together), `profile L S` (which process runs, every S instructions
+ //!                     for L), `shot NAME`
+-//!                     (the screen into OUT/NAME.pgm), `screen` (it as text, then "end") and
+-//!                     `quit`
++//!                     (the screen into OUT/NAME.pgm), `screen` (it as text, then "end"),
++//!                     `camera PATH` (what the camera sees from then on: a greyscale PGM,
++//!                     `camera` alone for the built-in test QR again) and `quit`
+ //!   --realtime        never let maki's time run ahead of this computer's: asleep, it waits
+ //!                     for the clock (and wakes for the host's bytes) rather than skipping to
+ //!                     its next timer, so a host's timing (heartbeats, timeouts) holds. Counts
+@@ -253,6 +254,8 @@ enum Command {
+     Shot(String),
+     Screen,
+     Profile(u64, u64),
++    /// a picture for the camera (a PGM's path), or none: the built-in test QR again
++    Camera(Option<String>),
+     Quit,
+ }
+ 
+@@ -308,6 +311,8 @@ impl Control {
+                 ["screen"] => Some(Command::Screen),
+                 ["profile", l, s] => parse_count(l).zip(parse_count(s)).filter(|(_, s)| *s > 0).map(|(l, s)| Command::Profile(l, s)),
+                 ["quit"] => Some(Command::Quit),
++                ["camera"] => Some(Command::Camera(None)),
++                ["camera", path] => Some(Command::Camera(Some(path.to_string()))),
+                 [] => continue,
+                 _ => None,
+             };
+@@ -643,6 +648,43 @@ fn ascii_art(fb: &[u8], half: bool) -> String {
+ }
+ 
+ /// Binary PGM (P5), 8-bit gray, 128x128 — readable by any image tool.
++/// maki: a binary greyscale PGM (P5, 8 bits): its width, height and pixels.
++fn read_pgm(path: &str) -> Result<(u32, u32, Vec<u8>), String> {
++    let data = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
++    // the header: P5, width, height, maxval, each after whitespace or a comment line
++    let mut fields = Vec::new();
++    let mut at = 0;
++    while fields.len() < 4 {
++        while at < data.len() && (data[at].is_ascii_whitespace() || data[at] == b'#') {
++            if data[at] == b'#' {
++                while at < data.len() && data[at] != b'\n' {
++                    at += 1;
++                }
++            }
++            at += 1;
++        }
++        let start = at;
++        while at < data.len() && !data[at].is_ascii_whitespace() {
++            at += 1;
++        }
++        if start == at {
++            return Err(format!("{path}: not a PGM"));
++        }
++        fields.push(String::from_utf8_lossy(&data[start..at]).to_string());
++    }
++    let num = |s: &str| s.parse::<u32>().map_err(|_| format!("{path}: not a PGM"));
++    if fields[0] != "P5" || num(&fields[3])? != 255 {
++        return Err(format!("{path}: only 8-bit binary PGMs (P5)"));
++    }
++    let (w, h) = (num(&fields[1])?, num(&fields[2])?);
++    let pixels = data.get(at + 1..).unwrap_or_default();
++    let n = w as usize * h as usize;
++    if w < 2 || h == 0 || pixels.len() < n {
++        return Err(format!("{path}: {w}x{h}, but {} bytes of pixels", pixels.len()));
++    }
++    Ok((w, h, pixels[..n].to_vec()))
++}
++
+ fn write_pgm(path: &str, fb: &[u8]) -> std::io::Result<()> {
+     use std::io::Write;
+     let mut out = Vec::with_capacity(20 + W * H);
+@@ -877,6 +919,29 @@ fn main() {
+                         Command::Profile(len, step) => {
+                             profile = Some((total + len, step, total, String::new()));
+                         }
++                        Command::Camera(None) => {
++                            baomulator::emu_camera_clear(e);
++                            ctl.reply("ok");
++                        }
++                        Command::Camera(Some(path)) => match read_pgm(&path) {
++                            Ok((w, h, grey)) => {
++                                // UYVY, grey: each pair of pixels' luma, neutral chroma (an odd
++                                // width loses its last column)
++                                let even = (w & !1) as usize;
++                                let mut uyvy = Vec::with_capacity(even * h as usize * 2);
++                                for row in grey.chunks(w as usize) {
++                                    for pair in row[..even].chunks(2) {
++                                        uyvy.extend_from_slice(&[0x80, pair[0], 0x80, pair[1]]);
++                                    }
++                                }
++                                if baomulator::emu_camera_frame(e, uyvy.as_ptr(), even as u32, h) {
++                                    ctl.reply("ok");
++                                } else {
++                                    ctl.reply("error: the camera won't take that size");
++                                }
++                            }
++                            Err(err) => ctl.reply(&format!("error: {err}")),
++                        },
+                         Command::Quit => {
+                             ctl.reply("ok");
+                             quit = true;
+-- 
+2.55.0
+
