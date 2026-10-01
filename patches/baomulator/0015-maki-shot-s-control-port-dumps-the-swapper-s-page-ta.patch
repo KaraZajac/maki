@@ -1,0 +1,110 @@
+From d03c4468e9ce31f0b8dc0c932b3496f8afb2fa03 Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Thu, 1 Oct 2026 11:41:24 -0400
+Subject: [PATCH] maki: shot's control port dumps the swapper's page table (rpt
+ NAME)
+
+`rpt NAME` writes who holds each of RAM's 512 pages, and when it was last used, into
+OUT/rpt-NAME.txt, at a moment a test chooses (--rpt takes counts fixed at the start): before and
+after an app opens, say. It reads the table where --rpt says, or where maki's loader puts it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/shot.rs | 45 ++++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 34 insertions(+), 11 deletions(-)
+
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index 5babe79..aba3a95 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -55,7 +55,8 @@
+ //!                     for L), `shot NAME`
+ //!                     (the screen into OUT/NAME.pgm), `screen` (it as text, then "end"),
+ //!                     `camera PATH` (what the camera sees from then on: a greyscale PGM,
+-//!                     `camera` alone for the built-in test QR again) and `quit`
++//!                     `camera` alone for the built-in test QR again), `rpt NAME` (the
++//!                     swapper's page table now, into OUT/rpt-NAME.txt) and `quit`
+ //!   --realtime        never let maki's time run ahead of this computer's: asleep, it waits
+ //!                     for the clock (and wakes for the host's bytes) rather than skipping to
+ //!                     its next timer, so a host's timing (heartbeats, timeouts) holds. Counts
+@@ -256,6 +257,8 @@ enum Command {
+     Profile(u64, u64),
+     /// a picture for the camera (a PGM's path), or none: the built-in test QR again
+     Camera(Option<String>),
++    /// the swapper's page table now, into OUT/rpt-NAME.txt
++    PageTable(String),
+     Quit,
+ }
+ 
+@@ -312,6 +315,9 @@ impl Control {
+                 ["profile", l, s] => parse_count(l).zip(parse_count(s)).filter(|(_, s)| *s > 0).map(|(l, s)| Command::Profile(l, s)),
+                 ["quit"] => Some(Command::Quit),
+                 ["camera"] => Some(Command::Camera(None)),
++                ["rpt", name] if name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') => {
++                    Some(Command::PageTable(name.to_string()))
++                }
+                 ["camera", path] => Some(Command::Camera(Some(path.to_string()))),
+                 [] => continue,
+                 _ => None,
+@@ -648,6 +654,22 @@ fn ascii_art(fb: &[u8], half: bool) -> String {
+ }
+ 
+ /// Binary PGM (P5), 8-bit gray, 128x128 — readable by any image tool.
++/// The swapper's page table at `base` (its RPT: who has each of RAM's 512 pages, and when it
++/// was last used), a line a page: index, PID, flags, virtual address, date; and the newest date.
++fn page_table(e: *mut baomulator::Emulator, base: u32) -> (String, u32) {
++    let mut dump = String::new();
++    let mut newest = 0u32;
++    for i in 0..512u32 {
++        let ts = baomulator::emu_dbg_read32(e, base + i * 8);
++        let vpn = baomulator::emu_dbg_read32(e, base + i * 8 + 4);
++        if vpn & 0xff != 0 {
++            newest = newest.max(ts);
++        }
++        dump.push_str(&format!("{i} {} {:x} {:08x} {ts}\n", vpn & 0xff, (vpn >> 8) & 0xf, vpn & !0xfff));
++    }
++    (dump, newest)
++}
++
+ /// maki: a binary greyscale PGM (P5, 8 bits): its width, height and pixels.
+ fn read_pgm(path: &str) -> Result<(u32, u32, Vec<u8>), String> {
+     let data = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+@@ -923,6 +945,16 @@ fn main() {
+                             baomulator::emu_camera_clear(e);
+                             ctl.reply("ok");
+                         }
++                        Command::PageTable(name) => {
++                            // the --rpt address if one was given, else where maki's loader puts it
++                            let base = a.rpt.first().map_or(0x611f_4000, |&(_, addr)| addr);
++                            let (dump, newest) = page_table(e, base);
++                            let path = format!("{}/rpt-{name}.txt", a.out_dir);
++                            match std::fs::write(&path, &dump) {
++                                Ok(()) => ctl.reply(&format!("rpt {path} (page clock about {newest})")),
++                                Err(err) => ctl.reply(&format!("error: {err}")),
++                            }
++                        }
+                         Command::Camera(Some(path)) => match read_pgm(&path) {
+                             Ok((w, h, grey)) => {
+                                 // UYVY, grey: each pair of pixels' luma, neutral chroma (an odd
+@@ -995,16 +1027,7 @@ fn main() {
+             }
+             while total >= rpt_at {
+                 let base = rpt_next.unwrap().1;
+-                let mut dump = String::new();
+-                let mut newest = 0u32;
+-                for i in 0..512u32 {
+-                    let ts = baomulator::emu_dbg_read32(e, base + i * 8);
+-                    let vpn = baomulator::emu_dbg_read32(e, base + i * 8 + 4);
+-                    if vpn & 0xff != 0 {
+-                        newest = newest.max(ts);
+-                    }
+-                    dump.push_str(&format!("{i} {} {:x} {:08x} {ts}\n", vpn & 0xff, (vpn >> 8) & 0xf, vpn & !0xfff));
+-                }
++                let (dump, newest) = page_table(e, base);
+                 let path = format!("{}/rpt-{rpt_at}.txt", a.out_dir);
+                 std::fs::write(&path, &dump).ok();
+                 std::fs::write(format!("{}/rpt.txt", a.out_dir), &dump).ok();
+-- 
+2.55.0
+

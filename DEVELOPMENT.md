@@ -236,8 +236,9 @@ python scripts/emu-usb/fido-cancel.py                       # the computer cance
 
 A test drives maki's buttons and looks at its screen on port 7881 (patch 0011): `press N`,
 `press 3+4` (left and right together, maki's menu), `shot NAME`, `screen`, `profile L S`,
-`camera PATH` (what maki's camera sees, a PGM, until `camera` alone; patch 0014) and `quit`, a
-line each (shot.rs says more); `scripts/emu-usb/emu.ts` has them for the tests, with opening a home
+`camera PATH` (what maki's camera sees, a PGM, until `camera` alone; patch 0014), `rpt NAME`
+(who holds each page of RAM, from the swapper's page table; patch 0015) and `quit`, a line each
+(shot.rs says more); `scripts/emu-usb/emu.ts` has them for the tests, with opening a home
 screen item by name and QR codes drawn for maki's camera. With `--answer` saying yes to installs:
 
 ```sh
