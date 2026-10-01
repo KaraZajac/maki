@@ -68,6 +68,11 @@ def shot(name):
         return path
 
 
+# the app host's items, from when they were registered; the rest are maki's own screens
+hosted = set(re.findall(r"registered app '([^']+)' \(_maki app host_\)", log_since(0)))
+# an app can take a minute or more to open in the emulator (a badge is several times faster)
+OPEN_S = 180
+
 seen = []
 results = []
 for i in range(64):
@@ -83,11 +88,11 @@ for i in range(64):
     seen.append(name)
     # an app of the app host's says when it runs, then when its first frame is up; maki's own
     # screens (Passkeys, say) say neither
-    running = wait_for(r"running (\S+)\s", at, 15)
+    running = wait_for(r"running (\S+)\s", at, OPEN_S if name in hosted else 15)
     first = None
     if running:
         app = re.escape(running.group(1))
-        first = wait_for(app + r": first frame after (\d+) ms", at, 120)
+        first = wait_for(app + r": first frame after (\d+) ms", at, OPEN_S)
     time.sleep(3)
     picture = shot(f"{i:02d}-{re.sub('[^A-Za-z0-9]+', '-', name).strip('-').lower()}")
     trouble = re.findall(r"(?im)^.*(?:crash|panick|not responding|aborted|trap).*$", log_since(at))
@@ -97,6 +102,9 @@ for i in range(64):
     press(LEFT, gap=0.5)
     press(CENTRE, gap=0.8)
     closed = wait_for(r"exited from its menu|returned to the home screen", at, 15)
+    # and stopped, before the next one: the app host runs one app at a time
+    if running:
+        wait_for(re.escape(running.group(1)) + r" stopped", at, 60)
     frame = f"{first.group(1)} ms" if first else "no frame"
     results.append((name, frame, bool(closed), trouble))
     print(f"{name}: first frame {frame}, {'closed' if closed else 'NOT CLOSED'}"

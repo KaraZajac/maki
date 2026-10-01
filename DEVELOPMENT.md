@@ -218,7 +218,10 @@ port on 7878, where maki desktop's "Use fake maki" and its client connect as to 
 FIDO's 64-byte HID reports on 7879; keystrokes on 7880 (HID usages, printed as text too). A host
 waits on time (maki-link drops the link after 25 s without a frame, CTAPHID allows 100 ms between
 a message's packets), so pace the emulator to real time once maki is up: `--realtime-from 8G`
-(scripted presses before then keep their timing). `--console-live` prints maki's log as it
+(scripted presses before then keep their timing). Paced, an idle maki waits for this computer's
+clock instead of skipping to its next timer, and wakes for the host's bytes as a badge's USB
+interrupt would wake it (patch 0012); counts after that (presses, answers, profiles) are of time,
+10 ns each. `--console-live` prints maki's log as it
 comes, and `--answer` says yes on maki's screen. With a demo build (`MAKI_DEMO=1`, so the PIN
 script works) and the storage of a set-up maki:
 
@@ -236,6 +239,7 @@ A test drives maki's buttons and looks at its screen on port 7881 (patch 0011): 
 
 ```sh
 npx --prefix desktop vite-node scripts/emu-usb/install.ts xous-core/libs/maki-wasm/tests/fixtures/*.maki
+npx --prefix desktop vite-node scripts/emu-usb/store-install.ts   # or as maki desktop does, from apps/store
 python scripts/emu-usb/apps.py LOG       # each home screen item opened, timed, screenshot, closed
 python scripts/emu-usb/profile.py LOG "4 4 5"   # where the time goes as the third item opens
 ```

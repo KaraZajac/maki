@@ -1,0 +1,191 @@
+From de44773737ad7a6865bd820f042d38785d0171eb Mon Sep 17 00:00:00 2001
+From: Kara Zajac <kara@soulstone.org>
+Date: Thu, 1 Oct 2026 08:46:57 -0400
+Subject: [PATCH] maki: under --realtime, an idle core waits for the host's
+ clock rather than leaping to its next timer
+
+Asleep with nothing pending, the core skipped straight to its next timer's deadline, however far,
+and --realtime then held the whole emulator until this computer's clock caught up, the host's
+bytes waiting meanwhile: a minute or more per round trip. On a badge, USB's interrupt would wake
+it at once. Now the Machine has an idle limit (emu_set_idle_limit) an asleep core skips no
+further than, and emu_run returns there; shot holds it a few milliseconds ahead of the host's
+clock, sleeps that long, and wakes maki for the host's bytes. Paced, a slice counts the time it
+took (10 ns each), so presses, answers and profiles keep their lengths in time.
+
+A store install of an 87 KB app: about 25 s, from 12 minutes for one of 248 KB.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KrrQLcb6MfwT6Kc7SresSY
+---
+ src/bin/shot.rs | 26 ++++++++++++++++++++++----
+ src/bus.rs      | 11 +++++++++++
+ src/cpu.rs      | 12 ++++++++++--
+ src/lib.rs      | 20 ++++++++++++++++++--
+ 4 files changed, 61 insertions(+), 8 deletions(-)
+
+diff --git a/src/bin/shot.rs b/src/bin/shot.rs
+index d58936c..3ecfdc4 100644
+--- a/src/bin/shot.rs
++++ b/src/bin/shot.rs
+@@ -55,8 +55,10 @@
+ //!                     for L), `shot NAME`
+ //!                     (the screen into OUT/NAME.pgm), `screen` (it as text, then "end") and
+ //!                     `quit`
+-//!   --realtime        never let maki's time run ahead of this computer's: it waits rather than
+-//!                     skipping idle time, so a host's timing (heartbeats, timeouts) holds
++//!   --realtime        never let maki's time run ahead of this computer's: asleep, it waits
++//!                     for the clock (and wakes for the host's bytes) rather than skipping to
++//!                     its next timer, so a host's timing (heartbeats, timeouts) holds. Counts
++//!                     (presses, answers, profiles) are then of time: 10 ns each
+ //!   --realtime-from T from instruction count T on (once maki's booted and its PIN's in, say):
+ //!                     before then, as fast as it goes
+ //!   --console-live    print maki's console as it comes, a line at a time
+@@ -815,6 +817,10 @@ fn main() {
+     let mut paced: Option<(std::time::Instant, u64)> = None;
+     // Run in slices so virtual time advances the same way as the web UI does.
+     const SLICE: u64 = 10_000_000;
++    const NS_PER_INSN: u64 = 10;
++    // `--realtime`: how far an asleep maki may run ahead of this computer's clock, which is
++    // about how long the loop below sleeps at a time while it waits
++    const IDLE_AHEAD_NS: u64 = 4_000_000;
+     let mut samples = String::new();
+     a.rpt.sort();
+     let mut rpts = a.rpt.clone().into_iter();
+@@ -829,8 +835,20 @@ fn main() {
+                 .min(next_sample.saturating_sub(total).max(1))
+                 .min(rpt_at.saturating_sub(total).max(1))
+                 .min(profile.as_ref().map_or(u64::MAX, |p| p.2.saturating_sub(total).max(1)));
+-            baomulator::emu_run(e, chunk as u32, 10);
+-            total += chunk;
++            // `--realtime`: an asleep maki skips no further than this computer's clock (nor past
++            // this slice), so the host's bytes reach it as they come, as a badge's USB interrupt
++            // would wake it, rather than once its next timer is due; the slice then counts the
++            // time it took rather than its budget
++            let start = baomulator::emu_time_ns(e);
++            if let Some((wall, emu)) = paced {
++                let now = emu + wall.elapsed().as_nanos() as u64 + IDLE_AHEAD_NS;
++                baomulator::emu_set_idle_limit(e, now.min(start + chunk * NS_PER_INSN));
++            }
++            baomulator::emu_run(e, chunk as u32, NS_PER_INSN as u32);
++            total += match paced {
++                Some(_) => (baomulator::emu_time_ns(e) - start) / NS_PER_INSN,
++                None => chunk,
++            };
+             if let Some(pipe) = usb.as_mut() {
+                 pipe.pump(e, total);
+             }
+diff --git a/src/bus.rs b/src/bus.rs
+index 8e5ca86..64748ba 100644
+--- a/src/bus.rs
++++ b/src/bus.rs
+@@ -52,6 +52,10 @@ pub struct Machine {
+     code_pg: Box<[u8]>,
+     /// instrumentation: number of code-invalidation events
+     pub code_inval: u64,
++    /// maki: virtual time an idle core may not skip past (`u64::MAX`: no bound). shot's
++    /// `--realtime` holds it just ahead of the host's clock, so an asleep core waits for the
++    /// clock, and for the host's input, rather than leaping to its next timer.
++    pub idle_limit_ns: u64,
+ }
+ 
+ impl Machine {
+@@ -69,6 +73,7 @@ impl Machine {
+             code_gen: 1,
+             code_pg: vec![0u8; CODE_PG_LEN].into_boxed_slice(),
+             code_inval: 0,
++            idle_limit_ns: u64::MAX,
+         };
+         // Baochip-1x memory regions (utralib/src/generated/bao1x.rs)
+         mach.add_region(0x5000_0000, 0x20000, true); // IFRAM0 (128 KiB)
+@@ -432,6 +437,12 @@ impl Machine {
+         self.soc.irq_invalidate();
+     }
+ 
++    /// maki: how far an idle core may still skip (see `idle_limit_ns`); 0 = it must stop here.
++    #[inline]
++    pub fn idle_room(&self) -> u64 {
++        self.idle_limit_ns.saturating_sub(self.time_ns())
++    }
++
+     /// Current virtual time in microseconds (CSR `time` reads).
+     pub fn time(&self) -> u64 {
+         self.time_ns() / 1000
+diff --git a/src/cpu.rs b/src/cpu.rs
+index 244c05b..0f81a2e 100644
+--- a/src/cpu.rs
++++ b/src/cpu.rs
+@@ -913,15 +913,23 @@ impl Cpu {
+                     // time can wake the core — only host input or an MMIO write
+                     // can. Fall back to the old quantum there; it is bounded
+                     // work, and the browser paces wall-clock time separately.
++                    //
++                    // maki: and never past `idle_limit_ns`. There the slice ends with
++                    // `asleep` = 2, so the caller can wait for its clock or its input.
++                    let room = mach.idle_room();
++                    if room == 0 {
++                        asleep = 2;
++                        break;
++                    }
+                     let dt = mach.next_irq_dt();
+                     self.instret += 1;
+                     n += 1;
+                     asleep = 1;
+                     if dt == u64::MAX {
+-                        mach.tick(ns * 2048);
++                        mach.tick((ns * 2048).min(room));
+                         continue;
+                     }
+-                    mach.tick(dt.max(ns));
++                    mach.tick(dt.max(ns).min(room));
+                     break;
+                 }
+                 self.wfi = false;
+diff --git a/src/lib.rs b/src/lib.rs
+index 2c6649c..804afcc 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -381,6 +381,11 @@ pub extern "C" fn emu_run(e: *mut Emulator, max_insns: u32, ns_per_insn: u32) ->
+             let (n, a) = e.cpu.run_slice(&mut e.mach, mip, budget, ns);
+             i += n;
+             asleep = a;
++            // maki: asleep at `idle_limit_ns`: the rest of the slice is the caller's to wait
++            if a == 2 {
++                asleep = 1;
++                break;
++            }
+         }
+         e.mach.settle();
+         e.dump_kick1();
+@@ -423,9 +428,13 @@ pub extern "C" fn emu_run(e: *mut Emulator, max_insns: u32, ns_per_insn: u32) ->
+             }
+         }
+         if was_wfi && e.cpu.wfi {
+-            // stayed asleep: fast-forward virtual time
+-            e.mach.tick(ns_per_insn as u64 * 2048);
++            // stayed asleep: fast-forward virtual time (maki: no further than `idle_limit_ns`)
++            let room = e.mach.idle_room();
+             asleep = 1;
++            if room == 0 {
++                break;
++            }
++            e.mach.tick((ns_per_insn as u64 * 2048).min(room));
+         } else {
+             e.mach.tick(ns_per_insn as u64);
+             asleep = 0;
+@@ -486,6 +495,13 @@ pub extern "C" fn emu_time_ns(e: *mut Emulator) -> u64 {
+     unsafe { &mut *e }.mach.time_ns()
+ }
+ 
++/// maki: an idle core skips no further than `ns` of virtual time, and `emu_run` returns there
++/// (`u64::MAX`, the default: no bound). For pacing to a host clock: see shot's `--realtime`.
++#[no_mangle]
++pub extern "C" fn emu_set_idle_limit(e: *mut Emulator, ns: u64) {
++    unsafe { &mut *e }.mach.idle_limit_ns = ns;
++}
++
+ /// maki: what maki's USB service has written on pipe channel `chan` (0 serial, 1 FIDO, 2
+ /// keyboard) since the last call. See `bus::devices::udc`.
+ pub fn emu_pipe_take(e: *mut Emulator, chan: usize) -> Vec<u8> {
+-- 
+2.55.0
+
