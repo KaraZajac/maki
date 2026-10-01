@@ -6,8 +6,11 @@ import { readFileSync } from 'node:fs'
 import { MakiClient } from '../../desktop/src/shared/client'
 import { TcpTransport } from '../../desktop/src/shared/test-support'
 
+// the emulated maki runs a tenth as fast as a badge when it's busy: wait that much longer
+const SLOW = Number(process.env.MAKI_EMU_SLOW ?? 10)
+
 const t = await TcpTransport.open(7878)
-const c = new MakiClient(t)
+const c = new MakiClient(t, SLOW)
 let failed = 0
 for (const path of process.argv.slice(2).filter((a) => a.endsWith('.maki'))) {
   const t0 = Date.now()
