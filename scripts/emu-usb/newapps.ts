@@ -13,6 +13,7 @@ import { sha512 } from '../../desktop/node_modules/@noble/hashes/sha2.js'
 import { HDKey } from '../../desktop/node_modules/@scure/bip32/index.js'
 import { mnemonicToSeedSync } from '../../desktop/node_modules/@scure/bip39/index.js'
 import { relay } from '../../desktop/src/main/roughtime'
+import { readBundle } from '../../desktop/src/shared/bundle'
 import { Link } from '../../desktop/src/shared/link'
 import { addMessage, listMessage, PASSWORDS_APP, readList } from '../../desktop/src/shared/passwords'
 import { TcpTransport } from '../../desktop/src/shared/test-support'
@@ -71,7 +72,9 @@ for (const [name, id, file] of RUN) {
   for (;;) {
     const { space } = await link.appSpace()
     const free = space ? space.space - space.taken : 0
-    if (space && space.apps < space.maxApps && free > bundle.length + 24 * 1024) break
+    // the bundle, the storage its manifest asks for, and some to spare
+    const storage = readBundle(bundle).manifest.storageKib * 1024
+    if (space && space.apps < space.maxApps && free > bundle.length + storage + 8 * 1024) break
     const spare = apps
       .filter((a) => !KEEP.includes(a.id.split('.').pop()!))
       .sort((a, b) => b.bundle + b.storage * 1024 - (a.bundle + a.storage * 1024))[0]

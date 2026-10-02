@@ -55,6 +55,7 @@ DOCS = [
         ("extension", "The browser extension", "Logins, codes and passkeys, and maki's accounts for sites, asked on maki's screen.", ("maki", "docs/extension.md")),
         ("apps", "Apps and the store", "Installing apps, what their permissions mean, and taking them away again.", ("maki", "docs/apps.md")),
         ("wallets", "Wallets", "Twenty coins, Bitcoin to Zcash, and passphrase wallets: every payment shown on maki first.", ("maki", "docs/wallets.md")),
+        ("flashcards", "Flashcards", "Decks studied on maki a card at a time, sent from a file, pasted text or Anki: Leitner's boxes.", ("maki", "docs/flashcards.md")),
         ("passwords", "Password Maker", "Passwords made from your phrase and typed by maki, the same on a Coldcard: none stored.", ("maki", "docs/passwords.md")),
         ("signing", "SSH, git and files", "SSH sign-ins and git signatures, gpg, minisign and age, each waiting for your yes.", ("maki", "docs/signing.md")),
         ("sudo", "sudo, with a yes on maki", "Every command sudo runs, shown whole on maki and signed before it runs.", ("maki", "docs/sudo.md")),
