@@ -83,6 +83,27 @@ The **Wallets** page holds each of maki's accounts once you add it from maki: Bi
 Monero and Solana, with balances, fresh addresses to check on maki's screen, and sending, which
 maki shows and signs. [Wallets](wallets.md) goes through each.
 
+## Passphrase wallets
+
+maki desktop asks maki which wallet its wallet apps have as it links, and with each heartbeat:
+the phrase's own, or a [passphrase wallet](wallets.md#a-passphrase-wallet) and its fingerprint.
+The passphrase itself never leaves maki. With one open, the **Wallets** page says so ("maki has
+passphrase wallet 1a2b3c4d open") and its cards are that wallet's: the accounts its apps shared,
+and the sites connected to its Ethereum and Solana accounts. The phrase's own wallet's are kept for
+when it's open again. A site connected under one wallet sees no account under the other until you
+connect it again, so nothing tells it the two are one person's. While maki is locked or unplugged,
+the page stays with the wallet maki had open last: locked, maki can't say which it will have next.
+
+Before any of maki's wallet apps is asked anything, maki desktop checks with maki that it still has
+the wallet the page shows, and what an app shares is kept only for the wallet it was asked under.
+If you open another wallet on maki just then, maki desktop turns to it: nothing meant for one
+wallet is asked of the other or kept as its, and you ask again there.
+
+The phrase's own wallet's accounts stay in the files maki desktop always kept them in; a passphrase
+wallet's go in files of its own, named by its fingerprint (`accounts.wallet-1a2b3c4d.json`). So a
+computer's files show that a passphrase wallet was used on it, and the accounts it shared there:
+open one you keep hidden only on a computer you'd trust with that.
+
 ## Connections
 
 The **Connections** page is where everything else plugs in: the browsers (for [the

@@ -24,8 +24,9 @@ messaging. It sends nothing to any server.
 ## maki desktop
 
 maki desktop runs on your computer and keeps what it has in its own folder there. Your backups
-are encrypted by maki, with a key from its recovery phrase. It reaches the internet only for
-these:
+are encrypted by maki, with a key from its recovery phrase. A passphrase wallet's accounts are
+kept in files of their own, named by its fingerprint, so the folder shows that one was used
+([Passphrase wallets](desktop.md#passphrase-wallets)). It reaches the internet only for these:
 
 - **The time:** Roughtime servers that maki chooses, to check its clock. maki desktop passes the
   requests and their signed answers back and forth.
@@ -46,7 +47,10 @@ these:
 
 maki holds your keys, logins, codes, passkeys and apps' data, encrypted, and gives none of them
 out without a press on its screen. It reaches nothing by itself, only through maki desktop as
-above. Apps on maki get only the permissions it showed you when you installed them.
+above. Apps on maki get only the permissions it showed you when you installed them. Without a
+press, it tells maki desktop which wallet its wallet apps have (the phrase's own, or a passphrase
+wallet) and that wallet's fingerprint, which wallets show anyway, so maki desktop can keep each
+one's accounts apart. The passphrase never leaves maki.
 
 ## This site
 

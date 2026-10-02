@@ -13,8 +13,9 @@ and the stock vault's contents with them. That's the one-way door.
 
 ## I lost my maki. What now?
 
-Your recovery phrase brings everything back on another maki (or restores the wallets in any
-compatible wallet: Sparrow, MetaMask, a Ledger, Phantom). Restore it, then **Restore to maki** in
+Your recovery phrase, or enough of [its shares](first-boot.md#shares-instead-of-the-words), brings
+everything back on another maki (or restores the wallets in any compatible wallet: Sparrow,
+MetaMask, a Ledger, Phantom). Restore it, then **Restore to maki** in
 maki desktop brings back your logins and codes from the last backup. Whoever has the old badge can
 read what's on it in time, so move the wallets' coins, and change what matters.
 

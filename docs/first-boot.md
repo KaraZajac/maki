@@ -32,6 +32,25 @@ maki restored from the phrase has all of them again. Anyone who reads the phrase
 keep the paper somewhere safe and never type it into a computer: to restore, it goes back in on
 maki itself, word by word.
 
+## Shares instead of the words
+
+At the same step maki offers **shares instead**: the phrase split into Shamir shares (Blockchain
+Commons' SSKR), any few of which bring it back, while fewer show nothing of it. Choose how many it
+takes and how many there are (2 of 3, say; up to 16), and maki shows each share's words, eight to a
+screen, numbered: 29 short words a share (46 for a 24-word phrase). Write each down on its own
+paper, then maki checks a word of each. Keep them apart, so that no one place, and no one person,
+holds enough of them.
+
+The words are ByteWords: four letters each, and the first and last letter of each is enough to
+find it again. A share says which set it's from and how many the set takes; nothing else needs
+writing down. To restore, choose **shares** where maki asks how many words your phrase is, and type
+the shares in on maki, a word at a time, until it has enough: each is checked as it's finished.
+Shares put back together give the same phrase, so every wallet, passkey and backup comes back with
+them, and Blockchain Commons' seedtool reads them too (`seedtool -i sskr`).
+
+Later, maki's menu (**Shares**) makes a new set from the phrase maki has, once you've entered the
+PIN again. A new set doesn't cancel an old one: enough shares of either still bring the phrase back.
+
 ## A name
 
 The first time it starts, a maki picks a name, a maki roll (natto, uni, umekyu, one of thirty-two)

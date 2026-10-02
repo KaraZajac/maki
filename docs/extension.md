@@ -78,8 +78,9 @@ to set up and nothing to type on the computer. When a site makes or uses a passk
 site, "Sign in?" or "Save a passkey?", and whose it is. The centre approves it, as it does a
 login's question, and maki shows one question at a time. Sites that insist on verification, as GitHub and most passkey sites do,
 take that, in every browser (Firefox and Zen included, which can't set up a security key's PIN
-midway). A press counts for the one request it answered, and while maki is locked it answers
-nothing. Unplugging it locks it.
+midway). A press counts for the one request it answered. While maki is locked, a request waits
+for its PIN, two minutes at most, the computer told all along that maki waits for you (this is
+what lets [a disk unlock with maki](disk-unlock.md) at boot). Unplugging it locks it.
 
 ## Ethereum, Solana and Nostr for sites
 

@@ -57,7 +57,10 @@ code-execution bug in maki itself would get past all of the above.
   and once they're used up maki wipes without checking the PIN at all.
 - The recovery phrase (24 words from the hardware random number generator) is the root of every
   key that can't be made again. It's shown on maki and goes back in on maki, never through a
-  computer.
+  computer. Shares of it (Shamir's, SSKR) are the same: shown on maki, at setup or from the menu
+  once the PIN is entered again, and typed back in on maki.
+- A passphrase wallet's passphrase is typed on maki too, and kept only in maki's memory until it
+  locks: never stored, never in a backup.
 - Backups are encrypted with a key from the phrase. The PIN is never in one: a backup file is
   exactly what someone would try PINs against.
 

@@ -54,9 +54,12 @@ DOCS = [
         ("desktop", "maki desktop", "The tray app that links maki to your computer: the link, the time, backups and apps.", ("maki", "docs/desktop.md")),
         ("extension", "The browser extension", "Logins, codes and passkeys, and maki's accounts for sites, asked on maki's screen.", ("maki", "docs/extension.md")),
         ("apps", "Apps and the store", "Installing apps, what their permissions mean, and taking them away again.", ("maki", "docs/apps.md")),
-        ("wallets", "Wallets", "Bitcoin (multisig too), Ethereum, Monero and Solana: every payment shown on maki first.", ("maki", "docs/wallets.md")),
+        ("wallets", "Wallets", "Twenty coins, Bitcoin to Zcash, and passphrase wallets: every payment shown on maki first.", ("maki", "docs/wallets.md")),
+        ("passwords", "Password Maker", "Passwords made from your phrase and typed by maki, the same on a Coldcard: none stored.", ("maki", "docs/passwords.md")),
         ("signing", "SSH, git and files", "SSH sign-ins and git signatures, gpg, minisign and age, each waiting for your yes.", ("maki", "docs/signing.md")),
         ("sudo", "sudo, with a yes on maki", "Every command sudo runs, shown whole on maki and signed before it runs.", ("maki", "docs/sudo.md")),
+        ("confirm", "maki confirm", "A yes on maki for any script: a deploy, a force push, a migration, signed so the script can tell.", ("maki", "docs/confirm.md")),
+        ("disk-unlock", "A disk unlocked with maki", "A LUKS2 disk opened at boot by maki, its PIN entered on maki: systemd-cryptenroll's FIDO2.", ("maki", "docs/disk-unlock.md")),
         ("nostr", "Nostr", "Your Nostr key for sites and for Nostr apps, every event shown before it's signed.", ("maki", "docs/nostr.md")),
     ]),
     ("Reference", [
