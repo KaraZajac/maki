@@ -254,6 +254,7 @@ MAKI_FIDO_PYTHON=venv/bin/python npx --prefix desktop vite-node scripts/emu-usb/
 npx --prefix desktop vite-node scripts/emu-usb/childseeds.ts LOG OUT   # a child seed's words, on maki's screen
 npx --prefix desktop vite-node scripts/emu-usb/nametag.ts LOG OUT   # a tag scanned, its link's QR code read back
 npx --prefix desktop vite-node scripts/emu-usb/minesweeper.ts LOG OUT   # a flag, a step, the game kept
+npx --prefix desktop vite-node scripts/emu-usb/macropad.ts LOG   # a DuckyScript sent, kept, and typed out of USB
 ```
 
 The last three read maki's screen from frames the emulator saved in its folder (OUT) with
