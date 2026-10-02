@@ -1,9 +1,11 @@
 # Wallets
 
-maki's wallets are apps from the store, for those who want them: **Bitcoin**, **Ethereum**,
-**Monero** and **Solana**. maki keeps the keys, made from your recovery phrase at the standard
-paths other wallets use, so the same phrase works in Sparrow, MetaMask, a Ledger or Phantom too.
-Each app may use only the accounts its manifest names, which maki shows you when you install it.
+maki's wallets are apps from the store, for those who want them: **Bitcoin**, **Litecoin**,
+**Dogecoin**, **Bitcoin Cash**, **Kaspa**, **Ethereum**, **Monero**, **Solana**, **XRP**,
+**Stellar**, **Tron**, **Cosmos**, **NEAR**, **Sui**, **Aptos** and **Cardano**. maki keeps the
+keys, made from your recovery phrase at the standard paths other wallets use, so the same phrase
+works in Sparrow, MetaMask, Phantom, Keplr, Eternl or a Ledger too. Each app may use only the
+accounts its manifest names, which maki shows you when you install it.
 
 Every payment is shown on maki's screen before it's signed: each one's amount and full address, the
 change coming back, and the fee, a page at a time. maki signs only when you say yes there, and only
@@ -124,3 +126,70 @@ The account Phantom and Solflare make from the same phrase (`m/44'/501'/0'/0'`).
   anything maki can't read flagged.
 - **maki desktop** holds the account on Solana and its devnet: its SOL and tokens, and sending,
   simulated first, then signed on maki.
+
+## Litecoin, Dogecoin and Bitcoin Cash
+
+Bitcoin's own wallet code, on each one's network: everything maki checks for Bitcoin, it checks
+for these.
+
+- **Litecoin:** native SegWit (`m/84'/2'/0'`) and taproot (`m/86'/2'/0'`), as Litecoin Core,
+  Electrum-LTC and Ledger make them. maki desktop holds it through litecoinspace.org.
+- **Dogecoin:** the account Trezor, Ledger and the other BIP44 wallets make (`m/44'/3'/0'`,
+  addresses starting with D); every coin it spends comes with the whole transaction that made it.
+  maki desktop has no public Dogecoin server to ask yet.
+- **Bitcoin Cash:** the account Electron Cash and Ledger make (`m/44'/145'/0'`), its addresses in
+  CashAddr (`bitcoincash:q…`), signed with Bitcoin Cash's fork ID. maki won't spend or make
+  CashTokens, which it can't show. maki desktop goes through Bitcoin Cash's Electrum servers.
+
+## Kaspa
+
+The account Kaspium, Kaspa NG, Kastle and Ledger's Kaspa app make (`m/44'/111111'/0'`). maki desktop
+finds the addresses it has used, receiving and change, and sends from them through api.kaspa.org,
+the change to a fresh change address, paying Kaspa's fee for the payment's mass.
+
+A Kaspa signature covers only its own coin's amount, so a computer could lie about one coin and
+then another for the same payment (the SegWit fee attack of 2020): maki keeps what it was told
+each coin it signed for held, and refuses one said to hold something else. Kaspa charges for small
+outputs to keep them: a payment of less than about 0.2 KAS costs more than it's worth, or won't go.
+
+## XRP, Stellar and Tron
+
+- **XRP:** the account Xaman, Ledger and Trust Wallet make (`m/44'/144'/0'/0/0`): XRP, RLUSD and
+  USDC. A partial payment, handing the account to another key, and a fee over 2 XRP are said
+  loudly, and a token whose code spells XRP is never shown as XRP. maki desktop takes a
+  destination tag.
+- **Stellar:** the account Freighter and Ledger make (SEP-5's, `m/44'/148'/0'`): XLM, USDC and EURC
+  (Circle's, by their issuer). Anything that changes who can sign for the account is said loudly.
+  maki desktop takes a memo, and opens a new account with the 1 XLM Stellar needs.
+- **Tron:** the account TronLink and Ledger make (`m/44'/195'/0'/0/0`): TRX, USDT and the other
+  tokens maki knows, the most a token payment can burn for energy shown. Tron's accounts are sent
+  tokens unasked, often scams named like real ones: maki desktop counts those, and doesn't show them.
+
+## Cosmos
+
+The account Keplr, Cosmostation and Ledger make (`m/44'/118'/0'/0/0`), on the Cosmos Hub and the
+chains that share its keys: Osmosis, Celestia, Noble (its USDC), dYdX, Neutron, Akash, Axelar,
+Babylon and Juno. maki desktop's Cosmos card has a chain picker, and maki shares the account on each
+chain you pick. maki reads sends, staking, votes and IBC transfers in full, and refuses grants that
+would let another account act for yours, Cosmos's usual phishing.
+
+## NEAR, Sui and Aptos
+
+- **NEAR:** the implicit account MyNearWallet, near-cli and Trust Wallet make (`m/44'/397'/0'`):
+  NEAR, USDC, USDT and wNEAR. When the recipient isn't signed up for a token yet, maki desktop pays
+  its deposit for them in the same transaction, and says so.
+- **Sui:** the account Slush and Ledger make (`m/44'/784'/0'/0'/0'`): SUI, USDC and the other coins
+  maki knows, in coin objects or in the account's address balance. A call maki can't read is
+  flagged with what it's given, and sponsored transactions aren't signed.
+- **Aptos:** the account Petra and Ledger make (`m/44'/637'/0'/0'/0'`): APT, USDC and USDT, each
+  payment's gas found by trying it first. Nothing that would hand the account to another key is
+  signed.
+
+## Cardano
+
+The account Eternl, Lace, Yoroi and Ledger make (`m/1852'/1815'/0'`), with Cardano's own kind of
+keys (BIP32-Ed25519, which maki makes from your phrase as they do): ADA and its tokens. maki desktop
+works out the account's addresses itself and goes through Koios; maki checks that change pays the
+account's own address with its own stake key, and signs nothing for scripts, pools or governance
+actions.
+
