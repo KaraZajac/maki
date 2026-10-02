@@ -4,6 +4,24 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
+## Preview, 2026-10-01.6
+
+maki's firmware (maki-firmware `35e43eb39`), with maki desktop 0.1.5 and the extension 0.1.5, on the
+[download page](https://maki.netslum.io/download/); maki desktop updates a maki on preview
+2026-10-01 or later to it, and itself from 0.1.2 on. It has run in the emulator end to end: a
+DuckyScript sent from maki desktop, kept by maki, run on maki, and the keystrokes — Gui+R and
+Ctrl+Alt+Delete among them — out of maki's USB. Not yet on a badge.
+
+- **Macro Pad**, in the maki store: keystrokes maki types into a computer at the press of a
+  button — text, keys and DuckyScript (1.0, plus STRINGLN), which you write or load in maki
+  desktop and send to maki. maki keeps each script and types it only when you run it there,
+  holding maki, with "typing" in its bar: an attended tool, for demos, pentests and your own
+  machine. It can press shortcuts, so it can open and run programs — run only scripts you trust.
+- **For apps** (host API 10): `keyboard::chord` presses a key with Ctrl, Alt or the
+  Command/Windows key held — shortcuts such as Gui+R, which maki wouldn't let an app press before.
+  An app that does this says so, and maki's install warning for the keyboard permission now says
+  it can press shortcuts and open programs.
+
 ## Preview, 2026-10-01.5
 
 maki's firmware (maki-firmware `e757cd61b`), with maki desktop 0.1.4 and the extension 0.1.4, on

@@ -1,69 +1,69 @@
 {
   "firmware": {
-    "name": "preview 2026-10-01.5",
-    "commit": "e757cd61b42b4bdd8e3d68f9e587f5d194422fa7",
+    "name": "preview 2026-10-01.6",
+    "commit": "35e43eb39ccbc8878b5e1a6ce43eb7d47cfaeda1",
     "date": "2026-10-01",
     "protocol": 3,
-    "release": "https://github.com/KaraZajac/maki-firmware/releases/tag/preview-2026-10-01.5",
-    "sums": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.5/SHA256SUMS",
+    "release": "https://github.com/KaraZajac/maki-firmware/releases/tag/preview-2026-10-01.6",
+    "sums": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.6/SHA256SUMS",
     "files": [
       {
         "name": "loader.uf2",
-        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.5/loader.uf2",
+        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.6/loader.uf2",
         "bytes": 354816,
-        "sha256": "65d6008f05d683522d2ac0bb07699cbc9ce10d46af00987ddc11e93dd4f1c4fc"
+        "sha256": "3e8d468e1115a2be0fca74fe9988d675c35bfea562dd9ed6b2ed46abe65e818c"
       },
       {
         "name": "xous.uf2",
-        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.5/xous.uf2",
+        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.6/xous.uf2",
         "bytes": 6186496,
-        "sha256": "1cfeeb3e5cd540aa8f777d600af1ab0b03bc1585d56b5806ca9f44ab1503dbff"
+        "sha256": "9d3089091f962f937957e1386dc3a9ab9cfffa372c8c148bf1a8ab16386d1cac"
       },
       {
         "name": "swap.uf2",
-        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.5/swap.uf2",
+        "url": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.6/swap.uf2",
         "bytes": 7417856,
-        "sha256": "8d80fa3386487fce21f3b5f9281666c4f5878aacaec4189fba013adc3259a2f5"
+        "sha256": "52fe9a04e87022891774b6b5aa9ad399388dca8c1979c78c2fa075efb6c1546e"
       }
     ],
-    "notices": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.5/THIRD-PARTY-NOTICES.md"
+    "notices": "https://github.com/KaraZajac/maki-firmware/releases/download/preview-2026-10-01.6/THIRD-PARTY-NOTICES.md"
   },
   "desktop": {
-    "name": "0.1.4",
-    "commit": "53920d001c3f4028cf2286ddc398151866c2551e",
+    "name": "0.1.5",
+    "commit": "8ea543040d4d612ef85728ad09e80161a1c6ed22",
     "date": "2026-10-01",
-    "release": "https://github.com/KaraZajac/maki-desktop/releases/tag/v0.1.4",
-    "sums": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.4/SHA256SUMS",
+    "release": "https://github.com/KaraZajac/maki-desktop/releases/tag/v0.1.5",
+    "sums": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.5/SHA256SUMS",
     "protocol": 3,
-    "notices": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.4/THIRD-PARTY-NOTICES.md",
+    "notices": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.5/THIRD-PARTY-NOTICES.md",
     "files": [
       {
-        "name": "maki-desktop-0.1.4-x86_64.AppImage",
-        "url": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.4/maki-desktop-0.1.4-x86_64.AppImage",
-        "bytes": 126481151,
-        "sha256": "de14715bf73e5fcce3b827c9bea74d7e164d0989455a978093eef95ab7fdb417"
+        "name": "maki-desktop-0.1.5-x86_64.AppImage",
+        "url": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.5/maki-desktop-0.1.5-x86_64.AppImage",
+        "bytes": 126481198,
+        "sha256": "e8d3785587a8f78ca70480e28ef392306cd1067c14a7d25c148b29b0578e0c74"
       }
     ]
   },
   "extension": {
-    "name": "0.1.4",
-    "commit": "53920d001c3f4028cf2286ddc398151866c2551e",
+    "name": "0.1.5",
+    "commit": "8ea543040d4d612ef85728ad09e80161a1c6ed22",
     "date": "2026-10-01",
-    "release": "https://github.com/KaraZajac/maki-desktop/releases/tag/v0.1.4",
-    "sums": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.4/SHA256SUMS",
-    "notices": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.4/THIRD-PARTY-NOTICES-extension.md",
+    "release": "https://github.com/KaraZajac/maki-desktop/releases/tag/v0.1.5",
+    "sums": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.5/SHA256SUMS",
+    "notices": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.5/THIRD-PARTY-NOTICES-extension.md",
     "files": [
       {
-        "name": "maki-extension-0.1.4-chrome.zip",
-        "url": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.4/maki-extension-0.1.4-chrome.zip",
-        "bytes": 30938,
-        "sha256": "026efd1e835dfdf19d5e740bc43802b7948760ae61754b2093928e811f97ca33"
+        "name": "maki-extension-0.1.5-chrome.zip",
+        "url": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.5/maki-extension-0.1.5-chrome.zip",
+        "bytes": 30940,
+        "sha256": "8f8182d397bdd52e20591e29e78e2cc7be32cdf7a910a6129604592f08ca9fa7"
       },
       {
-        "name": "maki-extension-0.1.4-firefox.xpi",
-        "url": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.4/maki-extension-0.1.4-firefox.xpi",
-        "bytes": 30036,
-        "sha256": "8d345701934d8c5935c50b1d43167ecdd2ed3037eaf48fdc2631d95eae1edb27"
+        "name": "maki-extension-0.1.5-firefox.xpi",
+        "url": "https://github.com/KaraZajac/maki-desktop/releases/download/v0.1.5/maki-extension-0.1.5-firefox.xpi",
+        "bytes": 30037,
+        "sha256": "ee6005cea3ecc164106ee9ada5686eb4c9d25c22cdd766d661eb293f18378776"
       }
     ]
   }

@@ -272,7 +272,10 @@ each one could do:
   for the app. A developer who loses their key can't update the app, and a new key means new app
   keys.
 - **keyboard**: typing into the computer as a USB keyboard, only while the app is in front,
-  with a mark in the strip while it types. The strongest warning: it could type commands.
+  with a mark in the strip while it types: text, keys beyond text, and (host API 10) shortcuts
+  with Ctrl, Alt or the Command/Windows key held — Gui+R, Ctrl+Alt+Delete. The strongest warning:
+  it can type commands and press shortcuts, so it can open and run programs. The Macro Pad app
+  (DuckyScript) is what this is for.
 - **camera**: QR codes, through maki's own scanner, while the app is in front: the camera's
   view fills the screen while it scans, and any button cancels. (Frames themselves, for apps
   that see more than QR codes, could come later.)
