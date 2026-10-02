@@ -34,11 +34,11 @@ days in a row wait for the date.
 
 ## Sending decks from maki desktop
 
-In maki desktop, under **Connections**, **Flashcards**: open a CSV or tab-separated file, paste text
-(a card a line: its front, a tab or a comma, then its back), or open what Anki exports (**File**,
-**Export**, **Cards in Plain Text**; maki desktop reads its header lines, takes the HTML off, makes a
-card of each cloze deletion, and asks which deck, if the file has several). Files in UTF-8, UTF-16
-or Windows-1252 all read.
+In maki desktop, on its **Flashcards** page: open a CSV or tab-separated file, paste text (a card a
+line: its front, a tab or a comma, then its back), or open what Anki exports (**File**, **Export**,
+**Cards in Plain Text**; maki desktop reads its header lines, takes the HTML off, makes a card of
+each cloze deletion, and asks which deck, if the file has several). Files in UTF-8, UTF-16 or
+Windows-1252 all read.
 
 Before anything is sent, maki desktop shows the deck as maki will have it. maki's fonts draw Latin
 letters with Western Europe's accents, digits and the usual punctuation (Œ and œ, curly quotes, …

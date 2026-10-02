@@ -104,12 +104,25 @@ wallet's go in files of its own, named by its fingerprint (`accounts.wallet-1a2b
 computer's files show that a passphrase wallet was used on it, and the accounts it shared there:
 open one you keep hidden only on a computer you'd trust with that.
 
-## Connections
+## The sidebar
 
-The **Connections** page is where everything else plugs in: the browsers (for [the
-extension](extension.md)), ssh and git ([SSH, git and files](signing.md)), gpg, age and minisign,
-[sudo](sudo.md), [Nostr apps](nostr.md), and the Notes and Contacts apps. Each part appears once
-the app it needs is on maki, with a **Get it** button when it isn't.
+maki desktop's pages, down the left, in four groups:
+
+- **maki**: the Overview, maki's **Apps** (from the maki store) and its **Backups**.
+- **Money**: maki's **Wallets**.
+- **On maki**: a page for each of maki's apps that has a side here, once maki has the app: **Macro
+  Pad** (its scripts), **Flashcards** (its decks), **Notes**, **Contacts**, **Password Maker**
+  ([passwords made from your phrase](passwords.md)) and **Show QR**. An app's page stays while maki
+  is unplugged, and goes once maki hasn't the app any more.
+- **Computer**: what this computer reaches maki for: **Browsers** (for [the
+  extension](extension.md)), **SSH, Git & keys** (ssh, git, gpg, age and minisign: [SSH, git and
+  files](signing.md)), **sudo & Confirm** ([sudo](sudo.md), and [maki confirm](confirm.md) for your
+  scripts) and **Nostr** ([Nostr apps](nostr.md)). Each part shows a **Get it** button while the app
+  it needs isn't on maki.
+
+**About**, below them, has maki desktop's version and what it runs on, maki's, the updates, the
+MIT License and the third-party notices, links to the site, the docs and the source, whether maki
+desktop starts at login, and the folder it keeps its files in.
 
 ## Other systems
 

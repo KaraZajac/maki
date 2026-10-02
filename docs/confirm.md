@@ -70,7 +70,7 @@ expecting the question, say no.
 ## Setting it up
 
 - Install the **Confirm** app on maki from the store.
-- In maki desktop, **Connections**, **Confirm**: **Install** `maki-confirm` (it goes in
+- In maki desktop, **sudo & Confirm**, **Confirm**: **Install** `maki-confirm` (it goes in
   `~/.local/bin`), compare the key it shows with the one Confirm shows on maki, from its menu, then
   **Save…** the key file. **Test it** asks maki, as `maki-confirm` would, and checks the yes.
 
@@ -155,4 +155,4 @@ answer signing nothing, and what it can't read or show turned down without askin
 tested against a stand-in for each answer and exit code, and the whole way, through maki desktop's
 socket and the link, to the Confirm app on the stand-in for maki: a yes checked against the key
 `--public-key` wrote, and another maki's turned down. And end to end: maki desktop running, its
-Connections page testing the key, and `maki-confirm` started as the script it installs starts it.
+sudo & Confirm page testing the key, and `maki-confirm` started as the script it installs starts it.

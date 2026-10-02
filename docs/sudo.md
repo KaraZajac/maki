@@ -37,8 +37,8 @@ nothing it says but the signature.
 Linux, with sudo 1.9 or later (the approval plugins it runs after sudoers):
 
 - Install the **Sudo** app on maki from the store.
-- In maki desktop, **Connections**, **sudo**: compare the key it shows with the one maki's Sudo app
-  shows from its menu, then **Turn on**. It asks for your admin password.
+- In maki desktop, **sudo & Confirm**, **sudo**: compare the key it shows with the one maki's Sudo
+  app shows from its menu, then **Turn on**. It asks for your admin password.
 
 Setting up puts the plugin in `/usr/local/libexec/maki`, maki's key in `/etc/maki/sudo.pub` (root's)
 and a line in `/etc/sudo.conf` for your user; then it starts sudo once, and if sudo won't start with

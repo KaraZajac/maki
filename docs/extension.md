@@ -26,7 +26,7 @@ does Zen. Turn `xpinstall.signatures.required` off in `about:config`, then in `a
 
 ### Connect it to maki desktop
 
-In maki desktop, **Connections**, **Browsers** lists the browsers on this computer: Chrome,
+In maki desktop, **Browsers** lists the browsers on this computer: Chrome,
 Chromium, Brave, Edge, Vivaldi, Opera, Thorium, Firefox, Zen, Floorp and LibreWolf, installed the
 usual way or as a Flatpak. **Connect** each one you use the extension in, so it can reach maki
 desktop; **Disconnect** takes that away again.

@@ -25,7 +25,7 @@ like any other: a site that's breached loses it, so give each site a number of i
 
 What the app keeps is which password is which: a site's name, your username there, the password's
 number, its length and alphabet, and whether Enter follows it. None of that is secret, and none of
-it is a password. You add them in maki desktop, under **Connections**, **Password Maker**: a site, a
+it is a password. You add them in maki desktop, on its **Password Maker** page: a site, a
 username, a number (it suggests the lowest you haven't used), and maki asks you on its own screen
 before it keeps it. Changing or removing one asks too.
 

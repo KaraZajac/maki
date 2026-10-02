@@ -19,7 +19,7 @@ in real Chromium and Firefox, and against every client's way of writing an event
 Nostr apps on your phone or the web that can sign in with a remote signer (Coracle and Nostrudel,
 among others) can sign through maki desktop as their "bunker", over relays:
 
-- In maki desktop, **Connections**, **Nostr apps**, turn on **Remote signing**. It shows a
+- In maki desktop, **Nostr**, turn on **Remote signing**. It shows a
   `bunker://` link, and the same as a QR code.
 - In the app, sign in with a bunker, or "remote signer", and scan or paste the link. maki asks
   whether to let the app see your key, naming it.
