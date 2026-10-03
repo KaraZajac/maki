@@ -4,6 +4,74 @@ maki's changes, newest first. It's in early development: each preview is a set o
 from the repositories as they were that day, not a release anyone has audited. Before the first
 one, maki was built a day at a time, and that's here too.
 
+## Preview, 2026-10-03
+
+maki's firmware (maki-firmware `5f3599ff5`), with maki desktop 0.1.6 and the extension 0.1.6, on the
+[download page](https://maki.netslum.io/download/); maki desktop updates a maki on preview
+2026-10-01 or later to it, and itself from 0.1.2 on. It has run in the emulator end to end: a
+passphrase typed on maki and its wallet's accounts over the link; Shamir shares made from maki's
+menu, read off its screen and put back together, and a blank maki restored from two of three typed
+in on it; a disk's secret asked for while maki was locked, held for its PIN and then given; logins,
+codes and a passkey imported, the passkey then signing in through FIDO; a deck studied on maki and
+read back; and each new app installed and opened, Password Maker typing BIP-85's password into the
+computer. Not yet on a badge.
+
+- **Sixteen more wallets**, in the maki store, each with its card on maki desktop's Wallets page
+  (what it holds, its history, receiving, and payments gone through on maki): **Litecoin**,
+  **Dogecoin**, **Bitcoin Cash**, **Dash**, **DigiByte**, **Zcash** (transparent addresses),
+  **Kaspa**, **XRP**, **Stellar**, **Tron**, **TON**, **Cosmos** (the Hub and the nine chains that
+  share its keys, Osmosis, Celestia and Noble's USDC among them), **NEAR**, **Sui**, **Aptos** and
+  **Cardano**. Each makes the account the coin's usual wallets make from the same phrase, and reads
+  what it's asked to sign as the coin's own software writes it, strictly, before showing it: every
+  payment, token and fee spelled out, anything that would hand the account to someone else refused.
+  Dogecoin's card waits for a server: there's no free public one maki desktop can ask.
+- **Ethereum on 21 networks**: maki's Ethereum app names fifteen more (Avalanche, Robinhood Chain,
+  HyperEVM, Monad, Mantle, Plasma, X Layer, Arc, World Chain, Ink, Linea, Gnosis, ZKsync Era, Celo
+  and Unichain) and their stablecoins, and maki desktop holds the account on all of them and BNB
+  Chain. On the OP Stack networks (Optimism, Base and five more) maki now says the network's L1
+  fee isn't capped: its "Max fee" had left that out, and a real Optimism transfer cost 2.8 times
+  what it said.
+- **Passphrase wallets**: a BIP39 passphrase, typed on maki itself, opens another wallet from the
+  same phrase, as Trezor, Ledger and Coldcard make it; from maki's menu, Wallets, or at every
+  unlock if you'd like. maki shows its fingerprint, wallet apps have it until maki locks, and maki
+  desktop keeps its accounts apart. Passkeys, logins, apps' keys and backups don't change.
+- **Password Maker**: BIP-85's passwords, made from your phrase and typed by maki itself (or shown
+  on its screen), never stored and never on the computer: number N at 21 characters is a Coldcard's
+  Type Passwords' number N. maki desktop says which is which.
+- **Shamir backup**: your phrase as shares, any 2 of 3 (or any k of n, up to 16) of which give it
+  back, written down instead of the words at setup, or made later from maki's menu once its PIN is
+  entered again. They're Blockchain Commons' SSKR, so they hold the phrase itself (the same words,
+  the same wallets everywhere) and seedtool reads them too; a maki restores from them typed in on
+  it ([how](docs/first-boot.md#shares-instead-of-the-words)).
+- **Disk unlock**: maki answers a computer that asks for a passkey or a disk's key while it's still
+  locked, and keeps it waiting until you enter the PIN: a LUKS disk enrolled with
+  systemd-cryptenroll unlocks at boot with maki ([how](docs/disk-unlock.md)).
+- **Confirm**: a yes on maki for any script (`maki-confirm "Deploy?"`), signed so the script can
+  tell it was you. **Show QR**: anything from maki desktop as a QR code on maki's screen.
+- **Sudoku** (made on maki, one solution each, graded easy to expert) and **Sokoban** (David W.
+  Skinner's Microban). **Flashcards**: decks from maki desktop (a CSV file, pasted text or Anki's
+  export), studied on maki a card at a time, Leitner's boxes bringing back sooner what you missed
+  ([how](docs/flashcards.md)).
+- **maki desktop, rearranged**: the sidebar groups its pages (maki; money; what's on maki, a page
+  for each app with a side here; what this computer reaches maki for), and **About** has the
+  versions, the updates, the license and notices, and the links.
+- **Portfolio**: what every account maki shared holds, in your currency, each coin and token's
+  share, and the total day by day; its tile on the Overview.
+- **Moving to maki**: logins, two-step codes and passkeys imported from Bitwarden, Proton Pass,
+  LastPass, 1Password, KeePassXC, Dashlane, the browsers, Apple Passwords and more, looked over
+  before anything's sent, and maki asks once; imported passkeys are marked, and come back from a
+  backup ([how](docs/import.md)).
+- **Macro Pad 1.1** shows the scripts maki keeps, to read and change, and asks on maki before it
+  keeps, replaces or removes one (it didn't ask before); **Flashcards 1.1** shows a deck's cards,
+  with each one's box, to change and send back. Notes and Contacts have pages of their own.
+- **Fixes**: QR codes hold any text (some UTF-8, Japanese or Greek capitals among it, went into
+  Kanji mode and scanned as other characters); the wait for a passkey's yes no longer spins (USB's
+  FIDO receive timeout fired at once); maki desktop keeps Dogecoin's and Bitcoin Cash's accounts in
+  files of their own (saving them replaced Bitcoin's).
+- **For apps** (host API 11 and 12): a wallet on `curve = "bip32-ed25519"`, signing with Cardano's
+  keys; `wallet::type_password` and `wallet::show_password`.
+- The maki store has 58 apps now (Macro Pad and Flashcards at 1.1), and maki keeps 32 at a time.
+
 ## Preview, 2026-10-01.6
 
 maki's firmware (maki-firmware `35e43eb39`), with maki desktop 0.1.5 and the extension 0.1.5, on the
