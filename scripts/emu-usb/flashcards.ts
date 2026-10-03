@@ -14,6 +14,7 @@ import {
   deckBytes,
   FLASHCARDS_APP,
   listMessage,
+  readBack,
   readList,
   removeMessage,
   sendDeck,
@@ -141,5 +142,23 @@ check(
   `kept: none new, the two known in box 2 and the one missed in box 1 (${JSON.stringify(after?.boxes)})`
 )
 check(after?.due === 0, `nothing due again today (${after?.due})`)
+// and read back from maki (Flashcards 1.1): each card with the box its answer put it in
+if (after) {
+  const back = await readBack(send, after.id)
+  if (!back.ok && back.update) console.log('(Flashcards 1.0: no read-back to check)')
+  else
+    check(
+      back.ok &&
+        back.deck.name === NAME &&
+        JSON.stringify(back.deck.cards.map((c) => [c.front, c.back, c.box])) ===
+          JSON.stringify([
+            ['France', 'Paris', 2],
+            ['Japan', 'Tokyo', 1],
+            ['Kenya', 'Nairobi', 2]
+          ]) &&
+        back.deck.cards[0].due - back.deck.cards[1].due === 1,
+      `read back from maki: France and Kenya in box 2, Japan in box 1, due a day apart (${JSON.stringify(back.ok ? back.deck.cards : back)})`
+    )
+}
 if (after) await send(removeMessage(after.id))
 process.exit(failed ? 1 : 0)

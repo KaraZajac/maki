@@ -18,7 +18,9 @@ decrypted without a press, with the details in front of you.
   from the fields it showed you, signs a git commit from the bytes it showed the subject of, checks
   a Bitcoin input against the transaction it spends, and names a site by the hostname the browser
   reports, never by what the page says.
-- **Keys don't leave.** Wallet, SSH, signing and app keys stay on maki. Passkeys are made on maki.
+- **Keys don't leave.** Wallet, SSH, signing and app keys stay on maki. Passkeys are made on maki,
+  but for any you [import](import.md#passkeys-from-elsewhere) from another password manager, whose
+  keys were made there and have been in a file on the computer: maki marks those imported.
 - **A passkey takes a press.** maki verifies you with its own PIN, entered on maki to unlock it,
   and each passkey it makes or uses takes a press on maki for that one request: nothing on the
   computer gets a verified passkey signature from maki without one.

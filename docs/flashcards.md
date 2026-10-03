@@ -49,6 +49,15 @@ out; the preview says which, line by line, and how much of maki's room the deck 
 Sending a deck again, under the same name, replaces it and keeps the progress of each card whose
 front it still has. Removing a deck from maki desktop or from maki's menu takes its progress too.
 
+## A deck's cards
+
+On maki desktop's **Flashcards** page, each deck on maki shows what it has for today and its cards
+in Leitner's boxes; **Open** shows its cards, as maki has them, with each one's box and when it's
+next due. Change a card, add one, remove one or rename the deck, and before you send it the page
+says how many cards keep their progress: a card whose front you changed starts again, as maki keeps
+progress by a card's front. A deck changed on maki since it was opened isn't sent over: open it
+again. Seeing a deck's cards needs Flashcards 1.1; with 1.0, the page says to update it on Apps.
+
 ## Limits
 
 Eight decks, of up to 1000 cards each, in the app's 64 KiB: about 2000 short cards in all. A deck's

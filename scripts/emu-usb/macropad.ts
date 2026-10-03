@@ -9,7 +9,15 @@
 import { readFileSync } from 'node:fs'
 import { relay } from '../../desktop/src/main/roughtime'
 import { Link } from '../../desktop/src/shared/link'
-import { MACROPAD_APP, scriptMessage } from '../../desktop/src/shared/macropad'
+import {
+  getMessage,
+  listMessage,
+  MACROPAD_APP,
+  readPad,
+  readText,
+  removeMessage,
+  scriptMessage
+} from '../../desktop/src/shared/macropad'
 import { TcpTransport } from '../../desktop/src/shared/test-support'
 import { CENTRE, Control, Log, closeFront, openItem, sleep } from './emu'
 
@@ -73,6 +81,25 @@ check(!!pressedChord, 'it pressed Ctrl+Alt+Delete')
 const trouble = log.since(0).match(/(?:panick|not responding|aborted).*$/im)
 if (trouble) console.log(`maki says: ${trouble[0]}`)
 await closeFront(ctl, log)
+
+// Macro Pad 1.1: the script listed, read back as it was sent, and removed (maki asks first: the
+// emulator's --answer says yes), the way maki desktop's Macro Pad page does it
+const pad = readPad((await link.appMessage(MACROPAD_APP, listMessage())).answer)
+if (!pad) console.log('(Macro Pad 1.0: no list to check)')
+else {
+  const listed = pad.scripts.find((x) => x.name === NAME)
+  check(!!listed && listed.kind === 'ducky', `listed on maki: “${NAME}”, DuckyScript (${JSON.stringify(listed)})`)
+  if (listed) {
+    const text = readText((await link.appMessage(MACROPAD_APP, getMessage(listed.id))).answer)
+    check(text === SCRIPT, 'read back as it was sent')
+    const gone = await link.appMessage(MACROPAD_APP, removeMessage(listed.id), 120_000)
+    const after = readPad((await link.appMessage(MACROPAD_APP, listMessage())).answer)
+    check(
+      gone.status === 'approved' && gone.answer[0] === 0 && !after?.scripts.some((x) => x.name === NAME),
+      'removed, once maki asked, and gone from the list'
+    )
+  }
+}
 await link.drop('done')
 ctl.close()
 process.exit(failed ? 1 : 0)

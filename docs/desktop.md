@@ -80,8 +80,24 @@ for.
 ## Wallets
 
 The **Wallets** page holds each of maki's accounts once you add it from maki: Bitcoin, Ethereum,
-Monero and Solana, with balances, fresh addresses to check on maki's screen, and sending, which
-maki shows and signs. [Wallets](wallets.md) goes through each.
+Monero, Solana and the rest, with balances, fresh addresses to check on maki's screen, and sending,
+which maki shows and signs. [Wallets](wallets.md) goes through each.
+
+## Portfolio
+
+The **Portfolio** page adds them up: every coin and token in the accounts maki has shared, in the
+currency you choose for prices (none chosen, it asks, and CoinGecko isn't asked until one is), each
+with its amount, price, value and share of the whole, and a chart of the total day by day. Each
+account is looked up as its wallet card looks it up, one after another, and what was found is kept,
+so the last total shows at once (on the Overview too) while it looks again. It says when each was
+looked up, what couldn't be (counted as it last was), and what isn't counted: test networks,
+wallets with no account here yet, tokens with no price. A passphrase wallet's total is its own.
+
+## Logins and passkeys
+
+The **Logins & passkeys** page says what maki's vault holds (logins, two-step codes and passkeys,
+and which of the passkeys were imported), and brings logins, codes and passkeys over from another
+password manager: [Moving to maki from another password manager](import.md).
 
 ## Passphrase wallets
 
@@ -109,11 +125,12 @@ open one you keep hidden only on a computer you'd trust with that.
 maki desktop's pages, down the left, in four groups:
 
 - **maki**: the Overview, maki's **Apps** (from the maki store) and its **Backups**.
-- **Money**: maki's **Wallets**.
-- **On maki**: a page for each of maki's apps that has a side here, once maki has the app: **Macro
-  Pad** (its scripts), **Flashcards** (its decks), **Notes**, **Contacts**, **Password Maker**
+- **Money**: the **Portfolio** and maki's **Wallets**.
+- **On maki**: **Logins & passkeys**, and a page for each of maki's apps that has a side here, once
+  maki has the app: **Macro Pad** (the scripts maki keeps, to read and change), **Flashcards** (its
+  decks and their cards: [Flashcards](flashcards.md)), **Notes**, **Contacts**, **Password Maker**
   ([passwords made from your phrase](passwords.md)) and **Show QR**. An app's page stays while maki
-  is unplugged, and goes once maki hasn't the app any more.
+  is unplugged or locked, and says so; it goes once maki hasn't the app any more.
 - **Computer**: what this computer reaches maki for: **Browsers** (for [the
   extension](extension.md)), **SSH, Git & keys** (ssh, git, gpg, age and minisign: [SSH, git and
   files](signing.md)), **sudo & Confirm** ([sudo](sudo.md), and [maki confirm](confirm.md) for your

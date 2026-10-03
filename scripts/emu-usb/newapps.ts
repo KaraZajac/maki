@@ -43,6 +43,7 @@ const APPS: [string, string, string][] = [
   ['Zcash', 'com.leviathan.maki.zcash', 'zcash'],
   ['Sudoku', 'com.leviathan.maki.sudoku', 'sudoku'],
   ['Sokoban', 'com.leviathan.maki.sokoban', 'sokoban'],
+  ['Macro Pad', 'com.leviathan.maki.macropad', 'macropad'],
   ...(process.env.MAKI_FLASHCARDS ? [['Flashcards', 'com.leviathan.maki.flashcards', 'flashcards'] as [string, string, string]] : [])
 ]
 const ONLY = process.env.MAKI_ONLY?.split(',')
@@ -59,17 +60,20 @@ if (!(await link.attach(await TcpTransport.open(7878), 'fake maki')))
 let apps = (await link.appList()).apps
 const installed = new Set<string>()
 for (const [name, id, file] of RUN) {
+  const bundle = new Uint8Array(readFileSync(`${FIXTURES}/${file}.maki`))
+  const version = readBundle(bundle).manifest.version
   const have = apps.find((a) => a.id === id)
-  if (have?.name === name) {
+  if (have?.name === name && have.version >= version) {
     installed.add(id)
     continue
   }
-  if (have) {
+  if (have && have.name !== name) {
     console.log(`replacing ${have.name}, an older build: ${await link.appRemove(have.id, have.name)}`)
     apps = (await link.appList()).apps
   }
-  const bundle = new Uint8Array(readFileSync(`${FIXTURES}/${file}.maki`))
+  // an update takes the room its older version had: room is made only for a new app
   for (;;) {
+    if (have?.name === name) break
     const { space } = await link.appSpace()
     const free = space ? space.space - space.taken : 0
     // the bundle, the storage its manifest asks for, and some to spare
@@ -86,7 +90,7 @@ for (const [name, id, file] of RUN) {
   const r = await link.appInstall(name, bundle)
   check(
     r.approval === 'approved',
-    `${name} installed (${r.approval}${r.reason ? `: ${r.reason}` : ''}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`
+    `${name} ${have?.name === name ? `updated to version ${version}` : 'installed'} (${r.approval}${r.reason ? `: ${r.reason}` : ''}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`
   )
   if (r.approval === 'approved') installed.add(id)
   apps = (await link.appList()).apps
