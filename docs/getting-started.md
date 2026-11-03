@@ -40,7 +40,7 @@ keep the wallets to pocket money.
 - **Add what you want:** the browser extension for logins and codes, apps from the maki store
   (wallets, SSH, Nostr, sudo and more), each one approved on maki before it installs.
 
-Everything to download is on the [download page](https://maki.netslum.io/download/).
+Everything to download is on the [download page](https://maki.karazajac.io/download/).
 
 ## How you use it
 

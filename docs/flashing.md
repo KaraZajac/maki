@@ -17,7 +17,7 @@ module. You copy the files onto the badge like onto a USB stick, in its update m
 
 ## Get the files
 
-Download the three files from the [download page](https://maki.netslum.io/download/), or build
+Download the three files from the [download page](https://maki.karazajac.io/download/), or build
 them (below). Check them against the SHA-256 sums published beside them:
 
 ```sh

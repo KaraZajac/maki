@@ -7,7 +7,7 @@ one, maki was built a day at a time, and that's here too.
 ## Preview, 2026-10-03
 
 maki's firmware (maki-firmware `5f3599ff5`), with maki desktop 0.1.6 and the extension 0.1.6, on the
-[download page](https://maki.netslum.io/download/); maki desktop updates a maki on preview
+[download page](https://maki.karazajac.io/download/); maki desktop updates a maki on preview
 2026-10-01 or later to it, and itself from 0.1.2 on. It has run in the emulator end to end: a
 passphrase typed on maki and its wallet's accounts over the link; Shamir shares made from maki's
 menu, read off its screen and put back together, and a blank maki restored from two of three typed
@@ -75,7 +75,7 @@ computer. Not yet on a badge.
 ## Preview, 2026-10-01.6
 
 maki's firmware (maki-firmware `35e43eb39`), with maki desktop 0.1.5 and the extension 0.1.5, on the
-[download page](https://maki.netslum.io/download/); maki desktop updates a maki on preview
+[download page](https://maki.karazajac.io/download/); maki desktop updates a maki on preview
 2026-10-01 or later to it, and itself from 0.1.2 on. It has run in the emulator end to end: a
 DuckyScript sent from maki desktop, kept by maki, run on maki, and the keystrokes — Gui+R and
 Ctrl+Alt+Delete among them — out of maki's USB. Not yet on a badge.
@@ -93,7 +93,7 @@ Ctrl+Alt+Delete among them — out of maki's USB. Not yet on a badge.
 ## Preview, 2026-10-01.5
 
 maki's firmware (maki-firmware `e757cd61b`), with maki desktop 0.1.4 and the extension 0.1.4, on
-the [download page](https://maki.netslum.io/download/); maki desktop updates a maki on preview
+the [download page](https://maki.karazajac.io/download/); maki desktop updates a maki on preview
 2026-10-01 or later to it, and itself from 0.1.2 on. It has run in the emulator: a child seed
 shown by maki, each of its words found on maki's screen beside its number, as the BIP's steps
 make them on another library's keys; a name tag scanned through maki's camera, its name drawn
@@ -121,7 +121,7 @@ opened again as it was. Not yet on a badge.
 ## Preview, 2026-10-01.4
 
 maki's firmware (maki-firmware `8acb4b03d`), with maki desktop 0.1.3 and the extension 0.1.3 as
-before, on the [download page](https://maki.netslum.io/download/); maki desktop 0.1.3 updates a
+before, on the [download page](https://maki.karazajac.io/download/); maki desktop 0.1.3 updates a
 maki on preview 2026-10-01 or later to it. It has run in the emulator: a Google Authenticator
 export of three codes scanned through maki's camera and each time-based code checked against RFC
 6238 as the browser extension gets it, busy QR codes read by the Scanner app, logins and
@@ -147,7 +147,7 @@ passkeys, codes typed from Authenticator. Not yet on a badge.
 ## Preview, 2026-10-01.3
 
 maki's firmware (maki-firmware `0181b4633`), with maki desktop 0.1.3 and the extension 0.1.3 as
-before, on the [download page](https://maki.netslum.io/download/); maki desktop 0.1.3 updates a
+before, on the [download page](https://maki.karazajac.io/download/); maki desktop 0.1.3 updates a
 maki on preview 2026-10-01 or later to it. It has run in the emulator through everything: a
 blank maki set up from its phrase, all 31 store apps installed and opened, logins with a passkey
 first, passkeys made and used, TOTP codes scanned, sent and typed, native apps opened and closed
@@ -169,7 +169,7 @@ again and again, backups. Not yet on a badge.
 
 The morning's preview again, with fixes: maki's firmware (maki-firmware `0cf07cd06`), maki desktop
 0.1.3 and the extension 0.1.3 (maki-desktop `d45c4dd`), on the
-[download page](https://maki.netslum.io/download/). maki desktop 0.1.2 updates itself to 0.1.3,
+[download page](https://maki.karazajac.io/download/). maki desktop 0.1.2 updates itself to 0.1.3,
 which updates a maki on the morning's preview to this one; a maki on anything older is flashed by
 hand. The fixes have run in the emulator.
 
@@ -192,7 +192,7 @@ hand. The fixes have run in the emulator.
 ## Preview, 2026-10-01
 
 maki's firmware (maki-firmware `4375d3b32`), maki desktop 0.1.2 for Linux and the extension 0.1.2
-(maki-desktop `10d5a2b`), on the [download page](https://maki.netslum.io/download/). They speak
+(maki-desktop `10d5a2b`), on the [download page](https://maki.karazajac.io/download/). They speak
 version 3 of the link protocol, as the preview before them did. The maki store has 31 apps, ten of
 them updated, and signs these releases into its index: from this preview on, maki desktop updates
 maki's firmware, itself and the apps. Flash this firmware by hand the first time.
@@ -298,7 +298,7 @@ FIDO2 client reach the emulated maki over its USB.
 
 ## maki desktop 0.1.1, 2026-09-29
 
-maki desktop and the extension 0.1.1, on the [download page](https://maki.netslum.io/download/),
+maki desktop and the extension 0.1.1, on the [download page](https://maki.karazajac.io/download/),
 with the preview's firmware: they speak the same version of the link protocol.
 
 - **maki desktop manages the extension's browsers.** Connections lists every browser it knows on
@@ -317,7 +317,7 @@ with the preview's firmware: they speak the same version of the link protocol.
 ## Preview, 2026-09-29
 
 The first downloads: maki's firmware (maki-firmware `a998b9a9e`), maki desktop 0.1.0 for Linux and
-the browser extension 0.1.0 (maki-desktop `ab323a6`), on the [download page](https://maki.netslum.io/download/).
+the browser extension 0.1.0 (maki-desktop `ab323a6`), on the [download page](https://maki.karazajac.io/download/).
 They speak version 3 of the link protocol, so they go together. The maki store has 24 apps.
 
 maki has run on a DEF CON 34 badge since 2026-09-28: setup, and the link to maki desktop over USB

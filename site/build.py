@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build maki.netslum.io from maki's repositories.
+"""Build maki.karazajac.io from maki's repositories.
 
 The site describes maki as its repositories do, so it's made from them rather than written
 beside them: the home, download and developer pages from site/pages; the docs from the user guide
@@ -32,7 +32,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-BASE = "https://maki.netslum.io"
+BASE = "https://maki.karazajac.io"
 GH = "https://github.com/KaraZajac"
 REPOS = {
     "maki": (f"{GH}/maki", "main"),
@@ -137,7 +137,7 @@ def page(*, path, title, description, body, nav, css_version, wide=False, extra_
 <div class="wrap">
 <div class="top">
   <div class="house">
-    <a href="https://netslum.io/">netslum.io</a><span class="sep">/</span>
+    <a href="https://karazajac.io/projects/">karazajac.io</a><span class="sep">/</span>
     <a class="me" href="/">{MARK}maki</a>
   </div>
   <nav class="main" aria-label="maki">
@@ -156,7 +156,7 @@ def page(*, path, title, description, body, nav, css_version, wide=False, extra_
   <div class="cols">
     <div>
       <div style="display:flex;align-items:center;gap:.6rem;color:var(--text);font-family:var(--mono);font-weight:700"><span style="width:1.6rem;height:1.6rem;display:inline-block">{MARK}</span>maki</div>
-      <p style="margin:.7rem 0 0;max-width:22rem">A security key that shows you what you&rsquo;re signing, for the DEF CON 34 badge. By <a href="https://netslum.io">.leviathan</a>, part of <a href="https://netslum.io">netslum.io</a>. MIT License; the firmware builds on Xous (Apache 2.0): <a href="/download/#licenses">licenses</a>.</p>
+      <p style="margin:.7rem 0 0;max-width:22rem">A security key that shows you what you&rsquo;re signing, for the DEF CON 34 badge. By <a href="https://karazajac.io/">.kara</a>. MIT License; the firmware builds on Xous (Apache 2.0): <a href="/download/#licenses">licenses</a>.</p>
     </div>
     <div><h4>maki</h4><ul>
       <li><a href="/apps/">Apps</a></li><li><a href="/docs/">Docs</a></li><li><a href="/download/">Download</a></li><li><a href="/docs/changelog.html">What&rsquo;s new</a></li>
@@ -570,7 +570,7 @@ def build_pages(out: Path, css_version, releases, apps):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Build maki.netslum.io from maki's repositories.")
+    ap = argparse.ArgumentParser(description="Build maki.karazajac.io from maki's repositories.")
     ap.add_argument("--out", required=True)
     ap.add_argument("--firmware", default=str(ROOT / "xous-core"))
     ap.add_argument("--store", default=str(ROOT / "apps"))

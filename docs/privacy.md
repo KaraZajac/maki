@@ -54,7 +54,7 @@ one's accounts apart. The passphrase never leaves maki.
 
 ## This site
 
-maki.netslum.io is a static site, with no cookies, analytics or sign-in.
+maki.karazajac.io is a static site, with no cookies, analytics or sign-in.
 
 Questions or problems: open an issue on
 [maki desktop's repository](https://github.com/KaraZajac/maki-desktop/issues).

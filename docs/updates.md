@@ -7,7 +7,7 @@ data.** Your storage isn't in the firmware, so flashing new firmware doesn't tou
 ## The three pieces
 
 - **maki desktop** — the tray app on your computer. Update it from the
-  [download page](https://maki.netslum.io/download/). It holds no keys, so nothing of yours is at
+  [download page](https://maki.karazajac.io/download/). It holds no keys, so nothing of yours is at
   stake. maki desktop and maki speak a versioned protocol, so run the release that pairs with your
   firmware (the download page lists them together).
 - **maki's firmware** — the three files you flash (`loader.uf2`, `xous.uf2`, `swap.uf2`). This is

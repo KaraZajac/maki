@@ -28,7 +28,7 @@ maki checks against verified time. A store app carries two signatures, its devel
 store's, so no single stolen key can push an update.
 
 The store runs on development keys for now, until the real ones are made offline. See every app on
-the [apps page](https://maki.netslum.io/apps/).
+the [apps page](https://maki.karazajac.io/apps/).
 
 ## Permissions
 

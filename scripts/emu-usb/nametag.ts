@@ -29,7 +29,7 @@ const qrOn = (frame: string): string | null => {
   }
 }
 
-const [NAME, UNDER, LINK] = ['Ada Lovelace', 'maki tester', 'https://maki.netslum.io']
+const [NAME, UNDER, LINK] = ['Ada Lovelace', 'maki tester', 'https://maki.karazajac.io']
 // drawn before anything's opened on maki, so a test that can't start leaves it as it was
 const picture = qrPicture(`${NAME}\n${UNDER}\n${LINK}`)
 if (!picture) throw new Error('no mask gives the tag three finders, as bao-video looks')

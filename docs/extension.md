@@ -7,7 +7,7 @@ maki desktop to maki, which shows what's asking and waits for your press.
 ## Install it
 
 The extension isn't in Chrome's or Firefox's store yet, so it's loaded by hand. Download it from
-the [download page](https://maki.netslum.io/download/) (or build it: `npm run build:extension` in
+the [download page](https://maki.karazajac.io/download/) (or build it: `npm run build:extension` in
 maki-desktop).
 
 ### Chrome, Chromium, Brave, Edge, Vivaldi, Opera

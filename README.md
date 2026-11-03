@@ -27,7 +27,7 @@ for your keys.
 
 The user guide (flashing, first boot, maki desktop, the extension, the wallets, signing, sudo,
 Nostr, the security model) starts at [docs/getting-started.md](docs/getting-started.md), and it's
-on [maki.netslum.io](https://maki.netslum.io) with the downloads and the store's apps. What
+on [maki.karazajac.io](https://maki.karazajac.io) with the downloads and the store's apps. What
 changed when: [CHANGELOG.md](CHANGELOG.md). The site is built from these repositories by
 [site/build.py](site/build.py).
 

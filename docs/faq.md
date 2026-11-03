@@ -70,7 +70,7 @@ the SDK are yours, under whatever license you choose.
 Each download carries the licenses and notices of the code of others in it, in
 `THIRD-PARTY-NOTICES.md`: beside the firmware's files, inside maki desktop (its window's
 **notices**) and in the extension. None of it is under a copyleft license. They're on the
-[download page](https://maki.netslum.io/download/#licenses) too.
+[download page](https://maki.karazajac.io/download/#licenses) too.
 
 ## Where do I report a bug?
 

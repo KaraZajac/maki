@@ -605,7 +605,7 @@ Security, MIT, needs extra hardware, desktop Firefox only, and notes for the rev
 saves the signed package. The manifest declares, as Mozilla requires, what the extension hands
 maki desktop, which Firefox counts as data leaving the browser: authentication info, browsing
 activity, financial info and communications. The privacy policy both stores ask for is
-[Privacy](docs/privacy.md), `https://maki.netslum.io/docs/privacy.html`.
+[Privacy](docs/privacy.md), `https://maki.karazajac.io/docs/privacy.html`.
 
 Kara's part, once:
 

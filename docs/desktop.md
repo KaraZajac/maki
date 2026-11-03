@@ -9,7 +9,7 @@ holds no keys: whatever it asks maki for, maki shows you first.
 
 ## Install it
 
-On Linux, download the AppImage from the [download page](https://maki.netslum.io/download/), make
+On Linux, download the AppImage from the [download page](https://maki.karazajac.io/download/), make
 it executable and run it:
 
 ```sh
